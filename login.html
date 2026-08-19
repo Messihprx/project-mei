@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - FinMEI fluxo inteligente</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="login-page">
+    <div class="login-wrapper">
+        <div class="login-header">
+            <h1>FinMEI fluxo inteligente</h1>
+            <p>Gerencie seu negócio de forma simples e rápida.</p>
+        </div>
+
+        <div class="formulario">
+            <form id="formLogin">
+                <h2 class="titulo-login">Acesse sua conta</h2>
+
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="email" id="emailLogin" placeholder="exemplo@email.com" required>
+                </div>
+
+                <div class="input-group">
+                    <label>Senha</label>
+                    <input type="password" id="senhaLogin" placeholder="Sua senha" required>
+                    <a href="recuperar.html"
+                        style="font-size: 0.8rem; color: #38bdf8; text-decoration: none; display: block; margin-top: 5px;">Esqueceu
+                        sua senha?</a>
+                </div>
+
+                <button type="submit" class="btn-login">Entrar</button>
+
+                <div style="text-align: center; margin: 10px 0; color: #94a3b8;">ou</div>
+
+                <button type="button" onclick="loginGoogle()" class="btn-google" id="btnGoogle">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18">
+                    Entrar com Google
+                </button>
+
+                <p class="cadastro-link">
+                    Novo por aqui? <a href="cadastro.html">Crie sua conta</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
+</body>
+
+</html>

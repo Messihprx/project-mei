@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Venda | FinMEI fluxo inteligente</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">MEI</div>
+                <span>finMEI</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> Dashboard
+            </a>
+            <a href="vendas.html" class="nav-item">
+                <i data-lucide="shopping-cart"></i> Vendas
+            </a>
+            <a href="gastos.html" class="nav-item">
+                <i data-lucide="trending-down"></i> Gastos
+            </a>
+            <a href="clientes.html" class="nav-item">
+                <i data-lucide="users"></i> Clientes
+            </a>
+            <a href="devendo.html" class="nav-item">
+                <i data-lucide="alert-circle"></i> Devedores
+            </a>
+            
+            <div class="sidebar-divider">ATALHOS</div>
+            <a href="novo-cliente.html" class="nav-item">
+                <i data-lucide="user-plus"></i> Novo Cliente
+            </a>
+            <a href="nova-venda.html" class="nav-item active">
+                <i data-lucide="plus-circle"></i> Nova Venda
+            </a>
+
+            <hr>
+            <button onclick="logout()" class="btn-logout">
+                <i data-lucide="log-out"></i> <span>Sair</span>
+            </button>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+        <header class="top-bar">
+            <div class="page-header">
+                <h3>Registrar Venda</h3>
+                <p>Lance um novo serviço ou produto vendido</p>
+            </div>
+            <a href="vendas.html" class="btn-logout" style="width: auto; padding: 0.5rem 1rem; text-decoration: none; font-size: 0.8rem;">Voltar</a>
+        </header>
+
+        <section class="content-wrapper">
+            <div class="formulario">
+                <form id="formNovaVenda">
+                    <div class="input-group">
+                        <label>Cliente</label>
+                        <input type="text" id="clienteVendaInput" placeholder="Digite o nome do cliente..." autocomplete="off" required list="listaClientesSugestoes">
+                        
+                        <datalist id="listaClientesSugestoes"></datalist>
+                        
+                        <input type="hidden" id="clienteIdSelecionado">
+                    </div>
+                    <div class="input-group">
+                        <label>Descrição do Serviço/Produto</label>
+                        <input type="text" id="servicoVenda" placeholder="Ex: Manutenção de Ar-condicionado" required>
+                    </div>
+                    <div class="input-group input-group-val-status">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label>Valor (R$)</label>
+                                <input type="number" id="valorVenda" step="0.01" min="0.01" required placeholder="0,00">
+                            </div>
+                            <div>
+                                <label>Status</label>
+                                <select id="statusVenda">
+                                    <option value="pago">Pago ✅</option>
+                                    <option value="pendente">Pendente ⏳</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" style="margin-top: 1.5rem; width: 100%;">Finalizar Registro</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/nova-venda.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

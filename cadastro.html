@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - FinMEI fluxo inteligente</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="login-page">
+
+    <div class="login-wrapper">
+        <div class="login-header">
+            <h1>FinMEI fluxo inteligente</h1>
+            <p>Comece a organizar suas finanças hoje mesmo.</p>
+        </div>
+
+        <div class="formulario">
+            <form id="formCadastro">
+                <h2 class="titulo-login">Crie sua conta</h2>
+
+                <div class="input-group">
+                    <label>Nome Completo</label>
+                    <input type="text" id="nomeCadastro" placeholder="Seu nome e sobrenome" required>
+                    <div id="erro-nomeCadastro" class="erro-campo"></div>
+                </div>
+
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="email" id="emailCadastro" placeholder="exemplo@email.com" required>
+                    <div id="erro-emailCadastro" class="erro-campo"></div>
+                </div>
+
+                <div class="input-group">
+                    <label>Senha</label>
+                    <div class="input-senha-container">
+                        <input type="password" id="senhaCadastro"
+                            placeholder="Mín. 8 caracteres, maiúscula, número e símbolo" required>
+                        <button type="button" class="btn-ver-senha" onclick="togglePassword('senhaCadastro')"
+                            tabindex="-1">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="erro-senhaCadastro" class="erro-campo"></div>
+                </div>
+
+                <div class="input-group">
+                    <label>Confirmar Senha</label>
+                    <div class="input-senha-container">
+                        <input type="password" id="senhaConfirmar" placeholder="Repita a senha" required>
+                        <button type="button" class="btn-ver-senha" onclick="togglePassword('senhaConfirmar')"
+                            tabindex="-1">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="erro-senhaConfirmar" class="erro-campo"></div>
+                </div>
+
+                <div id="erro-formCadastro" class="erro-campo erro-formulario"></div>
+
+                <button type="submit" class="btn-login">Finalizar Cadastro</button>
+
+                <p class="cadastro-link">
+                    Já tem uma conta? <a href="login.html">Faça login</a>
+                </p>
+            </form>
+        </div>
+
+        <script type="module" src="js/auth.js"></script>
+
+        <script>
+            // Função simples para mostrar/esconder senha
+            function togglePassword(id) {
+                const input = document.getElementById(id);
+                input.type = input.type === "password" ? "text" : "password";
+            }
+        </script>
+</body>
+
+</html>

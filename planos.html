@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Planos e Assinaturas | FinMEI</title>
+
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .planos-container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 2rem;
+            justify-content: center;
+            align-items: stretch;
+            margin-top: 3rem;
+            padding: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .plano-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid var(--borda-cor);
+            border-radius: 12px;
+            padding: 2rem;
+            flex: 1;
+            min-width: 300px;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .plano-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .plano-card.premium {
+            border: 2px solid var(--cor-primaria);
+            position: relative;
+        }
+
+        .plano-card.premium::before {
+            content: "Recomendado";
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--cor-primaria);
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .plano-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .plano-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--texto-principal);
+            margin-bottom: 0.5rem;
+        }
+
+        .plano-price {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--cor-primaria);
+        }
+
+        .plano-price span {
+            font-size: 1rem;
+            color: var(--texto-secundario);
+            font-weight: 400;
+        }
+
+        .plano-features {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 2rem;
+            flex-grow: 1;
+        }
+
+        .plano-features li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+            color: var(--texto-secundario);
+            font-size: 0.95rem;
+        }
+
+        .plano-features li i {
+            color: var(--cor-sucesso);
+            width: 18px;
+        }
+
+        .plano-features li.disabled {
+            opacity: 0.5;
+        }
+
+        .plano-features li.disabled i {
+            color: var(--cor-erro);
+        }
+
+        .btn-assinar {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .btn-assinar.primary {
+            background-color: var(--cor-primaria);
+            color: white;
+        }
+
+        .btn-assinar.primary:hover {
+            background-color: #0284c7;
+            /* darker shade */
+        }
+
+        .btn-assinar.secondary {
+            background-color: transparent;
+            color: var(--texto-principal);
+            border: 1px solid var(--borda-cor);
+        }
+
+        .btn-assinar.secondary:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+
+<body class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">MEI</div>
+                <span>finMEI</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="index.html" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> Dashboard
+            </a>
+            <a href="vendas.html" class="nav-item">
+                <i data-lucide="shopping-cart"></i> Vendas
+            </a>
+            <a href="gastos.html" class="nav-item">
+                <i data-lucide="trending-down"></i> Gastos
+            </a>
+            <a href="clientes.html" class="nav-item">
+                <i data-lucide="users"></i> Clientes
+            </a>
+            <hr>
+            <a href="planos.html" class="nav-item active">
+                <i data-lucide="star"></i> Assinatura
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button onclick="logout()" class="btn-logout">
+                <i data-lucide="log-out"></i> Sair
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-content"
+        style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh;">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+
+        <div style="text-align: center; margin-top: 2rem;">
+            <h1 style="font-size: 2.2rem; font-weight: 800; color: var(--texto-principal);"><i data-lucide="rocket"
+                    style="color:var(--cor-primaria); width:32px; height:32px;"></i> Evolua seu Negócio</h1>
+            <p style="color: var(--texto-secundario); margin-top: 5px;">Escolha o plano ideal para gerenciar suas
+                finanças de forma ilimitada</p>
+        </div>
+
+        <div class="planos-container">
+            <!-- Plano Gratuito -->
+            <div class="plano-card">
+                <div class="plano-header">
+                    <h3 class="plano-title">Gratuito (Teste)</h3>
+                    <div class="plano-price">R$ 0 <span>/14 dias</span></div>
+                </div>
+
+                <ul class="plano-features">
+                    <li><i data-lucide="check-circle"></i> Acesso completo ao Dashboard</li>
+                    <li><i data-lucide="check-circle"></i> Controle financeiro parcial</li>
+                    <li><i data-lucide="check-circle"></i> Limite de cadastro de clientes</li>
+                    <li class="disabled"><i data-lucide="x-circle"></i> Acesso contínuo sem bloqueios</li>
+                    <li class="disabled"><i data-lucide="x-circle"></i> Entradas ilimitadas</li>
+                    <li class="disabled"><i data-lucide="x-circle"></i> Saídas ilimitadas</li>
+                </ul>
+
+                <a href="index.html" class="btn-assinar secondary">Voltar ao Dashboard</a>
+            </div>
+
+            <!-- Plano Premium -->
+            <div class="plano-card premium">
+                <div class="plano-header">
+                    <h3 class="plano-title">Premium</h3>
+                    <div class="plano-price">R$ 15<span>,90 /mês</span></div>
+                </div>
+
+                <ul class="plano-features">
+                    <li><i data-lucide="check-circle"></i> Tudo do plano gratuito</li>
+                    <li><i data-lucide="check-circle"></i> Acesso contínuo sem bloqueios</li>
+                    <li><i data-lucide="check-circle"></i> Cadastro ilimitado de Clientes</li>
+                    <li><i data-lucide="check-circle"></i> Entradas ilimitadas</li>
+                    <li><i data-lucide="check-circle"></i> Histórico financeiro completo</li>
+                    <li><i data-lucide="check-circle"></i> Suporte Prioritário</li>
+                    <li><i data-lucide="check-circle"></i> Exportar/importar dados</li>
+                    <li><i data-lucide="check-circle"></i> Acesso ao relatório avançado BI</li>
+                </ul>
+
+                <!-- Substitua o link do botão abaxo pelo link do seu Checkout (ex: MercadoPago, Stripe) -->
+                <button id="btnAbrirCheckout" class="btn-assinar primary">Assinar Premium Agora</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL DE CHECKOUT SIMULADO -->
+    <div id="modalCheckout" class="modal-overlay" style="display: none;">
+        <div class="modal-content checkout-modal">
+            <div class="modal-header">
+                <h3>Finalizar Assinatura</h3>
+                <button onclick="fecharCheckout()" class="btn-close">&times;</button>
+            </div>
+            
+            <div id="etapaSelecao">
+                <p style="color: var(--texto-secundario); margin-bottom: 20px;">Escolha como deseja pagar os <b>R$ 15,90/mês</b>:</p>
+                <div class="metodos-pagamento">
+                    <div class="metodo-item" onclick="selecionarMetodo('pix')">
+                        <i data-lucide="qr-code"></i>
+                        <span>PIX (Liberação Imediata)</span>
+                    </div>
+                    <div class="metodo-item" onclick="selecionarMetodo('cartao')">
+                        <i data-lucide="credit-card"></i>
+                        <span>Cartão de Crédito</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="etapaPix" style="display: none; text-align: center;">
+                <p>Escaneie o código ou copie a chave abaixo:</p>
+                <div style="background: white; padding: 15px; border-radius: 8px; display: inline-block; margin: 15px 0;">
+                    <!-- Substitua o link abaixo pela imagem do seu QR Code real se preferir -->
+                    <img id="imgQrCode" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=SimulacaoFinMEI" alt="QR Code Pix">
+                </div>
+                
+                <div class="pix-copia-e-cola" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; border: 1px dashed var(--borda-cor);">
+                    <code id="chavePix" style="font-size: 0.8rem; color: var(--cor-primaria);">SUA-CHAVE-PIX-AQUI</code>
+                    <button onclick="copiarPix()" class="btn-acao" style="padding: 5px 10px; font-size: 0.7rem; border-radius: 5px;">Copiar</button>
+                </div>
+
+                <p style="font-size: 0.8rem; color: var(--texto-secundario);">Pagamento 100% seguro. Liberado em segundos.</p>
+                <button onclick="confirmarPagamento('pix')" class="btn-assinar primary" style="margin-top: 15px;">Já realizei o pagamento</button>
+            </div>
+
+            <div id="etapaCartao" style="display: none;">
+                <div class="form-cartao">
+                    <input type="text" placeholder="Número do Cartão" class="input-checkout">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" placeholder="MM/AA" class="input-checkout">
+                        <input type="text" placeholder="CVV" class="input-checkout">
+                    </div>
+                    <input type="text" placeholder="Nome no Cartão" class="input-checkout">
+                </div>
+                <button onclick="confirmarPagamento('cartao')" class="btn-assinar primary" style="margin-top: 15px;">Confirmar Pagamento</button>
+            </div>
+
+            <div id="etapaProcessando" style="display: none; text-align: center; padding: 30px 0;">
+                <div class="loader"></div>
+                <p style="margin-top: 20px;">Processando seu pagamento com segurança...</p>
+            </div>
+
+            <div id="etapaSucesso" style="display: none; text-align: center; padding: 20px 0;">
+                <i data-lucide="check-circle" style="color: var(--cor-sucesso); width: 60px; height: 60px; margin-bottom: 15px;"></i>
+                <h3 style="color: var(--cor-sucesso);">Pagamento Confirmado!</h3>
+                <p>Parabéns! Você agora é um usuário <b>Premium</b>.</p>
+                <button onclick="window.location.href='index.html'" class="btn-assinar primary" style="margin-top: 20px;">Começar a Usar</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Estilos do Modal de Checkout */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 10000;
+            backdrop-filter: blur(5px);
+        }
+        .checkout-modal {
+            background: #1e293b; border: 1px solid var(--borda-cor); border-radius: 16px;
+            width: 100%; max-width: 450px; padding: 25px; position: relative;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-close { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; }
+        
+        .metodos-pagamento { display: flex; flex-direction: column; gap: 12px; }
+        .metodo-item {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--borda-cor);
+            padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 15px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .metodo-item:hover { background: rgba(56, 189, 248, 0.1); border-color: var(--cor-primaria); }
+        .metodo-item i { color: var(--cor-primaria); }
+
+        .input-checkout {
+            width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--borda-cor);
+            border-radius: 8px; color: white; margin-bottom: 10px; outline: none;
+        }
+        .input-checkout:focus { border-color: var(--cor-primaria); }
+
+        .loader {
+            border: 4px solid #334155; border-top: 4px solid var(--cor-primaria);
+            border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(3600deg); } }
+    </style>
+
+    <script type="module">
+        import { assinarPlanoPremium, verificarStatusPlano } from './js/planos.js';
+        
+        // --- NOVO: DESTACAR PLANO ATUAL ---
+        async function destacarPlanoAtual() {
+            const status = await verificarStatusPlano();
+            const cards = document.querySelectorAll('.plano-card');
+            
+            // Plano 0: Gratuito, Plano 1: Premium
+            if (status.premium) {
+                // Destaca o Premium
+                const premiumCard = cards[1];
+                marcarComoAtual(premiumCard, "Premium");
+            } else {
+                // Destaca o Gratuito
+                const gratuitoCard = cards[0];
+                marcarComoAtual(gratuitoCard, "Gratuito");
+            }
+        }
+
+        function marcarComoAtual(card, tipo) {
+            const header = card.querySelector('.plano-header');
+            const badge = document.createElement('div');
+            badge.innerHTML = "PLANO ATUAL";
+            badge.style.backgroundColor = tipo === "Premium" ? "#38bdf8" : "#94a3b8";
+            badge.style.color = "white";
+            badge.style.fontSize = "0.7rem";
+            badge.style.fontWeight = "800";
+            badge.style.padding = "4px 12px";
+            badge.style.borderRadius = "20px";
+            badge.style.marginTop = "10px";
+            badge.style.display = "inline-block";
+            header.appendChild(badge);
+
+            // Muda o botão
+            const btn = card.querySelector('.btn-assinar');
+            if (btn) {
+                if (tipo === "Premium") {
+                    btn.innerText = "Renovar Assinatura";
+                    btn.classList.add("primary");
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                    btn.style.cursor = "pointer";
+                } else {
+                    btn.innerText = "Plano Ativo";
+                    btn.disabled = true;
+                    btn.style.opacity = "0.7";
+                    btn.style.cursor = "default";
+                    btn.removeAttribute('id'); 
+                }
+            }
+        }
+
+        window.abrirCheckout = async () => {
+            document.getElementById('modalCheckout').style.display = 'flex';
+            document.getElementById('etapaSelecao').style.display = 'none';
+            document.getElementById('etapaPix').style.display = 'none';
+            document.getElementById('etapaCartao').style.display = 'none';
+            document.getElementById('etapaSucesso').style.display = 'none';
+            
+            // Mostra tela de processamento
+            document.getElementById('etapaProcessando').style.display = 'block';
+
+            // Chama a Edge Function
+            const res = await assinarPlanoPremium();
+                
+            if (res.success && res.init_point) {
+                // Redireciona o usuário para o Mercado Pago Checkout Pro
+                window.location.href = res.init_point;
+            } else {
+                document.getElementById('etapaProcessando').style.display = 'none';
+                alert("Erro ao conectar com Mercado Pago: " + res.message);
+                window.fecharCheckout();
+            }
+        };
+
+        window.fecharCheckout = () => {
+            document.getElementById('modalCheckout').style.display = 'none';
+        };
+
+        destacarPlanoAtual();
+        const btnCheckout = document.getElementById('btnAbrirCheckout');
+        if (btnCheckout) btnCheckout.addEventListener('click', abrirCheckout);
+    </script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

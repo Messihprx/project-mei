@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Devedores | FinMEI fluxo inteligente</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">MEI</div>
+                <span>finMEI</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> Dashboard
+            </a>
+            <a href="vendas.html" class="nav-item">
+                <i data-lucide="shopping-cart"></i> Vendas
+            </a>
+            <a href="gastos.html" class="nav-item">
+                <i data-lucide="trending-down"></i> Gastos
+            </a>
+            <a href="clientes.html" class="nav-item">
+                <i data-lucide="users"></i> Clientes
+            </a>
+            <a href="devendo.html" class="nav-item active">
+                <i data-lucide="alert-circle"></i> Devedores
+            </a>
+            
+            <div class="sidebar-divider">ATALHOS</div>
+            <a href="novo-cliente.html" class="nav-item">
+                <i data-lucide="user-plus"></i> Novo Cliente
+            </a>
+            <a href="nova-venda.html" class="nav-item">
+                <i data-lucide="plus-circle"></i> Nova Venda
+            </a>
+
+            <hr>
+            <button onclick="logout()" class="btn-logout">
+                <i data-lucide="log-out"></i> <span>Sair</span>
+            </button>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+        <header class="top-bar">
+            <div class="page-header">
+                <h3>Clientes em Aberto</h3>
+                <p>Lista de vendas com pagamento pendente</p>
+            </div>
+
+            <div class="user-info devedores-header-pc" style="display: flex; gap: 1rem; align-items: center;">
+                <div class="filtro-mes-devendo">
+                    <label for="filtroMesDevendo" style="font-size: 0.75rem; color: var(--texto-secundario); margin-bottom: 4px;">Filtrar mês</label>
+                    <input type="month" id="filtroMesDevendo" class="input-mes" style="margin-top: 0; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                </div>
+                <div class="contador-pendentes">
+                    Pendentes: <span id="qtdPendentes">0</span>
+                </div>
+            </div>
+        </header>
+
+        <section class="content-wrapper">
+            <div class="resumo-pendentes resumo-pendentes-mobile">
+                <span style="color: var(--texto-secundario); font-size: 0.9rem;">Total a Receber:</span>
+                <h2 id="totalPendentes" class="total-pendentes" style="font-size: 2rem;">R$ 0,00</h2>
+            </div>
+
+            <div id="listaDevedores" class="lista-devedores-mobile">
+                </div>
+        </section>
+    </main>
+
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/devendo.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

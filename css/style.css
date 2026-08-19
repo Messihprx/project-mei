@@ -1,0 +1,1770 @@
+:root {
+    /* Cores do Tema Dark */
+    --cor-primaria: #38bdf8;
+    --cor-primaria-hover: #0ea5e9;
+    --cor-sucesso: #22c55e;
+    --cor-erro: #ef4444;
+    
+    /* Cores de Fundo (De volta ao azul escuro) */
+    --fundo-cor: #0f172a; 
+    --fundo-card: #1e293b;
+    --fundo-hover: #334155;
+    
+    /* Cores de Texto */
+    --texto-principal: #f1f5f9;
+    --texto-secundario: #94a3b8;
+    --texto-dark: #0f172a;
+    
+    /* Borda */
+    --borda-cor: #334155;
+}
+
+* { padding: 0; margin: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+body { 
+    line-height: 1.6; 
+    color: var(--texto-principal); 
+    background-color: var(--fundo-cor);
+    overflow-x: hidden; /* Impeçer scroll lateral indesejado */
+    width: 100%;
+}
+
+html {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+/* --- TELAS DE ACESSO (LOGIN/CADASTRO) --- */
+.login-page {
+    background: var(--fundo-cor);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.login-wrapper {
+    width: 100%;
+    max-width: 400px;
+    background: var(--fundo-card);
+    padding: 2.5rem;
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    border: 1px solid var(--borda-cor);
+}
+
+.login-header h1 { color: var(--cor-primaria); font-size: 1.8rem; margin-bottom: 0.5rem; text-align: center; }
+.login-header p { color: var(--texto-secundario); text-align: center; font-size: 0.9rem; margin-bottom: 2rem; }
+
+.input-group { margin-bottom: 1.2rem; }
+.input-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--texto-principal); }
+
+input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--borda-cor);
+    border-radius: 0.5rem;
+    background: var(--fundo-cor);
+    color: white;
+    transition: 0.2s;
+}
+
+input:focus { outline: none; border-color: var(--cor-primaria); box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1); }
+
+/* --- BOTÕES --- */
+.btn-primary {
+    width: 100%;
+    background: var(--cor-primaria);
+    color: var(--texto-dark);
+    padding: 0.8rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-primary:hover { background: var(--cor-primaria-hover); transform: translateY(-1px); }
+
+.btn-google {
+    width: 100%;
+    background: var(--fundo-card);
+    border: 1px solid var(--borda-cor);
+    color: var(--texto-principal);
+    padding: 0.7rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 1rem;
+}
+
+.cadastro-link { text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--texto-secundario); }
+.cadastro-link a { color: var(--cor-primaria); text-decoration: none; font-weight: 600; }
+
+/* --- DASHBOARD LAYOUT (SISTEMA INTERNO) --- */
+.dashboard-layout { background-color: var(--fundo-cor); display: flex; min-height: 100vh; }
+
+.sidebar {
+    width: 260px;
+    background: var(--fundo-card);
+    height: 100vh;
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    border-right: 1px solid var(--borda-cor);
+}
+
+.logo-area { color: white; font-weight: 700; font-size: 1.2rem; margin-bottom: 2.5rem; display: flex; align-items: center; gap: 10px; }
+.logo-icon { background: var(--cor-primaria); color: var(--texto-dark); padding: 5px 10px; border-radius: 8px; font-size: 0.8rem; }
+
+.sidebar-nav { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+
+.nav-item {
+    color: var(--texto-secundario);
+    text-decoration: none;
+    padding: 0.8rem 1rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: 0.2s;
+}
+
+.nav-item:hover, .nav-item.active { background: var(--fundo-hover); color: var(--cor-primaria); }
+.nav-item i { width: 18px; }
+
+.main-content { margin-left: 260px; width: calc(100% - 260px); }
+
+.top-bar {
+    background: var(--fundo-card);
+    padding: 1rem 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--borda-cor);
+}
+
+.user-info { display: flex; align-items: center; gap: 15px; }
+.user-info img { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--borda-cor); background: var(--fundo-cor); }
+
+.content-wrapper { padding: 2.5rem; }
+
+.page-header h3 { font-size: 1.5rem; color: var(--texto-principal); }
+.page-header p { color: var(--texto-secundario); font-size: 0.9rem; }
+
+/* Cards do Dashboard */
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+
+.card-financeiro {
+    background: var(--fundo-card);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+    border: 1px solid var(--borda-cor);
+}
+
+.card-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+.pago .card-icon { background: rgba(34, 197, 94, 0.1); color: var(--cor-sucesso); }
+.pendente .card-icon { background: rgba(239, 68, 68, 0.1); color: var(--cor-erro); }
+.total .card-icon { background: rgba(56, 189, 248, 0.1); color: var(--cor-primaria); }
+
+.label { display: block; color: var(--texto-secundario); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
+.card-info h4 { font-size: 1.4rem; font-weight: 700; color: var(--texto-principal); }
+
+/* Botão Sair */
+.btn-logout {
+    margin-top: auto;
+    background: transparent;
+    border: 1px solid var(--borda-cor);
+    color: var(--texto-secundario);
+    width: 100%;
+    padding: 0.7rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: 0.2s;
+}
+.btn-logout:hover { border-color: var(--cor-erro); color: var(--cor-erro); background: rgba(239, 68, 68, 0.05); }
+
+@media (max-width: 768px) {
+    .sidebar { width: 70px; padding: 10px; }
+    .sidebar span, .logo-area span, .btn-logout span { display: none; }
+    .main-content { margin-left: 70px; width: calc(100% - 70px); }
+    .nav-item { justify-content: center; padding: 1rem; }
+    .top-bar { padding: 1rem; }
+}
+
+/* Ajuste do botão Entrar */
+.btn-login {
+    width: 100%;
+    background: var(--cor-primaria);
+    color: var(--texto-dark);
+    padding: 0.8rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+    margin-top: 1rem;
+}
+
+.btn-login:hover {
+    background: var(--cor-primaria-hover);
+    transform: translateY(-1px);
+}
+
+/* --- AJUSTE DO OLHINHO (VER SENHA) --- */
+
+/* Contêiner do input para permitir o botão por cima */
+.input-senha-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* Faz o input dar espaço para o ícone no final */
+.input-senha-container input {
+    padding-right: 2.5rem;
+}
+
+/* Posiciona o botão do olhinho */
+.btn-ver-senha {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--texto-secundario);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    transition: 0.2s;
+}
+
+.btn-ver-senha:hover {
+    color: var(--cor-primaria);
+}
+
+/* Define o tamanho do ícone SVG */
+.btn-ver-senha svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Efeito de risco no olho quando a senha está oculta */
+.btn-ver-senha.slash svg {
+    position: relative;
+}
+
+/* Criando o risco usando um pseudo-elemento */
+.btn-ver-senha.slash::after {
+    content: "";
+    position: absolute;
+    width: 22px; /* Ajuste conforme o tamanho do seu ícone */
+    height: 2px;
+    background-color: var(--texto-secundario);
+    transform: rotate(-45deg);
+    border-radius: 1px;
+    pointer-events: none; /* Não atrapalha o clique */
+}
+
+.btn-ver-senha.slash:hover::after {
+    background-color: var(--cor-primaria);
+}
+
+/* --- VALIDAÇÃO DE CAMPOS (ERROS) --- */
+.erro-campo {
+    display: none;
+    color: var(--cor-erro);
+    font-size: 0.78rem;
+    margin-top: 0.35rem;
+    padding-left: 2px;
+    line-height: 1.4;
+}
+
+.input-erro {
+    border-color: var(--cor-erro) !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+.input-erro:focus {
+    border-color: var(--cor-erro) !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+}
+
+.erro-formulario {
+    text-align: center;
+    margin-top: 0.8rem;
+    font-size: 0.82rem;
+}
+
+/* --- ESTILIZAÇÃO DE LISTAS E TABELAS (PROFISSIONAL) --- */
+.card-buscar {
+    background: var(--fundo-card);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--borda-cor);
+}
+
+.card-buscar label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--texto-secundario);
+    font-size: 0.9rem;
+}
+
+/* Estilo para as listas dinâmicas (clientes, vendas, etc) */
+#listaClientes, #listaVendas, #listaDevedores {
+    display: grid;
+    gap: 1rem;
+}
+
+.item-lista {
+    background: var(--fundo-card);
+    padding: 1.2rem;
+    border-radius: 0.8rem;
+    border: 1px solid var(--borda-cor);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: 0.3s;
+}
+
+.item-lista:hover {
+    border-color: var(--cor-primaria);
+    transform: translateX(5px);
+}
+
+/* --- FORMULÁRIOS PROFISSIONAIS --- */
+.formulario {
+    max-width: 600px;
+    background: var(--fundo-card);
+    padding: 2.5rem;
+    border-radius: 1rem;
+    border: 1px solid var(--borda-cor);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.formulario label {
+    color: var(--texto-secundario);
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+select {
+    width: 100%;
+    padding: 0.8rem;
+    background: var(--fundo-cor);
+    border: 1px solid var(--borda-cor);
+    color: white;
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* Botões de ação dentro das listas */
+.btn-acao {
+    padding: 0.5rem 1rem;
+    border-radius: 0.4rem;
+    border: none;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.btn-delete { background: rgba(239, 68, 68, 0.1); color: var(--cor-erro); }
+.btn-edit { background: rgba(56, 189, 248, 0.1); color: var(--cor-primaria); }
+
+/* Estilo específico para itens da lista de Vendas */
+#listaVendas {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.item-venda {
+    background: var(--fundo-card);
+    padding: 1.2rem;
+    border-radius: 0.8rem;
+    border: 1px solid var(--borda-cor);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: 0.2s;
+}
+
+.item-venda:hover {
+    border-color: var(--cor-primaria);
+    transform: translateX(4px);
+}
+
+.info-venda h4 { color: var(--texto-principal); font-size: 1.05rem; }
+.info-venda p { color: var(--texto-secundario); font-size: 0.85rem; }
+
+.valor-venda { text-align: right; }
+.valor-venda strong { display: block; color: var(--texto-principal); font-size: 1.1rem; }
+
+/* Status Badges */
+.status {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.status.pago { background: rgba(34, 197, 94, 0.1); color: var(--cor-sucesso); }
+.status.pendente { background: rgba(239, 68, 68, 0.1); color: var(--cor-erro); }
+
+/* Estilo para a lista de devedores */
+#listaDevedores {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.item-devedor {
+    background: var(--fundo-card);
+    padding: 1.2rem;
+    border-radius: 0.8rem;
+    border: 1px solid var(--borda-cor);
+    border-left: 4px solid var(--cor-erro); /* Destaque em vermelho para dívida */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: 0.2s;
+}
+
+.item-devedor:hover {
+    background: var(--fundo-hover);
+    transform: scale(1.01);
+}
+
+.info-devedor h4 { color: var(--texto-principal); }
+.info-devedor p { color: var(--cor-erro); font-size: 0.8rem; font-weight: 600; }
+
+.btn-cobrar {
+    background: var(--cor-sucesso);
+    color: var(--texto-dark);
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.4rem;
+    font-weight: 700;
+    font-size: 0.75rem;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+/* Ajuste para centralizar o formulário na tela principal */
+.content-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Alinha ao topo/esquerda */
+}
+
+.formulario {
+    width: 100%;
+    max-width: 600px; /* Largura confortável para leitura */
+    margin: 0 auto; /* Centraliza o card do form na página */
+}
+
+/* Estilo para selects e inputs dentro de grids de formulário */
+.input-group select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+}
+
+/* --- CORREÇÃO DE LARGURA E ALINHAMENTO --- */
+
+/* Garante que o conteúdo ocupe a largura total disponível */
+.content-wrapper {
+    width: 100%;
+    padding: 2rem; /* Espaçamento interno para não grudar nas bordas */
+    display: block; /* Retorna ao padrão para não centralizar tudo como o form */
+}
+
+/* Faz a barra de busca ocupar 100% da largura */
+.card-buscar {
+    width: 100%;
+    background: var(--fundo-card);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    border: 1px solid var(--borda-cor);
+    margin-bottom: 2rem;
+}
+
+.card-buscar input {
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.8rem 1rem;
+    background: var(--fundo-cor);
+    border: 1px solid var(--borda-cor);
+    color: var(--texto-principal);
+    border-radius: 0.5rem;
+}
+
+/* Ajuste das listas para ocuparem a largura total */
+#listaClientes, #listaVendas, #listaDevedores {
+    width: 100%;
+    display: grid;
+    gap: 1rem;
+}
+
+/* --- AJUSTE DASHBOARD (CARDS) --- */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.card.financeiro {
+    width: 100%; /* Garante que os cards cresçam proporcionalmente */
+    margin: 0;   /* Remove margens que possam estar centralizando */
+}
+
+/* --- ESTILIZAÇÃO DOS CARDS DE CLIENTE --- */
+.card-item-flex {
+    background: var(--fundo-card);
+    border: 1px solid var(--borda-cor);
+    border-radius: 1rem;
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.card-item-flex:hover {
+    border-color: var(--cor-primaria);
+    transform: translateY(-2px);
+}
+
+.info-principal {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+}
+
+.avatar-cliente {
+    width: 45px;
+    height: 45px;
+    background: linear-gradient(135deg, var(--cor-primaria), #0ea5e9);
+    color: var(--fundo-cor);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+.info-principal h4 {
+    color: var(--texto-principal);
+    font-size: 1rem;
+    margin-bottom: 2px;
+}
+
+.info-principal p {
+    color: var(--texto-secundario);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.obs-tag {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 2px 8px;
+    background: rgba(56, 189, 248, 0.1);
+    color: var(--cor-primaria);
+    border-radius: 4px;
+    font-size: 0.7rem;
+}
+
+.acoes {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.btn-whatsapp { 
+    color: var(--cor-sucesso) !important; 
+    background: rgba(34, 197, 94, 0.1) !important;
+}
+
+.btn-whatsapp:hover { background: var(--cor-sucesso) !important; color: white !important; }
+
+.btn-delete { 
+    color: var(--cor-erro) !important; 
+    background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.btn-delete:hover { background: var(--cor-erro) !important; color: white !important; }
+
+/* --- ESTILIZAÇÃO DOS CARDS DE VENDA --- */
+.icon-venda {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-venda.pago {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--cor-sucesso);
+}
+
+.icon-venda.pendente {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b; /* Amarelo/Laranja para atenção */
+}
+
+.montante {
+    display: block;
+    font-size: 1.1rem;
+    color: var(--texto-principal);
+    margin-bottom: 4px;
+}
+
+/* Badges de Status mais profissionais */
+.badge-status {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-status.pago {
+    background: var(--cor-sucesso);
+    color: white;
+}
+
+.badge-status.pendente {
+    background: #f59e0b;
+    color: white;
+}
+
+/* Ajuste no card-item-flex para suportar a busca que você já tem */
+.item-venda {
+    border-left: 4px solid transparent;
+}
+
+.item-venda:has(.pago) { border-left-color: var(--cor-sucesso); }
+.item-venda:has(.pendente) { border-left-color: #f59e0b; }
+
+.input-mes {
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.8rem;
+    background: var(--fundo-cor);
+    border: 1px solid var(--borda-cor);
+    color: var(--texto-principal);
+    border-radius: 0.5rem;
+    color-scheme: dark; /* Faz o calendário do navegador ficar escuro também */
+}
+
+.btn-pago-fast {
+    background: var(--cor-sucesso);
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 5px;
+    transition: opacity 0.2s;
+}
+
+.btn-pago-fast:hover {
+    opacity: 0.9;
+}
+
+.lista-financeira {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.item-lucro-mes {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    background: var(--fundo-cor); /* Usa a cor de fundo definida no seu tema */
+    border-radius: 0.5rem;
+    border-left: 4px solid var(--cor-sucesso); /* Destaque verde para lucro */
+}
+
+.item-lucro-mes span {
+    color: var(--texto-secundario);
+    font-size: 0.9rem;
+}
+
+.item-lucro-mes strong {
+    color: var(--cor-sucesso);
+    font-size: 1rem;
+}
+
+/* --- ESTRUTURA --- */
+.dashboard-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 260px;
+    background: var(--fundo-card);
+    border-right: 1px solid var(--borda-cor);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: 100vh;
+    z-index: 1000;
+}
+
+.main-content {
+    flex: 1;
+    margin-left: 260px;
+    padding: 2rem;
+}
+
+/* --- SIDEBAR --- */
+.sidebar-header {
+    padding: 2rem 1.5rem;
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 700;
+    color: var(--cor-primaria);
+}
+
+.logo-icon {
+    background: var(--cor-primaria);
+    color: var(--fundo-cor);
+    width: 35px;
+    height: 35px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 0 1rem;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0.8rem 1rem;
+    color: var(--texto-secundario);
+    text-decoration: none;
+    border-radius: 0.5rem;
+    transition: 0.2s;
+}
+
+.nav-item:hover, .nav-item.active {
+    background: var(--fundo-hover);
+    color: var(--cor-primaria);
+}
+
+.sidebar-divider {
+    padding: 1.5rem 1rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--texto-secundario);
+    letter-spacing: 1px;
+}
+
+/* --- TOP BAR --- */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.page-header h3 { font-size: 1.5rem; }
+.page-header p { color: var(--texto-secundario); font-size: 0.9rem; }
+
+/* --- CARDS E GRIDS --- */
+.resumo-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.card {
+    background: var(--fundo-card);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    border: 1px solid var(--borda-cor);
+    transition: transform 0.2s;
+}
+
+.card:hover { transform: translateY(-3px); }
+
+.card span {
+    color: var(--texto-secundario);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.card h2 {
+    font-size: 1.8rem;
+    margin-top: 0.5rem;
+}
+
+/* --- FILTROS --- */
+.card-buscar {
+    background: var(--fundo-card);
+    padding: 1.2rem;
+    border-radius: 1rem;
+    border: 1px solid var(--borda-cor);
+}
+
+.input-mes {
+    background: var(--fundo-cor);
+    border: 1px solid var(--borda-cor);
+    color: var(--texto-principal);
+    padding: 0.6rem;
+    border-radius: 0.5rem;
+    color-scheme: dark;
+}
+
+/* --- SEÇÕES DE DETALHES --- */
+.recentes {
+    background: var(--fundo-card);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    border: 1px solid var(--borda-cor);
+}
+
+.recentes h3 {
+    margin-bottom: 1.2rem;
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--borda-cor);
+    padding-bottom: 0.5rem;
+}
+
+.item-recente {
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--borda-cor);
+}
+
+.item-recente:last-child { border-bottom: none; }
+
+/* --- BOTÕES --- */
+.btn-primary {
+    background: var(--cor-primaria);
+    color: var(--fundo-cor);
+    border: none;
+    padding: 0.7rem 1.2rem;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid var(--borda-cor);
+    color: var(--texto-secundario);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-secondary:hover {
+    color: var(--texto-principal);
+    border-color: var(--texto-principal);
+}
+
+.btn-logout {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--cor-erro);
+    border: none;
+    padding: 0.8rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: 0.2s;
+}
+
+/* --- UI VENDAS PREMIUM --- */
+
+.card-venda-premium {
+    background: var(--fundo-card);
+    border: 1px solid var(--borda-cor);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    transition: all 0.2s ease-in-out;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Indicador lateral de status */
+.card-venda-premium::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+}
+
+.card-venda-premium.pago::before { background: var(--cor-sucesso); }
+.card-venda-premium.pendente::before { background: var(--cor-alerta); }
+
+.venda-frente {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.venda-icone {
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.pago .venda-icone { background: rgba(34, 197, 94, 0.1); color: var(--cor-sucesso); }
+.pendente .venda-icone { background: rgba(245, 158, 11, 0.1); color: var(--cor-alerta); }
+
+.venda-detalhes h4 {
+    font-size: 1rem;
+    color: var(--texto-principal);
+    margin-bottom: 2px;
+}
+
+.venda-detalhes p {
+    font-size: 0.85rem;
+    color: var(--texto-secundario);
+}
+
+.venda-data {
+    font-size: 0.75rem;
+    color: #64748b;
+    display: block;
+    margin-top: 4px;
+}
+
+.venda-financeiro {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.venda-valor {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--texto-principal);
+    letter-spacing: -0.5px;
+}
+
+.venda-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+.pago .venda-badge {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.pendente .venda-badge {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* Efeito Hover */
+.card-venda-premium:hover {
+    transform: translateX(5px);
+    border-color: var(--cor-primaria);
+    background: var(--fundo-hover);
+}
+
+.btn-logout:hover { background: rgba(239, 68, 68, 0.2); }
+
+/* --- RESPONSIVIDADE --- */
+@media (max-width: 900px) {
+    .sidebar { width: 70px; }
+    .sidebar span, .sidebar-divider, .logo-area span { display: none; }
+    .main-content { margin-left: 70px; }
+    div[style*="grid-template-columns: 1.5fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+.card-item-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--fundo-card);
+    padding: 1rem;
+    border-radius: 0.8rem;
+    margin-bottom: 10px;
+    border: 1px solid var(--borda-cor);
+}
+
+.acoes {
+    display: flex;
+    gap: 8px;
+}
+
+.acoes button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+}
+
+/* Estilos para o Modal */
+.modal {
+    display: none; 
+    position: fixed;
+    z-index: 999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    width: 90%;
+    max-width: 500px;
+    animation: fadeIn 0.3s ease;
+}
+
+.btn-bi {
+    background-color: #0ea5e9;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+    display: inline-block; 
+    margin-bottom: 10px;
+}
+.btn-bi:hover {
+    background-color: #0284c7;
+}
+
+.form-group { margin-bottom: 1rem; }
+.form-group label { font-size: 0.8rem; color: var(--texto-secundario); }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- COMPORTAMENTO DESKTOP (PADRÃO) --- */
+.btn-menu-mobile, .nav-item-logout-mobile-item, .nav-item-mobile-custom {
+    display: none !important;
+}
+
+/* --- AJUSTE TOTAL ANDROID PROFISSIONAL --- */
+@media (max-width: 768px) {
+    /* RESET GLOBAL MOBILE: Segura tudo dentro da tela */
+    * {
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+    }
+
+    body, html {
+        overflow-x: hidden !important;
+        position: relative !important;
+        width: 100% !important;
+    }
+
+    /* 1. Layout Base */
+    .dashboard-layout {
+        display: block !important; 
+        overflow-x: hidden !important;
+        width: 100vw !important;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        width: 100vw !important;
+        padding: 20px 15px !important;
+        padding-top: 80px !important; 
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
+    }
+
+    /* 2. Botão Menu (Estilo Android Material) - AGORA FLUTUANTE E ELEGANTE */
+    .btn-menu-mobile {
+        display: flex !important;
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 2100; /* Mais alto que o header */
+        background: var(--cor-primaria);
+        border: none;
+        color: var(--fundo-cor);
+        padding: 12px;
+        border-radius: 12px; /* Mudado de 50% para quadrado arredondado */
+        box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+        cursor: pointer;
+        transition: transform 0.2s, background 0.2s;
+    }
+
+    .btn-menu-mobile:active {
+        transform: scale(0.9);
+    }
+
+    /* Ajuste para o Header Mobile para não subir no botão de menu */
+    .top-bar {
+        padding: 1rem !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 15px !important;
+    }
+
+    .user-info {
+        width: 100% !important;
+        justify-content: space-between !important;
+    }
+
+    .user-info .btn-secondary span,
+    .user-info button[id*="Exportar"] span,
+    .user-info .btn-primary span {
+        display: none !important; /* Oculta texto de botões e links no mobile para caberem lado a lado */
+    }
+
+    .user-info .btn-secondary,
+    .user-info .btn-primary,
+    .user-info button[id*="Exportar"] {
+        padding: 10px !important;
+        min-width: 44px !important;
+        height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 12px !important; /* Mudado de 50% para quadrado arredondado */
+    }
+
+    .user-info .btn-primary i, .user-info .btn-secondary i {
+        margin: 0 !important;
+    }
+
+    /* 2.1 Overlay para escurecer o fundo */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(3px);
+        z-index: 1040;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+    }
+
+    /* 3. Sidebar Retrátil Lateral */
+    .sidebar {
+        position: fixed !important;
+        left: -100% !important; /* Escondida */
+        top: 0;
+        width: 280px !important;
+        height: 100vh !important;
+        background: #1e293b !important;
+        z-index: 1050;
+        transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex !important;
+        flex-direction: column !important;
+        border-right: 1px solid var(--borda-cor);
+        padding: 20px !important;
+    }
+
+    .sidebar.active {
+        left: 0 !important; /* Desliza para dentro */
+    }
+
+    .sidebar-nav {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 5px !important;
+    }
+
+    .nav-item {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        padding: 15px !important;
+        border-radius: 10px;
+    }
+
+    .nav-item span {
+        display: inline !important; /* Mostra o texto no menu lateral */
+        margin-left: 10px;
+    }
+
+    .nav-item-logout-mobile-item {
+        display: flex !important; /* Força a exibição */
+        align-items: center;
+        padding: 15px !important;
+        margin-top: auto !important; /* Empurra para o fim do menu */
+        color: #f87171 !important; /* Cor de erro/alerta (vermelho suave) */
+        font-weight: bold;
+        text-decoration: none;
+        border-radius: 10px;
+        background: rgba(239, 68, 68, 0.1); /* Um fundo leve para destacar */
+    }
+
+    .nav-item-logout-mobile-item i {
+        margin-right: 10px;
+    }
+
+    /* Oculta o rodapé da sidebar original no mobile para não duplicar */
+    .sidebar-footer { display: none !important; }
+
+    /* 4. EMPILHAMENTO DE CARDS */
+    /* Faz o Fluxo de Caixa e Histórico ficarem um em cima do outro */
+    .dashboard-grid-sections, 
+    div[style*="grid-template-columns: 1.6fr 1fr"],
+    div[style*="grid-template-columns: 2fr 1fr"] {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 20px !important;
+    }
+
+    /* Cards de Resumo em Grade 2x2 ou 1x1 em telas muito pequenas */
+    .resumo-cards {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 12px !important;
+    }
+
+    @media (max-width: 480px) {
+        .resumo-cards {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
+    /* Saldo Geral centralizado e destaque */
+    .card-saldo-geral, 
+    div[style*="background: linear-gradient"] {
+        flex-direction: column !important;
+        text-align: center !important;
+        padding: 30px 20px !important;
+        border-radius: 16px !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
+    }
+
+    #saldoGeralTotal {
+        font-size: 1.8rem !important; /* Reduzido para caber em telas menores */
+        margin-top: 10px;
+        letter-spacing: -1px;
+    }
+
+    /* Melhoria nos cards de resumo */
+    .resumo-cards .card {
+        padding: 1.2rem !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    .resumo-cards .card h2 {
+        font-size: 1.4rem !important;
+    }
+    
+    .sidebar {
+        position: fixed !important;
+        left: -100% !important; /* Escondido */
+        top: 0;
+        width: 280px !important;
+        height: 100vh !important;
+        z-index: 1050 !important;
+        transition: left 0.3s ease-in-out !important; /* Suavidade */
+        display: flex !important;
+    }
+
+    .sidebar.active {
+        left: 0 !important; /* Mostra */
+    }
+
+    /* Estilo compartilhado para os botões novos no Mobile */
+    .nav-item-mobile-custom, .btn-bi {
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        padding: 15px !important;
+        border-radius: 10px !important;
+        font-size: 0.9rem !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
+        border: none !important;
+        cursor: pointer !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: white !important;
+        text-align: left !important;
+    }
+
+    /* Ajuste específico para o ícone e texto */
+    .nav-item-mobile-custom i, .btn-bi i {
+        margin-right: 12px !important;
+        min-width: 20px !important;
+    }
+
+    /* Cores específicas para destacar cada um no escuro da sidebar */
+    .btn-bi {
+        background: rgba(16, 185, 129, 0.1) !important; /* Verde suave */
+        color: #10b981 !important;
+    }
+
+    /* Oculta o botão de sair original do footer se você já usa o nav-item-logout-mobile-item */
+    .btn-logout { display: none !important; }
+
+    .sidebar-nav .nav-item span, 
+    .nav-item-mobile-custom span,
+    .nav-item-logout-mobile-item span,
+    .btn-bi span,
+    .logo-area span { /* Adicionado logo-area span */
+        display: inline !important; /* Isso impede que o texto suma */
+        margin-left: 10px !important;
+        font-size: 0.9rem !important;
+        white-space: nowrap !important; /* Impede que o texto quebre linha */
+    }
+
+    /* Garante que o botão se comporte como uma linha inteira */
+    .btn-bi, .nav-item-mobile-custom {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
+        padding: 12px 15px !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: none !important;
+        color: white !important;
+    }
+
+    /* --- AJUSTES MOBILE ESPECÍFICOS --- */
+    
+    /* Dashboard - Filtros centralizados */
+    .dashboard-filtros-mobile {
+        text-align: center !important;
+    }
+    
+    .dashboard-filtros-mobile .filtro-mes-dashboard {
+        justify-content: center !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    /* Dashboard - Fluxo de Caixa Recente + Ver Vendas centralizados */
+    .fluxo-cabecalho-mobile {
+        text-align: center !important;
+        justify-content: center !important;
+    }
+    
+    .fluxo-cabecalho-mobile .titulo-fluxo {
+        width: 100% !important;
+        text-align: center !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .fluxo-cabecalho-mobile .link-ver-vendas {
+        margin-top: 0.5rem !important;
+    }
+
+    /* Controle de Gastos - Centralizar total e seleção */
+    .card-buscar:has(> div > div:has(> span)) {
+        text-align: center !important;
+    }
+    
+    .card-buscar:has(> div > div:has(> span)) > div {
+        justify-content: center !important;
+        flex-direction: column !important;
+        align-items: center !important;
+    }
+    
+    .card-buscar:has(> div > div:has(> span)) .card {
+        width: 100% !important;
+        max-width: 200px !important;
+        margin-top: 1rem !important;
+    }
+
+    /* Pendentes - Centralizar */
+    .resumo-pendentes {
+        text-align: center !important;
+    }
+    
+    /* Nova Venda - Centralizar valor e status */
+    .formulario .input-group:has(> div[style*="grid-template-columns"]) {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    .formulario .input-group:has(> div[style*="grid-template-columns"]) > div {
+        width: 100% !important;
+    }
+
+    /* Grid do valor e status */
+    .input-group[style*="grid-template-columns: 1fr 1fr"] {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1rem !important;
+    }
+    
+    .input-group[style*="grid-template-columns: 1fr 1fr"] > div {
+        width: 100% !important;
+    }
+
+    /* Gastos - Centralizar seleção do mês e total */
+    .card-gastos-mobile {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 1rem !important;
+    }
+    
+    .card-gastos-mobile .gastos-selecao-mes {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+    
+    .card-gastos-mobile .gastos-selecao-mes .input-mes,
+    .card-gastos-mobile .gastos-selecao-mes .input-mes-gastos {
+        width: 100% !important;
+        max-width: 250px !important;
+    }
+    
+    .card-gastos-mobile .card-total-gasto {
+        width: 100% !important;
+        max-width: 250px !important;
+        text-align: center !important;
+        padding: 1rem !important;
+        border-color: var(--cor-erro) !important;
+        background: rgba(239, 68, 68, 0.05) !important;
+    }
+
+    /* Devedores - Centralizar e ajustar */
+    .resumo-pendentes-mobile {
+        text-align: center !important;
+    }
+    
+    .resumo-pendentes-mobile h2 {
+        color: #f59e0b !important;
+    }
+    
+    .devedores-header-pc {
+        flex-direction: column !important;
+        align-items: center !important;
+    }
+    
+    .devedores-header-pc .contador-pendentes {
+        margin-top: 0.5rem !important;
+        color: #f59e0b !important;
+    }
+    
+    .lista-devedores-mobile .card-venda-premium {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1rem !important;
+    }
+    
+    .lista-devedores-mobile .info-principal {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+    }
+    
+    .lista-devedores-mobile .venda-financeiro {
+        text-align: center !important;
+        width: 100% !important;
+    }
+
+    /* 5. Ajuste de Itens de Lista (Vendas, Gastos, Clientes) */
+    .item-venda, .item-devedor, .card-venda-premium {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 15px !important;
+        padding: 1.2rem !important;
+    }
+
+    /* 5. Ajuste de Itens de Lista (Vendas, Gastos, Clientes, Devedores) */
+    .item-venda, .item-devedor, .card-venda-premium, .item-cliente, .card-item-flex {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 15px !important;
+        padding: 1.2rem !important;
+        width: 100% !important;
+    }
+
+    .valor-venda, .venda-financeiro, .acoes-cliente, .acoes {
+        width: 100% !important;
+        text-align: left !important;
+        border-top: 1px solid var(--borda-cor);
+        padding-top: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .info-cliente, .info-venda, .info-devedor, .info-principal {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+    }
+
+    .venda-detalhes {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+    }
+
+    .acoes-cliente button, .acoes button {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .info-venda h4, .info-devedor h4 {
+        font-size: 1rem !important;
+    }
+
+    /* Botões de Ação na Lista */
+    .acoes-venda, .acoes-gasto {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+
+    .acoes-venda button, .acoes-gasto button {
+        padding: 10px !important;
+        justify-content: center !important;
+    }
+
+    /* Nova Venda - Centralizar valor e status */
+    .input-group:has(> div[style*="grid-template-columns"]) {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    .input-group:has(> div[style*="grid-template-columns"]) > div {
+        width: 100% !important;
+    }
+
+    /* Nova Venda Mobile - Valor e Status lado a lado no desktop, empilhados no mobile */
+    .input-group-val-status > div {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1rem !important;
+    }
+    
+    .input-group-val-status > div > div {
+        width: 100% !important;
+    }
+}
+
+/* Desktop - Manter Valor e Status lado a lado e centralizado */
+@media (min-width: 769px) {
+    /* Nova Venda - Valor e Status centralizados */
+    .input-group-val-status {
+        display: flex !important;
+        justify-content: center !important;
+    }
+    
+    .input-group-val-status > div {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 1rem !important;
+        width: 100% !important;
+        max-width: 500px !important;
+    }
+    
+    .input-group-val-status > div > div {
+        width: 100% !important;
+    }
+    
+    /* Dashboard - Fluxo de Caixa Recente com Ver Vendas lado a lado no desktop */
+    .fluxo-cabecalho {
+        flex-wrap: nowrap !important;
+    }
+    
+    /* Dashboard - Filtros centralizados no PC */
+    .dashboard-filtros-pc {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 2rem !important;
+    }
+    
+    .dashboard-filtros-pc .filtro-mes-dashboard {
+        display: flex !important;
+        align-items: center !important;
+        gap: 1rem !important;
+    }
+    
+    .dashboard-filtros-pc .filtro-mes-dashboard .input-mes-dashboard {
+        width: auto !important;
+    }
+    
+    .fluxo-cabecalho .link-ver-vendas {
+        width: auto !important;
+        text-align: right !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Devedores - Seleção do mês e pendentes lado a lado no desktop */
+    .devedores-header-pc {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 1.5rem !important;
+    }
+    
+    .devedores-header-pc .filtro-mes-devendo {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    .devedores-header-pc .contador-pendentes {
+        background: rgba(245, 158, 11, 0.1) !important;
+        color: #f59e0b !important;
+        padding: 0.5rem 1rem !important;
+        border-radius: 0.5rem !important;
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+        border: 1px solid rgba(245, 158, 11, 0.2) !important;
+        height: fit-content !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Total pendentes - amarelo no PC também */
+    .total-pendentes {
+        color: #f59e0b !important;
+    }
+    
+    /* Dashboard - Fluxo de Caixa Recente com Ver Vendas lado a lado no desktop */
+    .fluxo-cabecalho-mobile {
+        flex-wrap: nowrap !important;
+        justify-content: space-between !important;
+    }
+    
+    .fluxo-cabecalho-mobile .titulo-fluxo {
+        width: auto !important;
+        text-align: left !important;
+        margin-bottom: 0 !important;
+    }
+    
+    .fluxo-cabecalho-mobile .link-ver-vendas {
+        width: auto !important;
+        text-align: right !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Remove antigos estilos do fluxo-cabecalho se existirem */
+    .fluxo-cabecalho {
+        flex-wrap: nowrap !important;
+    }
+    
+    .fluxo-cabecalho .link-ver-vendas {
+        width: auto !important;
+        text-align: right !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Gastos - Centralizados no desktop */
+    .card-gastos-mobile {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 2rem !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .card-gastos-mobile .gastos-selecao-mes {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+    }
+    
+    .card-gastos-mobile .gastos-selecao-mes .input-mes-gastos {
+        width: 180px !important;
+    }
+    
+    .card-gastos-mobile .card-total-gasto {
+        padding: 1rem !important;
+        border-color: var(--cor-erro) !important;
+        background: rgba(239, 68, 68, 0.05) !important;
+        text-align: center !important;
+    }
+}

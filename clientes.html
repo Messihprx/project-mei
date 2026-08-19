@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clientes | FinMEI fluxo inteligente</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">MEI</div>
+                <span>finMEI</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> Dashboard
+            </a>
+            <a href="vendas.html" class="nav-item">
+                <i data-lucide="shopping-cart"></i> Vendas
+            </a>
+            <a href="gastos.html" class="nav-item">
+                <i data-lucide="trending-down"></i> Gastos
+            </a>
+            <a href="clientes.html" class="nav-item active">
+                <i data-lucide="users"></i> Clientes
+            </a>
+            <a href="devendo.html" class="nav-item">
+                <i data-lucide="alert-circle"></i> Devedores
+            </a>
+            
+            <div class="sidebar-divider">ATALHOS</div>
+            <a href="novo-cliente.html" class="nav-item">
+                <i data-lucide="user-plus"></i> Novo Cliente
+            </a>
+            <a href="nova-venda.html" class="nav-item">
+                <i data-lucide="plus-circle"></i> Nova Venda
+            </a>
+
+            <button onclick="logout()" class="btn-logout" style="margin-top: auto; margin-bottom: 20px; width: calc(100% - 32px); margin-left: 16px;">
+                <i data-lucide="log-out"></i> <span>Sair</span>
+            </button>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+        <header class="top-bar">
+            <div class="page-header">
+                <h3>Meus Clientes</h3>
+                <p>Visualize e gerencie seus contatos</p>
+            </div>
+            <div class="user-info" style="display: flex; gap: 10px;">
+                <button id="btnExportarClientes" class="btn-secondary" style="padding: 0.6rem 1.2rem; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; background: rgba(56, 189, 248, 0.1); color: var(--cor-primaria); border: 1px solid var(--cor-primaria);">
+                    <i data-lucide="download" style="width: 16px;"></i> Exportar CSV
+                </button>
+                <a href="novo-cliente.html" class="btn-primary" style="padding: 0.6rem 1.2rem; text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="user-plus" style="width: 16px;"></i> Novo Cliente
+                </a>
+            </div>
+        </header>
+
+        <section class="content-wrapper">
+            <div class="card-buscar" style="margin-bottom: 2rem;">
+                <label for="buscarCliente" style="font-size: 0.8rem; color: var(--texto-secundario); display: block; margin-bottom: 5px;">Pesquisar por nome</label>
+                <input type="text" id="buscarCliente" placeholder="Digite o nome do cliente..." style="width: 100%; padding: 0.8rem; background: var(--fundo-cor); border: 1px solid var(--borda-cor); border-radius: 0.5rem; color: white;">
+            </div>
+
+            <div id="listaClientes">
+                </div>
+        </section>
+    </main>
+
+    <div id="modalEditar" class="modal">
+        <div class="modal-content card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="color: var(--cor-primaria);">Editar Cliente</h3>
+                <button onclick="fecharModal()" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer;">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            
+            <form id="formEditarCliente">
+                <input type="hidden" id="editId">
+                <div class="form-group">
+                    <label>Nome do Cliente</label>
+                    <input type="text" id="editNome" required>
+                    <div id="erro-editNome" class="erro-campo"></div>
+                </div>
+                <div class="form-group">
+                    <label>Telefone</label>
+                    <input type="text" id="editTelefone">
+                    <div id="erro-editTelefone" class="erro-campo"></div>
+                </div>
+                <div class="form-group">
+                    <label>Observação</label>
+                    <textarea id="editObs" rows="3" style="width: 100%; background: var(--fundo-cor); border: 1px solid var(--borda-cor); color: white; border-radius: 0.5rem; padding: 0.8rem; margin-top: 0.5rem;"></textarea>
+                </div>
+                <div id="erro-formEditarCliente" class="erro-campo erro-formulario"></div>
+                <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+                    <button type="submit" class="btn-primary" style="flex: 1;">Salvar Alterações</button>
+                    <button type="button" onclick="fecharModal()" class="btn-secondary" style="flex: 1;">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/clientes.js"></script>
+    <script>
+        // Inicializa ícones do Lucide
+        lucide.createIcons();
+    </script>
+
+</body>
+</html>

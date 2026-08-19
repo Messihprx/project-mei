@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meus Gastos | FinMEI fluxo inteligente</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="dashboard-layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area"><div class="logo-icon">MEI</div><span>finMEI</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html" class="nav-item"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+            <a href="vendas.html" class="nav-item"><i data-lucide="shopping-cart"></i> Vendas</a>
+            <a href="gastos.html" class="nav-item active"><i data-lucide="trending-down"></i> Gastos</a>
+            <a href="clientes.html" class="nav-item"><i data-lucide="users"></i> Clientes</a>
+            <a href="devendo.html" class="nav-item"><i data-lucide="alert-circle"></i> Devedores</a>
+            <div class="sidebar-divider">ATALHOS</div>
+            <a href="novo-cliente.html" class="nav-item">
+                <i data-lucide="user-plus"></i> Novo Cliente
+            </a>
+            <a href="nova-venda.html" class="nav-item">
+                <i data-lucide="plus-circle"></i> Nova Venda
+            </a>
+            <button onclick="logout()" class="btn-logout"><i data-lucide="log-out"></i><span>Sair</span></button>
+        </nav>
+        
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+        <header class="top-bar">
+            <div class="page-header">
+                <h3>Controle de Gastos</h3>
+                <p>Gerencie suas saídas e despesas</p>
+            </div>
+            <div class="user-info" style="display: flex; gap: 10px;">
+                <button id="btnExportarGastos" class="btn-secondary" style="padding: 0.6rem 1.2rem; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; background: rgba(56, 189, 248, 0.1); color: var(--cor-primaria); border: 1px solid var(--cor-primaria);">
+                    <i data-lucide="download" style="width: 16px;"></i> Exportar CSV
+                </button>
+                <button onclick="abrirModalGasto()" class="btn-primary" style="width: auto; padding: 0.6rem 1.2rem; display: flex; gap: 8px; align-items: center;">
+                    <i data-lucide="plus-circle"></i> Novo Gasto
+                </button>
+            </div>
+        </header>
+
+        <section class="content-wrapper">
+            <div class="card-buscar card-gastos-mobile">
+                <div class="gastos-selecao-mes">
+                    <label style="font-size: 0.8rem; color: var(--texto-secundario);">Mês de Referência:</label>
+                    <input type="month" id="filtroMesGastos" class="input-mes input-mes-gastos">
+                </div>
+                <div class="card card-total-gasto">
+                    <span style="font-size: 0.7rem;">TOTAL GASTO NO MÊS</span>
+                    <h3 id="totalGastoMes" style="color: var(--cor-erro); margin: 0;">R$ 0,00</h3>
+                </div>
+            </div>
+
+            <div id="listaGastos" style="margin-top: 1.5rem;">
+                </div>
+        </section>
+    </main>
+
+    <div id="modalGasto" class="modal">
+        <div class="modal-content card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="color: var(--cor-erro);">Registrar Saída</h3>
+                <button onclick="fecharModalGasto()" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer;"><i data-lucide="x"></i></button>
+            </div>
+            
+            <form id="formNovoGasto">
+                <div class="input-group">
+                    <label>Descrição do Gasto</label>
+                    <input type="text" id="descGasto" placeholder="Ex: Compra de embalagens" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="input-group">
+                        <label>Valor (R$)</label>
+                        <input type="number" id="valorGasto" placeholder="0,00" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Data</label>
+                        <input type="date" id="dataGasto" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Categoria</label>
+                    <select id="catGasto">
+                        <option value="Mercadoria">Mercadoria / Estoque</option>
+                        <option value="Aluguel">Aluguel / Espaço</option>
+                        <option value="Marketing">Marketing / Anúncios</option>
+                        <option value="Serviços">Luz / Água / Internet</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary" style="background: var(--cor-erro); color: white; margin-top: 1rem;">Salvar Gasto</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalEditarGasto" class="modal">
+        <div class="modal-content card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="color: var(--cor-primaria);">Editar Saída</h3>
+                <button onclick="fecharModalEditarGasto()" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer;"><i data-lucide="x"></i></button>
+            </div>
+            
+            <form id="formEditarGasto">
+                <input type="hidden" id="editGastoId">
+                <div class="input-group">
+                    <label>Descrição do Gasto</label>
+                    <input type="text" id="editDescGasto" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="input-group">
+                        <label>Valor (R$)</label>
+                        <input type="number" id="editValorGasto" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Data</label>
+                        <input type="date" id="editDataGasto" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Categoria</label>
+                    <select id="editCatGasto">
+                        <option value="Mercadoria">Mercadoria / Estoque</option>
+                        <option value="Aluguel">Aluguel / Espaço</option>
+                        <option value="Marketing">Marketing / Anúncios</option>
+                        <option value="Serviços">Luz / Água / Internet</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/gastos.js"></script>
+    <script>setTimeout(() => lucide.createIcons(), 500);</script>
+</body>
+</html>

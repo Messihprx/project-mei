@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Importar Dados | FinMEI fluxo inteligente</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+</head>
+<body class="dashboard-layout" style="display: block;">
+
+    <div class="container-importacao" style="max-width: 600px; margin: 2rem auto; padding: 0 1rem;">
+        <header style="margin-bottom: 2rem;">
+            <a href="index.html" style="text-decoration: none; color: var(--cor-primaria); font-weight: 600; display: flex; align-items: center; gap: 5px;">
+                <i data-lucide="arrow-left"></i> Voltar ao Dashboard
+            </a>
+            <h2 style="margin-top: 1rem;">Importação Geral</h2>
+            <p style="color: gray; font-size: 0.9rem;">Siga a ordem numérica para garantir a integridade dos dados.</p>
+        </header>
+
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            
+            <div class="card-item-flex" style="flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="background: var(--cor-primaria); color: white; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.8rem;">1</span>
+                    <h4 style="margin:0">Clientes</h4>
+                </div>
+                <p style="font-size: 0.8rem; color: #666;">Importe primeiro os clientes para que as vendas possam ser vinculadas a eles.</p>
+                <input type="file" id="csvClientes" accept=".csv,.txt" style="display: none;">
+                <button onclick="document.getElementById('csvClientes').click()" class="btn-acao" style="background: #eee; width: 100%; justify-content: center; border: 1px solid #ccc;">
+                    <i data-lucide="file-up"></i> Selecionar Clientes_Geral.csv
+                </button>
+                <div id="statusClientes" class="status-msg"></div>
+            </div>
+
+            <div class="card-item-flex" style="flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="background: var(--cor-primaria); color: white; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.8rem;">2</span>
+                    <h4 style="margin:0">Gastos (Despesas)</h4>
+                </div>
+                <input type="file" id="csvGastos" accept=".csv,.txt" style="display: none;">
+                <button onclick="document.getElementById('csvGastos').click()" class="btn-acao" style="background: #eee; width: 100%; justify-content: center; border: 1px solid #ccc;">
+                    <i data-lucide="file-up"></i> Selecionar Gastos_Mes.csv
+                </button>
+                <div id="statusGastos" class="status-msg"></div>
+            </div>
+
+            <div class="card-item-flex" style="flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="background: var(--cor-primaria); color: white; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.8rem;">3</span>
+                    <h4 style="margin:0">Vendas</h4>
+                </div>
+                <p style="font-size: 0.8rem; color: #666;">As vendas serão conectadas aos clientes pelo nome automaticamente.</p>
+                <input type="file" id="csvVendas" accept=".csv,.txt" style="display: none;">
+                <button onclick="document.getElementById('csvVendas').click()" class="btn-acao" style="background: #eee; width: 100%; justify-content: center; border: 1px solid #ccc;">
+                    <i data-lucide="file-up"></i> Selecionar Vendas_Mes.csv
+                </button>
+                <div id="statusVendas" class="status-msg"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <style>
+        .status-msg { font-size: 0.8rem; margin-top: 5px; font-weight: 600; min-height: 1.2em; }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .loading { color: #f59e0b; }
+    </style>
+
+    <script type="module">
+        import { supabase } from './js/auth.js';
+
+        // ==================== FUNÇÕES AUXILIARES ====================
+
+        // Normaliza texto: minúsculo, sem acento, sem espaços extras
+        function normalizar(str) {
+            if (!str) return '';
+            return String(str).trim().toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+
+        // Busca valor em objeto por múltiplos nomes de coluna (case-insensitive, sem acento)
+        function buscarCol(linha, ...nomes) {
+            // Cria mapa normalizado -> valor original
+            const mapa = {};
+            for (const key of Object.keys(linha)) {
+                mapa[normalizar(key)] = linha[key];
+            }
+            for (const nome of nomes) {
+                const valor = mapa[normalizar(nome)];
+                if (valor !== undefined && valor !== null && String(valor).trim() !== '') {
+                    return String(valor).trim();
+                }
+            }
+            return '';
+        }
+
+        // Formatar data para o banco (aceita múltiplos formatos)
+        function formatarDataParaBanco(data) {
+            if (!data) return new Date().toISOString().split('T')[0];
+            const s = String(data).trim();
+
+            // DD/MM/AAAA ou DD/MM/AAAA HH:MM
+            if (s.includes('/')) {
+                const parteData = s.split(' ')[0]; // Ignora hora se houver
+                const partes = parteData.split('/');
+                if (partes.length === 3) {
+                    const [d, m, a] = partes;
+                    return `${a.trim()}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                }
+            }
+
+            // AAAA-MM-DD ou AAAA-MM-DDTHH:MM:SS
+            if (s.includes('-')) {
+                return s.split('T')[0].split(' ')[0]; // Pega só a parte da data
+            }
+
+            return new Date().toISOString().split('T')[0];
+        }
+
+        // Detectar delimitador do CSV (amostra as primeiras linhas)
+        function detectarDelimitador(texto) {
+            const amostra = texto.split('\n').slice(0, 5).join('\n');
+            const contagem = { ';': 0, ',': 0, '\t': 0 };
+            // Conta ocorrências de cada delimitador (ignorando dentro de aspas)
+            for (const linha of amostra.split('\n')) {
+                if (!linha.trim()) continue;
+                // Remove conteúdo entre aspas para contar delimitadores reais
+                const limpa = linha.replace(/"[^"]*"/g, '');
+                contagem[';'] += (limpa.match(/;/g) || []).length;
+                contagem[','] += (limpa.match(/,/g) || []).length;
+                contagem['\t'] += (limpa.match(/\t/g) || []).length;
+            }
+            // Retorna o delimitador mais frequente
+            return Object.entries(contagem).sort((a, b) => b[1] - a[1])[0][0];
+        }
+
+        // Parse do CSV com detecção automática de delimitador
+        function parseCSV(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const texto = e.target.result;
+                const delimitador = detectarDelimitador(texto);
+
+                Papa.parse(file, {
+                    header: true,
+                    delimiter: delimitador,
+                    skipEmptyLines: 'greedy',
+                    transformHeader: h => h.trim().replace(/\uFEFF/g, ''),
+                    complete: callback,
+                    error: function(err) {
+                        callback({ data: [], errors: [err] });
+                    }
+                });
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        import { verificarStatusPlano } from './js/planos.js';
+
+        // Bloqueia a importação se não for Premium
+        (async function verificarRegraPremium() {
+            const status = await verificarStatusPlano();
+            if (!status.premium) {
+                alert("🔒 Função Premium: O módulo de importação de dados em massa é exclusivo para assinantes Premium. Faça o upgrade agora!");
+                window.location.href = "planos.html";
+            }
+        })();
+
+        // ==================== 1. IMPORTAR CLIENTES ====================
+        document.getElementById('csvClientes').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const divStatus = document.getElementById('statusClientes');
+
+            if (!file) return;
+            divStatus.className = "status-msg loading";
+            divStatus.innerText = "Processando...";
+
+            parseCSV(file, async function(results) {
+                try {
+                    if (results.errors && results.errors.length > 0 && results.data.length === 0) {
+                        divStatus.className = "status-msg error";
+                        divStatus.innerText = "❌ Erro ao ler o arquivo CSV. Verifique o formato.";
+                        return;
+                    }
+
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) { divStatus.className = "status-msg error"; divStatus.innerText = "❌ Usuário não autenticado."; return; }
+
+                    const clientesParaInserir = results.data
+                        .filter(item => buscarCol(item, 'Nome', 'nome', 'Nome Completo', 'nome completo', 'cliente'))
+                        .map(item => ({
+                            nome: buscarCol(item, 'Nome', 'nome', 'Nome Completo', 'cliente'),
+                            telefone: buscarCol(item, 'Telefone', 'telefone', 'Fone', 'fone', 'Phone', 'Celular', 'celular'),
+                            observacao: buscarCol(item, 'Observacao', 'Observação', 'observacao', 'observação', 'Obs', 'obs'),
+                            user_id: user.id,
+                            ativo: true
+                        }));
+
+                    if (clientesParaInserir.length === 0) {
+                        divStatus.className = "status-msg error";
+                        divStatus.innerText = "❌ Nenhum cliente válido encontrado. Verifique se a coluna se chama 'Nome'.";
+                        return;
+                    }
+
+                    const { error } = await supabase.from('clientes').insert(clientesParaInserir);
+
+                    if (error) {
+                        console.error("Erro Supabase:", error);
+                        divStatus.className = "status-msg error";
+                        divStatus.innerText = "❌ Erro: " + error.message;
+                    } else {
+                        divStatus.className = "status-msg success";
+                        divStatus.innerText = `✅ ${clientesParaInserir.length} cliente(s) importado(s)!`;
+                    }
+                } catch (err) {
+                    divStatus.className = "status-msg error";
+                    divStatus.innerText = "❌ Erro inesperado: " + err.message;
+                    console.error(err);
+                }
+
+                e.target.value = '';
+            });
+        });
+
+        // ==================== 2. IMPORTAR GASTOS ====================
+        document.getElementById('csvGastos').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const divStatus = document.getElementById('statusGastos');
+
+            if (!file) return;
+            divStatus.className = "status-msg loading";
+            divStatus.innerText = "Processando...";
+
+            parseCSV(file, async function(results) {
+                try {
+                    if (results.errors && results.errors.length > 0 && results.data.length === 0) {
+                        divStatus.className = "status-msg error";
+                        divStatus.innerText = "❌ Erro ao ler o arquivo CSV. Verifique o formato.";
+                        return;
+                    }
+
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) { divStatus.className = "status-msg error"; divStatus.innerText = "❌ Usuário não autenticado."; return; }
+
+                    const formatados = results.data
+                        .filter(g => buscarCol(g, 'Descricao', 'Descrição', 'descricao', 'descrição', 'Descricao', 'Descricao'))
+                        .map(g => ({
+                            user_id: user.id,
+                            descricao: buscarCol(g, 'Descricao', 'Descrição', 'descricao', 'descrição'),
+                            categoria: buscarCol(g, 'Categoria', 'categoria', 'Cat', 'cat') || 'Geral',
+                            valor: parseFloat(buscarCol(g, 'Valor', 'valor').replace(',', '.')) || 0,
+                            data: formatarDataParaBanco(buscarCol(g, 'Data', 'data', 'Data Gasto'))
+                        }));
+
+                    if (formatados.length === 0) {
+                        divStatus.className = "status-msg error";
+                        divStatus.innerText = "❌ Nenhum gasto válido encontrado. Verifique se a coluna se chama 'Descricao' e 'Valor'.";
+                        return;
+                    }
+
+                    const { error } = await supabase.from('despesas').insert(formatados);
+
+                    if (error) {
+                        console.error("Erro Supabase:", error);
+                        divStatus.className = "status-msg error";
+                        divStatus.innerText = "❌ Erro: " + error.message;
+                    } else {
+                        divStatus.className = "status-msg success";
+                        divStatus.innerText = `✅ ${formatados.length} gasto(s) importado(s)!`;
+                    }
+                } catch (err) {
+                    divStatus.className = "status-msg error";
+                    divStatus.innerText = "❌ Erro inesperado: " + err.message;
+                    console.error(err);
+                }
+
+                e.target.value = '';
+            });
+        });
+
+        // ==================== 3. IMPORTAR VENDAS ====================
+        document.getElementById('csvVendas').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const divStatus = document.getElementById('statusVendas');
+
+            if (!file) return;
+            divStatus.className = "status-msg loading";
+            divStatus.innerText = "Processando...";
+
+            parseCSV(file, async function(results) {
+                try {
+                    if (results.errors && results.errors.length > 0 && results.data.length === 0) {
+                        divStatus.className = "status-msg error";
+                        divStatus.innerText = "❌ Erro ao ler o arquivo CSV. Verifique o formato.";
+                        return;
+                    }
+
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) { divStatus.className = "status-msg error"; divStatus.innerText = "❌ Usuário não autenticado."; return; }
+
+                    let count = 0;
+                    let erros = [];
+
+                    for (const v of results.data) {
+                        const nomeCliente = buscarCol(v, 'Cliente', 'cliente', 'CLIENTE', 'Nome Cliente');
+                        if (!nomeCliente) continue;
+
+                        const valorRaw = buscarCol(v, 'Valor', 'valor');
+                        if (!valorRaw) { erros.push(`Linha sem valor: ${nomeCliente}`); continue; }
+
+                        try {
+                            // Busca cliente existente
+                            let { data: cliente } = await supabase
+                                .from('clientes')
+                                .select('id')
+                                .ilike('nome', nomeCliente)
+                                .eq('user_id', user.id)
+                                .maybeSingle();
+
+                            // Cria cliente se não existir
+                            if (!cliente) {
+                                const { data: novo, error: errCli } = await supabase.from('clientes')
+                                    .insert({ nome: nomeCliente, user_id: user.id, ativo: true })
+                                    .select('id').single();
+                                if (errCli) { erros.push(`Erro ao criar cliente "${nomeCliente}": ${errCli.message}`); continue; }
+                                cliente = novo;
+                            }
+
+                            // Insere venda
+                            const { error: errVenda } = await supabase.from('vendas').insert({
+                                user_id: user.id,
+                                cliente_id: cliente.id,
+                                descricao: buscarCol(v, 'Descricao', 'Descrição', 'descricao', 'descrição') || 'Venda',
+                                valor: parseFloat(valorRaw.replace(',', '.')),
+                                status: buscarCol(v, 'Status', 'status').toLowerCase() || 'pago',
+                                created_at: formatarDataParaBanco(buscarCol(v, 'Data', 'data'))
+                            });
+
+                            if (errVenda) { erros.push(`Erro na venda de "${nomeCliente}": ${errVenda.message}`); }
+                            else { count++; }
+                        } catch (errLinha) {
+                            erros.push(`Erro em "${nomeCliente}": ${errLinha.message}`);
+                        }
+                    }
+
+                    if (count > 0 && erros.length === 0) {
+                        divStatus.className = "status-msg success";
+                        divStatus.innerText = `✅ ${count} venda(s) importada(s)!`;
+                    } else if (count > 0 && erros.length > 0) {
+                        divStatus.className = "status-msg loading";
+                        divStatus.innerText = `⚠️ ${count} venda(s) importada(s), ${erros.length} com erro. (${erros[0]})`;
+                    } else if (count === 0) {
+                        divStatus.className = "status-msg error";
+                        divStatus.innerText = `❌ Nenhuma venda importada. ${erros.length > 0 ? erros[0] : 'Verifique as colunas Cliente, Valor e Data.'}`;
+                    }
+                } catch (err) {
+                    divStatus.className = "status-msg error";
+                    divStatus.innerText = "❌ Erro inesperado: " + err.message;
+                    console.error(err);
+                }
+
+                e.target.value = '';
+            });
+        });
+
+        lucide.createIcons();
+    </script>
+</body>
+</html>
