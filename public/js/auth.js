@@ -65,8 +65,8 @@ import { injetarBannerPlano } from './planos.js';
 // 1. VERIFICAR ACESSO (Proteção de Rotas)
 async function verificarAcesso() {
     const { data: { session } } = await supabase.auth.getSession();
-    const paginasPublicas = ["login.html", "cadastro.html", "recuperar.html", "redefinir-senha.html", "planos.html", ""];
-    const paginaAtual = window.location.pathname.split("/").pop() || "index.html";
+    const paginasPublicas = ["login", "cadastro", "recuperar", "redefinir-senha", "planos", ""];
+    const paginaAtual = (window.location.pathname.split("/").pop() || "index").split(".")[0];
 
     // Se NÃO está em página pública e não tem sessão -> manda pro login
     if (!paginasPublicas.includes(paginaAtual) && !session) {
@@ -74,7 +74,7 @@ async function verificarAcesso() {
         return;
     }
     // Se já tem sessão e está no login/cadastro
-    if ((paginaAtual === "login.html" || paginaAtual === "cadastro.html") && session) {
+    if ((paginaAtual === "login" || paginaAtual === "cadastro") && session) {
         window.location.href = "index.html";
         return;
     }
