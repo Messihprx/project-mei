@@ -113,15 +113,15 @@ window.marcarComoPago = async (id) => {
     try {
         const { error } = await supabase.from('vendas').update({ status: 'pago' }).eq('id', id);
         if (error) throw error;
-        alert("✅ Status atualizado!");
+        mostrarModal('Status atualizado!', 'A venda foi marcada como recebida.', 'sucesso');
         carregarDevedores();
     } catch (err) {
-        alert("Erro ao atualizar: " + err.message);
+        mostrarModal('Erro ao atualizar', traduzirErro(err.message));
     }
 };
 
 window.enviarCobranca = (telefone, nome, valor) => {
-    if (!telefone) return alert("Cliente sem telefone cadastrado.");
+    if (!telefone) return mostrarModal('Sem telefone', 'Cliente sem telefone cadastrado.', 'alerta');
     const numero = telefone.replace(/\D/g, "");
     const msg = encodeURIComponent(`Olá ${nome}, tudo bem? Passando para lembrar do valor de R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})} pendente. Como prefere pagar?`);
     window.open(`https://wa.me/55${numero}?text=${msg}`, '_blank');

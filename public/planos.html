@@ -414,7 +414,7 @@
                 window.location.href = res.init_point;
             } else {
                 document.getElementById('etapaProcessando').style.display = 'none';
-                alert("Erro ao conectar com Mercado Pago: " + res.message);
+                mostrarModal('Erro no pagamento', 'Erro ao conectar com Mercado Pago: ' + (res.message || 'tente novamente.'));
                 window.fecharCheckout();
             }
         };

@@ -53,7 +53,7 @@ if (formNovaVenda) {
         const valorNumerico = parseFloat(valor); // Aqui estava o erro (valorInput não existia)
 
         if (isNaN(valorNumerico) || valorNumerico <= 0) {
-            alert("Por favor, insira um valor de venda válido e maior que zero.");
+            mostrarModal('Valor inválido', 'Por favor, insira um valor de venda válido e maior que zero.', 'alerta');
             return; 
         }
         // ------------------------------------------
@@ -62,7 +62,7 @@ if (formNovaVenda) {
         const clienteEncontrado = listaDeClientesGlobal.find(c => c.nome === nomeDigitado);
 
         if (!clienteEncontrado) {
-            alert("Por favor, selecione um cliente válido da lista de sugestões.");
+            mostrarModal('Cliente inválido', 'Por favor, selecione um cliente válido da lista de sugestões.', 'alerta');
             return;
         }
 
@@ -84,11 +84,11 @@ if (formNovaVenda) {
 
             if (error) throw error;
 
-            alert("✅ Venda registrada com sucesso!");
-            window.location.href = "vendas.html";
+            mostrarModal('Venda registrada!', 'Sua venda foi registrada com sucesso.', 'sucesso');
+            setTimeout(() => { window.location.href = "vendas.html"; }, 1500);
 
         } catch (err) {
-            alert("Erro ao registrar venda: " + err.message);
+            mostrarModal('Erro ao registrar venda', traduzirErro(err.message));
         } finally {
             btn.disabled = false;
             btn.innerText = "Finalizar Registro";

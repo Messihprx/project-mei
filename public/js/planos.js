@@ -288,8 +288,8 @@ export async function injetarBannerPlano() {
 window.abrirImportacao = async function() {
     const status = await verificarStatusPlano();
     if (!status.premium) {
-        alert("🔒 Função Premium: O módulo de importação em massa de dados via CSV é exclusivo para assinantes Premium. Faça o upgrade agora!");
-        window.location.href = "planos.html";
+        mostrarModal('Recurso Premium', 'O módulo de importação em massa de dados via CSV é exclusivo para assinantes Premium. Faça o upgrade agora!', 'alerta');
+        setTimeout(() => { window.location.href = "planos.html"; }, 2000);
         return;
     }
     window.location.href = "importar.html";

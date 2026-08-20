@@ -1,0 +1,35 @@
+{
+  "changelogs": [
+    {
+      "data": "2026-08-19",
+      "resumo": "Validações em português com modal, tela de confirmação de e-mail, templates de e-mail, SMTP via Brevo e correção do preenchimento de perfil.",
+      "atualizacoes": [
+        {
+          "categoria": "Validações",
+          "titulo": "Validações em português com modal estilizado",
+          "descricao": "Todos os alert() nativos foram substituídos por um modal no tema do app (erro, sucesso e alerta). Mensagens de erro do Supabase traduzidas para o português no login, cadastro, recuperação e redefinição de senha, além de vendas, gastos, clientes e devedores."
+        },
+        {
+          "categoria": "Autenticação",
+          "titulo": "Tela de confirmação de e-mail",
+          "descricao": "Nova página confirmar-email.html que aguarda a confirmação do e-mail e entra automaticamente no sistema quando o usuário clica no link recebido (funciona no celular e no PC)."
+        },
+        {
+          "categoria": "E-mails",
+          "titulo": "Templates de e-mail no visual do FinMEI",
+          "descricao": "Criados templates HTML de confirmação de e-mail (confirmar-email.html) e de recuperação de senha (recuperar-senha.html) para configurar no Supabase."
+        },
+        {
+          "categoria": "E-mails",
+          "titulo": "Configuração de SMTP via Brevo",
+          "descricao": "SMTP configurado no Supabase através do Brevo (plano gratuito, 300 e-mails/dia) para envio dos e-mails transacionais."
+        },
+        {
+          "categoria": "Banco de Dados",
+          "titulo": "Correção da tabela perfis",
+          "descricao": "Trigger handle_new_user atualizada para preencher automaticamente as colunas nome_completo e email em novos cadastros (com e-mail ou via Google), com backfill para os perfis antigos que ficaram com NULL."
+        }
+      ]
+    }
+  ]
+}

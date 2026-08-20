@@ -217,16 +217,16 @@ document.addEventListener("DOMContentLoaded", () => {
 window.abrirRelatorioAnalitico = async function() {
     const statusObj = await verificarStatusPlano();
     if (!statusObj.premium) {
-        alert("🔒 Função Premium: O módulo de Relatórios de BI Avançados está disponível apenas para assinantes Premium. Faça o upgrade agora!");
-        window.location.href = "planos.html";
+        mostrarModal('Recurso Premium', 'O módulo de Relatórios de BI Avançados está disponível apenas para assinantes Premium. Faça o upgrade agora!', 'alerta');
+        setTimeout(() => { window.location.href = "planos.html"; }, 2000);
         return;
     }
 
     const { data: { user }, error } = await supabase.auth.getUser();
 
     if (error || !user) {
-        alert("Por favor, faça login para acessar seus relatórios.");
-        window.location.href = "login.html"; // Redireciona para sua página de login
+        mostrarModal('Faça login', 'Por favor, faça login para acessar seus relatórios.');
+        setTimeout(() => { window.location.href = "login.html"; }, 2000);
         return;
     }
 

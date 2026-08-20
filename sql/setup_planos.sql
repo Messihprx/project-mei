@@ -14,15 +14,26 @@ ON public.perfis FOR SELECT
 USING ( auth.uid() = id ); -- Mudamos de user_id para id
 
 -- 4. Função para auto-inserir perfil quando um novo usuário se cadastra
+--    (preenche nome_completo e email de cadastros com e-mail ou com Google)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY definer SET search_path = public
 AS $$
 BEGIN
-  -- Se a sua tabela perfis usa a coluna 'id' como chave estrangeira pra auth.users:
-  INSERT INTO public.perfis (id, plano, criado_em)
-  VALUES (new.id, 'gratuito', timezone('utc'::text, now()));
+  INSERT INTO public.perfis (id, nome_completo, email, plano, criado_em)
+  VALUES (
+    new.id,
+    COALESCE(
+      new.raw_user_meta_data->>'nome',
+      new.raw_user_meta_data->>'full_name',
+      new.raw_user_meta_data->>'name'
+    ),
+    new.email,
+    'gratuito',
+    timezone('utc'::text, now())
+  )
+  ON CONFLICT (id) DO NOTHING;
   RETURN new;
 END;
 $$;

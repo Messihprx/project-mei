@@ -56,11 +56,11 @@ if (formNovaVenda) {
 
             if (error) throw error;
 
-            alert("✅ Venda registrada!");
-            window.location.href = "vendas.html";
+            mostrarModal('Venda registrada!', 'Sua venda foi registrada com sucesso.', 'sucesso');
+            setTimeout(() => { window.location.href = "vendas.html"; }, 1500);
 
         } catch (err) {
-            alert("Erro: " + err.message);
+            mostrarModal('Erro ao registrar venda', traduzirErro(err.message));
         } finally {
             btn.disabled = false;
             btn.innerText = "Finalizar Registro";
@@ -153,7 +153,7 @@ window.deletarVenda = async (id) => {
         if (error) throw error;
         carregarVendas();
     } catch (err) {
-        alert("Erro ao excluir: " + err.message);
+        mostrarModal('Erro ao excluir', traduzirErro(err.message));
     }
 };
 
@@ -189,7 +189,7 @@ if (formEditarVenda) {
             fecharModalEditarVenda();
             carregarVendas();
         } catch (err) {
-            alert("Erro ao atualizar: " + err.message);
+            mostrarModal('Erro ao atualizar', traduzirErro(err.message));
         } finally {
             btn.disabled = false;
             btn.innerText = "Salvar Alterações";
@@ -231,8 +231,8 @@ document.addEventListener("DOMContentLoaded", () => {
         btnExport.addEventListener("click", async () => {
             const status = await verificarStatusPlano();
             if (!status.premium) {
-                alert("🔒 Função Premium: A exportação de relatórios detalhados é um recurso exclusivo para assinantes Premium.");
-                window.location.href = "planos.html";
+                mostrarModal('Recurso Premium', 'A exportação de relatórios detalhados é um recurso exclusivo para assinantes Premium.', 'alerta');
+                setTimeout(() => { window.location.href = "planos.html"; }, 2000);
                 return;
             }
 
@@ -256,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (error) throw error;
 
                 if (!vendas || vendas.length === 0) {
-                    alert("Nenhuma venda encontrada para exportar neste mês.");
+                    mostrarModal('Nenhuma venda', 'Nenhuma venda encontrada para exportar neste mês.', 'alerta');
                     return;
                 }
 
@@ -278,7 +278,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             } catch (err) {
                 console.error("Erro ao exportar:", err.message);
-                alert("Erro ao exportar dados.");
+                mostrarModal('Erro ao exportar', 'Não foi possível exportar os dados. Tente novamente.');
             } finally {
                 btnExport.disabled = false;
                 btnExport.innerHTML = '<i data-lucide="download" style="width: 16px;"></i> Exportar CSV';

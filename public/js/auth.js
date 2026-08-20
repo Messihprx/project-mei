@@ -60,12 +60,86 @@ function validarSenhaForte(senha) {
     return null;
 }
 
+// --- MODAL DE VALIDAÇÃO (SUBSTITUI OS ALERTS) ---
+function mostrarModal(titulo, mensagem, tipo = 'erro') {
+    let overlay = document.getElementById('modalAlertaOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'modalAlertaOverlay';
+        overlay.className = 'modal-alerta-overlay';
+        overlay.innerHTML = `
+            <div class="modal-alerta">
+                <div class="modal-alerta-icone" id="modalAlertaIcone">!</div>
+                <h3 class="modal-alerta-titulo" id="modalAlertaTitulo"></h3>
+                <p class="modal-alerta-mensagem" id="modalAlertaMensagem"></p>
+                <button type="button" class="modal-alerta-btn" id="modalAlertaBtn">Entendi</button>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) fecharModal();
+        });
+        document.getElementById('modalAlertaBtn').addEventListener('click', fecharModal);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') fecharModal();
+        });
+    }
+
+    const icone = document.getElementById('modalAlertaIcone');
+    const btn = document.getElementById('modalAlertaBtn');
+
+    icone.className = 'modal-alerta-icone ' + tipo;
+    btn.className = 'modal-alerta-btn ' + tipo;
+    icone.textContent = tipo === 'sucesso' ? '✓' : (tipo === 'alerta' ? '⚠' : '!');
+
+    document.getElementById('modalAlertaTitulo').textContent = titulo;
+    document.getElementById('modalAlertaMensagem').textContent = mensagem;
+    overlay.classList.add('active');
+    btn.focus();
+}
+
+function fecharModal() {
+    const overlay = document.getElementById('modalAlertaOverlay');
+    if (overlay) overlay.classList.remove('active');
+}
+
+window.mostrarModal = mostrarModal;
+window.fecharModal = fecharModal;
+window.traduzirErro = traduzirErro;
+
+// --- TRADUÇÃO DE ERROS DO SUPABASE ---
+function traduzirErro(mensagem) {
+    const msg = (mensagem || '').toLowerCase();
+    const erros = [
+        ['invalid login credentials', 'E-mail ou senha incorretos. Verifique os dados e tente novamente.'],
+        ['email not confirmed', 'Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada (e o spam).'],
+        ['email already registered', 'Este e-mail já possui uma conta. Faça login ou recupere a senha.'],
+        ['user already registered', 'Este e-mail já possui uma conta. Faça login ou recupere a senha.'],
+        ['password should be at least', 'A senha deve ter no mínimo 8 caracteres.'],
+        ['password should contain at least', 'A senha deve conter letras, números e símbolos.'],
+        ['weak password', 'Senha fraca. Use no mínimo 8 caracteres com letras, números e símbolos.'],
+        ['too many requests', 'Muitas tentativas. Aguarde alguns minutos e tente novamente.'],
+        ['rate limit', 'Muitas tentativas. Aguarde alguns minutos e tente novamente.'],
+        ['invalid email', 'Informe um e-mail válido.'],
+        ['user not found', 'Usuário não encontrado. Verifique o e-mail informado.'],
+        ['token has expired', 'O link de redefinição expirou. Solicite um novo link.'],
+        ['unexpected failure', 'Ocorreu um erro inesperado. Tente novamente mais tarde.'],
+        ['network error', 'Falha de conexão. Verifique sua internet e tente novamente.'],
+        ['signup not enabled', 'O cadastro está temporariamente desativado. Tente novamente mais tarde.'],
+        ['for security purposes, you can only request this once', 'Você já solicitou a redefinição. Verifique seu e-mail.'],
+    ];
+    for (const [chave, texto] of erros) {
+        if (msg.includes(chave)) return texto;
+    }
+    return `Ocorreu um erro: ${mensagem}`;
+}
+
 import { injetarBannerPlano } from './planos.js';
 
 // 1. VERIFICAR ACESSO (Proteção de Rotas)
 async function verificarAcesso() {
     const { data: { session } } = await supabase.auth.getSession();
-    const paginasPublicas = ["login", "cadastro", "recuperar", "redefinir-senha", "planos", ""];
+    const paginasPublicas = ["login", "cadastro", "recuperar", "redefinir-senha", "planos", "confirmar-email", ""];
     const paginaAtual = (window.location.pathname.split("/").pop() || "index").split(".")[0];
 
     // Se NÃO está em página pública e não tem sessão -> manda pro login
@@ -73,8 +147,8 @@ async function verificarAcesso() {
         window.location.href = "login.html";
         return;
     }
-    // Se já tem sessão e está no login/cadastro
-    if ((paginaAtual === "login" || paginaAtual === "cadastro") && session) {
+    // Se já tem sessão e está no login/cadastro/confirmação -> manda pro sistema
+    if ((paginaAtual === "login" || paginaAtual === "cadastro" || paginaAtual === "confirmar-email") && session) {
         window.location.href = "index.html";
         return;
     }
@@ -204,7 +278,7 @@ if (formCadastro) {
                 password: senha,
                 options: { 
                     data: { nome: nome },
-                    emailRedirectTo: window.location.origin + '/login.html'
+                    emailRedirectTo: window.location.origin + '/confirmar-email.html'
                 }
             });
 
@@ -253,8 +327,7 @@ if (formCadastro) {
             }
 
             // Sucesso
-            alert("Quase lá! Enviamos um link de confirmação para o seu e-mail. Verifique sua caixa de entrada (e o spam).");
-            window.location.href = "login.html";
+            window.location.href = "confirmar-email.html";
 
         } catch (err) {
             mostrarErro('formCadastro', 'Erro inesperado. Tente novamente mais tarde.');
@@ -274,13 +347,17 @@ if (formLogin) {
         const email = document.getElementById("emailLogin").value.trim();
         const senha = document.getElementById("senhaLogin").value;
 
+        const erroEmail = validarEmail(email);
+        if (erroEmail) { mostrarModal('E-mail inválido', erroEmail); return; }
+        if (!senha) { mostrarModal('Senha obrigatória', 'Digite sua senha para continuar.'); return; }
+
         const { data, error } = await supabase.auth.signInWithPassword({ 
             email, 
             password: senha 
         });
 
         if (error) {
-            alert("Erro: " + error.message);
+            mostrarModal('Não foi possível entrar', traduzirErro(error.message));
         } else {
             window.location.href = "index.html";
         }
@@ -299,7 +376,7 @@ const loginGoogle = async () => {
             },
         }
     });
-    if (error) alert("Erro Google: " + error.message);
+    if (error) mostrarModal('Erro no login com Google', traduzirErro(error.message));
 };
 
 // Vincula à janela global para o onclick funcionar
@@ -336,6 +413,9 @@ if (formRecuperar) {
         const email = document.getElementById("emailRecuperar").value.trim();
         const btn = document.getElementById("btnRecuperar");
 
+        const erroEmail = validarEmail(email);
+        if (erroEmail) { mostrarModal('E-mail inválido', erroEmail); return; }
+
         try {
             btn.disabled = true;
             btn.innerText = "Enviando...";
@@ -347,10 +427,10 @@ if (formRecuperar) {
 
             if (error) throw error;
 
-            alert("E-mail de recuperação enviado! Verifique sua caixa de entrada.");
-            window.location.href = "login.html";
+            mostrarModal('E-mail enviado!', 'Enviamos um link de redefinição para o seu e-mail. Verifique sua caixa de entrada (e o spam).', 'sucesso');
+            setTimeout(() => { window.location.href = "login.html"; }, 2500);
         } catch (err) {
-            alert("Erro: " + err.message);
+            mostrarModal('Erro ao enviar', traduzirErro(err.message));
         } finally {
             btn.disabled = false;
             btn.innerText = "Enviar Link";
@@ -368,7 +448,12 @@ if (formNovaSenha) {
         const btn = document.getElementById("btnAtualizar");
 
         if (senha !== confirma) {
-            alert("As senhas não coincidem!");
+            mostrarModal('Senhas diferentes', 'As senhas não coincidem. Digite a mesma senha nos dois campos.');
+            return;
+        }
+
+        if (senha.length < 8) {
+            mostrarModal('Senha fraca', 'A senha deve ter no mínimo 8 caracteres.');
             return;
         }
 
@@ -382,10 +467,10 @@ if (formNovaSenha) {
 
             if (error) throw error;
 
-            alert("✅ Senha alterada com sucesso! Você será redirecionado para o login.");
-            window.location.href = "login.html";
+            mostrarModal('Senha atualizada!', 'Sua senha foi alterada com sucesso. Você será redirecionado para o login.', 'sucesso');
+            setTimeout(() => { window.location.href = "login.html"; }, 2500);
         } catch (err) {
-            alert("Erro ao atualizar: " + err.message);
+            mostrarModal('Erro ao atualizar', traduzirErro(err.message));
         } finally {
             btn.disabled = false;
             btn.innerText = "Atualizar Senha";

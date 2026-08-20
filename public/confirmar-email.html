@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirme seu e-mail - FinMEI fluxo inteligente</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-page">
+    <div class="login-wrapper confirmar-email-wrapper">
+        <div class="login-header">
+            <h1>FinMEI fluxo inteligente</h1>
+        </div>
+
+        <div class="icone-email-pulsante">✉️</div>
+
+        <h2 class="titulo-login">Confirme seu e-mail</h2>
+        <p style="color: var(--texto-secundario); margin: 0 0 1rem; font-size: 0.9rem;">
+            Enviamos um link de confirmação para o seu e-mail.<br>
+            Clique no link recebido para ativar sua conta.
+        </p>
+
+        <div class="spinner-confirmacao"></div>
+        <p id="statusTexto" style="color: var(--texto-secundario); font-size: 0.85rem; margin-top: 1rem;">
+            Aguardando confirmação...
+        </p>
+
+        <button type="button" class="btn-login" onclick="verificarConfirmacao()">Já confirmei meu e-mail</button>
+
+        <p class="cadastro-link">
+            Não recebeu? <a href="cadastro.html">Tente novamente</a> · <a href="login.html">Voltar para o login</a>
+        </p>
+    </div>
+
+    <script type="module">
+        import { supabase } from './js/auth.js';
+
+        async function verificarConfirmacao() {
+            const statusTexto = document.getElementById('statusTexto');
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (session) {
+                statusTexto.textContent = 'E-mail confirmado! Entrando...';
+                statusTexto.style.color = 'var(--cor-sucesso)';
+                setTimeout(() => { window.location.href = "index.html"; }, 800);
+                return true;
+            }
+            return false;
+        }
+        window.verificarConfirmacao = verificarConfirmacao;
+
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (session && window.location.pathname.includes("confirmar-email")) {
+                verificarConfirmacao();
+            }
+        });
+
+        // Checa a cada 3 segundos até o usuário confirmar
+        setInterval(() => {
+            verificarConfirmacao();
+        }, 3000);
+    </script>
+</body>
+</html>

@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const valorGasto = parseFloat(valorInput.value);
 
             if (isNaN(valorGasto) || valorGasto <= 0) {
-                alert("Por favor, insira um valor maior que zero. Para gastos, o sistema já registra como saída automaticamente.");
+                mostrarModal('Valor inválido', 'Por favor, insira um valor maior que zero. Para gastos, o sistema já registra como saída automaticamente.', 'alerta');
                 return;
             }
 
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 fecharModalGasto();
                 carregarGastos();
             } catch (err) {
-                alert("Erro ao salvar: " + err.message);
+                mostrarModal('Erro ao salvar', traduzirErro(err.message));
             } finally {
                 btn.disabled = false;
             }
@@ -55,8 +55,8 @@ document.addEventListener("DOMContentLoaded", () => {
         btnExport.addEventListener("click", async () => {
             const status = await verificarStatusPlano();
             if (!status.premium) {
-                alert("🔒 Função Premium: A exportação de relatórios de despesas é um recurso exclusivo para assinantes Premium.");
-                window.location.href = "planos.html";
+                mostrarModal('Recurso Premium', 'A exportação de relatórios de despesas é um recurso exclusivo para assinantes Premium.', 'alerta');
+                setTimeout(() => { window.location.href = "planos.html"; }, 2000);
                 return;
             }
 
@@ -80,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (error) throw error;
 
                 if (!gastos || gastos.length === 0) {
-                    alert("Nenhum gasto encontrado para exportar neste mês.");
+                    mostrarModal('Nenhum gasto', 'Nenhum gasto encontrado para exportar neste mês.', 'alerta');
                     return;
                 }
 
@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             } catch (err) {
                 console.error("Erro ao exportar:", err.message);
-                alert("Erro ao exportar dados.");
+                mostrarModal('Erro ao exportar', 'Não foi possível exportar os dados. Tente novamente.');
             } finally {
                 btnExport.disabled = false;
                 btnExport.innerHTML = '<i data-lucide="download" style="width: 16px;"></i> Exportar CSV';
@@ -195,7 +195,7 @@ window.abrirEditarGasto = async function(id) {
         document.getElementById("modalEditarGasto").style.display = 'flex';
         lucide.createIcons();
     } catch (err) {
-        alert("Erro ao buscar dados: " + err.message);
+        mostrarModal('Erro ao buscar dados', traduzirErro(err.message));
     }
 };
 
@@ -210,7 +210,7 @@ window.deletarGasto = async function(id) {
         if (error) throw error;
         carregarGastos();
     } catch (err) {
-        alert("Erro ao excluir: " + err.message);
+        mostrarModal('Erro ao excluir', traduzirErro(err.message));
     }
 };
 
@@ -234,7 +234,7 @@ if (formEditarGasto) {
             fecharModalEditarGasto();
             carregarGastos();
         } catch (err) {
-            alert("Erro ao salvar: " + err.message);
+            mostrarModal('Erro ao salvar', traduzirErro(err.message));
         } finally { btn.disabled = false; }
     });
 }
