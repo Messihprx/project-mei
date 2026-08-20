@@ -40,11 +40,28 @@
             const statusTexto = document.getElementById('statusTexto');
             const { data: { session } } = await supabase.auth.getSession();
 
+            // Caso 1: confirmou no MESMO dispositivo -> sessão já existe
             if (session) {
                 statusTexto.textContent = 'E-mail confirmado! Entrando...';
                 statusTexto.style.color = 'var(--cor-sucesso)';
                 setTimeout(() => { window.location.href = "index.html"; }, 800);
                 return true;
+            }
+
+            // Caso 2: confirmou em OUTRO dispositivo -> verifica no servidor
+            const email = localStorage.getItem('emailConfirmacao');
+            if (email) {
+                try {
+                    const { data: confirmado } = await supabase.rpc('verificar_email_confirmado', { p_email: email });
+                    if (confirmado) {
+                        statusTexto.textContent = 'E-mail confirmado! Entrando...';
+                        statusTexto.style.color = 'var(--cor-sucesso)';
+                        setTimeout(() => { window.location.href = "login.html?confirmado=1"; }, 1200);
+                        return true;
+                    }
+                } catch (err) {
+                    console.error("Erro ao verificar confirmação:", err);
+                }
             }
             return false;
         }

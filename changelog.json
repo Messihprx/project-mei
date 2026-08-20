@@ -28,6 +28,11 @@
           "categoria": "Banco de Dados",
           "titulo": "Correção da tabela perfis",
           "descricao": "Trigger handle_new_user atualizada para preencher automaticamente as colunas nome_completo e email em novos cadastros (com e-mail ou via Google), com backfill para os perfis antigos que ficaram com NULL."
+        },
+        {
+          "categoria": "Autenticação",
+          "titulo": "Confirmação de e-mail entre dispositivos",
+          "descricao": "A tela de confirmação (confirmar-email.html) agora detecta a confirmação feita em outro dispositivo via função verificar_email_confirmado no Supabase. Ao confirmar pelo celular, o PC atualiza e redireciona para o login com o e-mail preenchido e aviso de sucesso."
         }
       ]
     }

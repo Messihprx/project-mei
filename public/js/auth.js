@@ -327,6 +327,7 @@ if (formCadastro) {
             }
 
             // Sucesso
+            localStorage.setItem('emailConfirmacao', email);
             window.location.href = "confirmar-email.html";
 
         } catch (err) {
@@ -337,6 +338,19 @@ if (formCadastro) {
             btn.innerText = "Finalizar Cadastro";
         }
     });
+}
+
+// --- E-MAIL CONFIRMADO EM OUTRO DISPOSITIVO (TELA DE LOGIN) ---
+if (document.getElementById('formLogin')) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('confirmado') === '1') {
+        mostrarModal('E-mail confirmado!', 'Seu e-mail foi confirmado com sucesso. Agora é só entrar com sua senha.', 'sucesso');
+    }
+    const emailPendente = localStorage.getItem('emailConfirmacao');
+    if (emailPendente) {
+        const campo = document.getElementById('emailLogin');
+        if (campo) campo.value = emailPendente;
+    }
 }
 
 // 3. LOGIN MANUAL
