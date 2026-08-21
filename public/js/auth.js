@@ -407,7 +407,7 @@ const loginGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { 
-            redirectTo: window.location.origin + '/public/index.html',
+            redirectTo: window.location.origin + '/index.html',
             queryParams: {
                 access_type: 'offline',
                 prompt: 'select_account',
