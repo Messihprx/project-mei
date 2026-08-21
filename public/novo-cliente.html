@@ -18,17 +18,16 @@
             </div>
         </div>
         <nav class="sidebar-nav">
-            <a href="index.html" class="nav-item"><i data-lucide="layout-dashboard"></i> Dashboard</a>
-            <a href="vendas.html" class="nav-item"><i data-lucide="shopping-cart"></i> Vendas</a>
+            <a href="index.html" class="nav-item"><i data-lucide="layout-dashboard"></i> <span>Dashboard</span></a>
+            <a href="vendas.html" class="nav-item"><i data-lucide="shopping-cart"></i> <span>Vendas</span></a>
             <a href="gastos.html" class="nav-item">
-                <i data-lucide="trending-down"></i> Gastos
+                <i data-lucide="trending-down"></i> <span>Gastos</span>
             </a>
-            <a href="clientes.html" class="nav-item"><i data-lucide="users"></i> Clientes</a>
-            <a href="devendo.html" class="nav-item"><i data-lucide="alert-circle"></i> Devedores</a>
+            <a href="clientes.html" class="nav-item"><i data-lucide="users"></i> <span>Clientes</span></a>
+            <a href="devendo.html" class="nav-item"><i data-lucide="alert-circle"></i> <span>Devedores</span></a>
             <div class="sidebar-divider">ATALHOS</div>
-            <a href="novo-cliente.html" class="nav-item active"><i data-lucide="user-plus"></i> Novo Cliente</a>
-            <a href="nova-venda.html" class="nav-item"><i data-lucide="plus-circle"></i> Nova Venda</a>
-            <hr>
+            <a href="novo-cliente.html" class="nav-item active"><i data-lucide="user-plus"></i> <span>Novo Cliente</span></a>
+            <a href="nova-venda.html" class="nav-item"><i data-lucide="plus-circle"></i> <span>Nova Venda</span></a>
             <button onclick="logout()" class="btn-logout"><i data-lucide="log-out"></i> <span>Sair</span></button>
         </nav>
     </aside>
@@ -61,7 +60,7 @@
                     <div class="input-group">
                         <label>Observação (Opcional)</label>
                         <textarea id="obsCliente" placeholder="Ex: Cliente prefere contato via e-mail"
-                            style="width: 100%; background: var(--fundo-cor); border: 1px solid var(--borda-cor); color: white; border-radius: 0.5rem; padding: 0.75rem; font-family: inherit; resize: vertical; min-height: 100px;"></textarea>
+                            style="width: 100%; background: var(--fundo-cor); border: 1px solid var(--borda-cor); color: white; border-radius: var(--radius-sm); padding: 0.75rem; font-family: inherit; resize: vertical; min-height: 100px;"></textarea>
                     </div>
                     <div id="erro-formNovoCliente" class="erro-campo erro-formulario"></div>
                     <button type="submit" class="btn-primary" style="margin-top: 1rem;">Salvar Cliente</button>

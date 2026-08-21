@@ -15,21 +15,20 @@
             <div class="logo-area"><div class="logo-icon">MEI</div><span>finMEI</span></div>
         </div>
         <nav class="sidebar-nav">
-            <a href="index.html" class="nav-item"><i data-lucide="layout-dashboard"></i> Dashboard</a>
-            <a href="vendas.html" class="nav-item"><i data-lucide="shopping-cart"></i> Vendas</a>
-            <a href="gastos.html" class="nav-item active"><i data-lucide="trending-down"></i> Gastos</a>
-            <a href="clientes.html" class="nav-item"><i data-lucide="users"></i> Clientes</a>
-            <a href="devendo.html" class="nav-item"><i data-lucide="alert-circle"></i> Devedores</a>
+            <a href="index.html" class="nav-item"><i data-lucide="layout-dashboard"></i> <span>Dashboard</span></a>
+            <a href="vendas.html" class="nav-item"><i data-lucide="shopping-cart"></i> <span>Vendas</span></a>
+            <a href="gastos.html" class="nav-item active"><i data-lucide="trending-down"></i> <span>Gastos</span></a>
+            <a href="clientes.html" class="nav-item"><i data-lucide="users"></i> <span>Clientes</span></a>
+            <a href="devendo.html" class="nav-item"><i data-lucide="alert-circle"></i> <span>Devedores</span></a>
             <div class="sidebar-divider">ATALHOS</div>
             <a href="novo-cliente.html" class="nav-item">
-                <i data-lucide="user-plus"></i> Novo Cliente
+                <i data-lucide="user-plus"></i> <span>Novo Cliente</span>
             </a>
             <a href="nova-venda.html" class="nav-item">
-                <i data-lucide="plus-circle"></i> Nova Venda
+                <i data-lucide="plus-circle"></i> <span>Nova Venda</span>
             </a>
-            <button onclick="logout()" class="btn-logout"><i data-lucide="log-out"></i><span>Sair</span></button>
+            <button onclick="logout()" class="btn-logout"><i data-lucide="log-out"></i> <span>Sair</span></button>
         </nav>
-        
     </aside>
 
     <main class="main-content">
@@ -41,12 +40,12 @@
                 <h3>Controle de Gastos</h3>
                 <p>Gerencie suas saídas e despesas</p>
             </div>
-            <div class="user-info" style="display: flex; gap: 10px;">
-                <button id="btnExportarGastos" class="btn-secondary" style="padding: 0.6rem 1.2rem; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; background: rgba(56, 189, 248, 0.1); color: var(--cor-primaria); border: 1px solid var(--cor-primaria);">
-                    <i data-lucide="download" style="width: 16px;"></i> Exportar CSV
+            <div class="user-info" style="display: flex; gap: 8px;">
+                <button id="btnExportarGastos" class="btn-secondary" style="font-size: 0.82rem;">
+                    <i data-lucide="download" style="width: 15px;"></i> <span>Exportar CSV</span>
                 </button>
-                <button onclick="abrirModalGasto()" class="btn-primary" style="width: auto; padding: 0.6rem 1.2rem; display: flex; gap: 8px; align-items: center;">
-                    <i data-lucide="plus-circle"></i> Novo Gasto
+                <button onclick="abrirModalGasto()" class="btn-primary" style="width: auto; padding: 0.55rem 1.1rem;">
+                    <i data-lucide="plus-circle" style="width: 15px;"></i> <span>Novo Gasto</span>
                 </button>
             </div>
         </header>
@@ -71,8 +70,8 @@
     <div id="modalGasto" class="modal">
         <div class="modal-content card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h3 style="color: var(--cor-erro);">Registrar Saída</h3>
-                <button onclick="fecharModalGasto()" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer;"><i data-lucide="x"></i></button>
+                <h3 style="color: var(--cor-erro); font-size: 1.1rem;">Registrar Saída</h3>
+                <button onclick="fecharModalGasto()" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer; font-size: 1.2rem;">&times;</button>
             </div>
             
             <form id="formNovoGasto">
@@ -80,7 +79,7 @@
                     <label>Descrição do Gasto</label>
                     <input type="text" id="descGasto" placeholder="Ex: Compra de embalagens" required>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div class="input-group">
                         <label>Valor (R$)</label>
                         <input type="number" id="valorGasto" placeholder="0,00" step="0.01" min="0.01" required>
@@ -100,7 +99,7 @@
                         <option value="Outros">Outros</option>
                     </select>
                 </div>
-                <button type="submit" class="btn-primary" style="background: var(--cor-erro); color: white; margin-top: 1rem;">Salvar Gasto</button>
+                <button type="submit" class="btn-primary" style="background: var(--cor-erro); margin-top: 1.2rem;">Salvar Gasto</button>
             </form>
         </div>
     </div>
@@ -108,8 +107,8 @@
     <div id="modalEditarGasto" class="modal">
         <div class="modal-content card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h3 style="color: var(--cor-primaria);">Editar Saída</h3>
-                <button onclick="fecharModalEditarGasto()" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer;"><i data-lucide="x"></i></button>
+                <h3 style="color: var(--cor-primaria); font-size: 1.1rem;">Editar Saída</h3>
+                <button onclick="fecharModalEditarGasto()" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer; font-size: 1.2rem;">&times;</button>
             </div>
             
             <form id="formEditarGasto">
@@ -118,7 +117,7 @@
                     <label>Descrição do Gasto</label>
                     <input type="text" id="editDescGasto" required>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div class="input-group">
                         <label>Valor (R$)</label>
                         <input type="number" id="editValorGasto" step="0.01" min="0.01" required>
@@ -138,7 +137,7 @@
                         <option value="Outros">Outros</option>
                     </select>
                 </div>
-                <button type="submit" class="btn-primary" style="margin-top: 1rem;">Salvar Alterações</button>
+                <button type="submit" class="btn-primary" style="margin-top: 1.2rem;">Salvar Alterações</button>
             </form>
         </div>
     </div>

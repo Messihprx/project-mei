@@ -137,29 +137,53 @@ function traduzirErro(mensagem) {
 import { injetarBannerPlano } from './planos.js';
 
 // 1. VERIFICAR ACESSO (Proteção de Rotas)
-async function verificarAcesso() {
-    const { data: { session } } = await supabase.auth.getSession();
-    const paginasPublicas = ["login", "cadastro", "recuperar", "redefinir-senha", "planos", "confirmar-email", ""];
-    const paginaAtual = (window.location.pathname.split("/").pop() || "index").split(".")[0];
+const paginasPublicas = ["login", "cadastro", "recuperar", "redefinir-senha", "planos", "confirmar-email", ""];
+const paginaAtual = (window.location.pathname.split("/").pop() || "index").split(".")[0];
+const isPaginaProtegida = !paginasPublicas.includes(paginaAtual);
 
-    // Se NÃO está em página pública e não tem sessão -> manda pro login
-    if (!paginasPublicas.includes(paginaAtual) && !session) {
-        window.location.href = "login.html";
-        return;
-    }
-    // Se já tem sessão e está no login/cadastro/confirmação -> manda pro sistema
-    if ((paginaAtual === "login" || paginaAtual === "cadastro" || paginaAtual === "confirmar-email") && session) {
-        window.location.href = "index.html";
-        return;
-    }
-    
-    // Injeta banner de plano em páginas protegidas
+// Verifica se veio do OAuth (tokens na URL)
+const temHashTokens = window.location.hash.includes('access_token');
+
+function inicializarPagina(session) {
     injetarBannerPlano();
-
-    // Inicializa menu mobile se houver botão e sidebar
     inicializarMenuMobileGlobal();
 }
-verificarAcesso();
+
+// Escuta mudanças de autenticação PRIMEIRO (captura o retorno do Google)
+supabase.auth.onAuthStateChange((event, session) => {
+    if (event === "PASSWORD_RECOVERY") {
+        if (window.location.pathname.includes("login.html") || window.location.pathname.includes("index.html")) {
+            window.location.href = "redefinir-senha.html";
+        }
+        return;
+    }
+
+    if (session && isPaginaProtegida) {
+        inicializarPagina(session);
+    } else if (session && (paginaAtual === "login" || paginaAtual === "cadastro" || paginaAtual === "confirmar-email")) {
+        window.location.href = "index.html";
+    } else if (!session && isPaginaProtegida && !temHashTokens) {
+        window.location.href = "login.html";
+    }
+});
+
+// Só verifica a sessão DEPOIS de dar tempo pro Supabase processar os tokens
+(async () => {
+    // Se veio do OAuth, espera o Supabase processar o hash da URL
+    if (temHashTokens) {
+        await new Promise(r => setTimeout(r, 1500));
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (session && isPaginaProtegida) {
+        inicializarPagina(session);
+    } else if (session && (paginaAtual === "login" || paginaAtual === "cadastro" || paginaAtual === "confirmar-email")) {
+        window.location.href = "index.html";
+    } else if (!session && isPaginaProtegida && !temHashTokens) {
+        window.location.href = "login.html";
+    }
+})();
 
 // --- LOGICA DE MENU MOBILE GLOBAL ---
 function inicializarMenuMobileGlobal() {
@@ -383,7 +407,7 @@ const loginGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { 
-            redirectTo: window.location.origin + '/index.html',
+            redirectTo: window.location.origin + '/public/index.html',
             queryParams: {
                 access_type: 'offline',
                 prompt: 'select_account',
@@ -493,12 +517,4 @@ if (formNovaSenha) {
 }
 
 // 7. DETECTOR DE LINKS DE E-MAIL (Recuperação de Senha)
-supabase.auth.onAuthStateChange((event, session) => {
-    if (event === "PASSWORD_RECOVERY") {
-        console.log("Usuário vindo do link de recuperação!");
-        // Se estivermos em qualquer página, ele manda para a de trocar senha
-        if (window.location.pathname.includes("login.html") || window.location.pathname.includes("index.html")) {
-            window.location.href = "redefinir-senha.html";
-        }
-    }
-});
+// (onAuthStateChange agora é chamado no topo do arquivo para capturar retorno do Google)

@@ -9,144 +9,6 @@
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
     <link rel="stylesheet" href="css/style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        .planos-container {
-            display: flex;
-            flex-direction: row;
-            flex-wrap: wrap;
-            gap: 2rem;
-            justify-content: center;
-            align-items: stretch;
-            margin-top: 3rem;
-            padding: 20px;
-            width: 100%;
-            max-width: 1200px;
-        }
-
-        .plano-card {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            border: 1px solid var(--borda-cor);
-            border-radius: 12px;
-            padding: 2rem;
-            flex: 1;
-            min-width: 300px;
-            max-width: 400px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            transition: transform 0.3s ease, border-color 0.3s ease;
-        }
-
-        .plano-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .plano-card.premium {
-            border: 2px solid var(--cor-primaria);
-            position: relative;
-        }
-
-        .plano-card.premium::before {
-            content: "Recomendado";
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--cor-primaria);
-            color: #fff;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .plano-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .plano-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--texto-principal);
-            margin-bottom: 0.5rem;
-        }
-
-        .plano-price {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--cor-primaria);
-        }
-
-        .plano-price span {
-            font-size: 1rem;
-            color: var(--texto-secundario);
-            font-weight: 400;
-        }
-
-        .plano-features {
-            list-style: none;
-            padding: 0;
-            margin-bottom: 2rem;
-            flex-grow: 1;
-        }
-
-        .plano-features li {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 1rem;
-            color: var(--texto-secundario);
-            font-size: 0.95rem;
-        }
-
-        .plano-features li i {
-            color: var(--cor-sucesso);
-            width: 18px;
-        }
-
-        .plano-features li.disabled {
-            opacity: 0.5;
-        }
-
-        .plano-features li.disabled i {
-            color: var(--cor-erro);
-        }
-
-        .btn-assinar {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: none;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
-            text-decoration: none;
-        }
-
-        .btn-assinar.primary {
-            background-color: var(--cor-primaria);
-            color: white;
-        }
-
-        .btn-assinar.primary:hover {
-            background-color: #0284c7;
-            /* darker shade */
-        }
-
-        .btn-assinar.secondary {
-            background-color: transparent;
-            color: var(--texto-principal);
-            border: 1px solid var(--borda-cor);
-        }
-
-        .btn-assinar.secondary:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-        }
-    </style>
 </head>
 
 <body class="dashboard-layout">
@@ -160,41 +22,40 @@
 
         <nav class="sidebar-nav">
             <a href="index.html" class="nav-item">
-                <i data-lucide="layout-dashboard"></i> Dashboard
+                <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
             </a>
             <a href="vendas.html" class="nav-item">
-                <i data-lucide="shopping-cart"></i> Vendas
+                <i data-lucide="shopping-cart"></i> <span>Vendas</span>
             </a>
             <a href="gastos.html" class="nav-item">
-                <i data-lucide="trending-down"></i> Gastos
+                <i data-lucide="trending-down"></i> <span>Gastos</span>
             </a>
             <a href="clientes.html" class="nav-item">
-                <i data-lucide="users"></i> Clientes
+                <i data-lucide="users"></i> <span>Clientes</span>
             </a>
             <hr>
             <a href="planos.html" class="nav-item active">
-                <i data-lucide="star"></i> Assinatura
+                <i data-lucide="star"></i> <span>Assinatura</span>
             </a>
         </nav>
 
         <div class="sidebar-footer">
             <button onclick="logout()" class="btn-logout">
-                <i data-lucide="log-out"></i> Sair
+                <i data-lucide="log-out"></i> <span>Sair</span>
             </button>
         </div>
     </aside>
 
-    <main class="main-content"
-        style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh;">
+    <main class="main-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh;">
         <button id="btnMenuMobile" class="btn-menu-mobile">
             <i data-lucide="menu"></i>
         </button>
 
         <div style="text-align: center; margin-top: 2rem;">
-            <h1 style="font-size: 2.2rem; font-weight: 800; color: var(--texto-principal);"><i data-lucide="rocket"
-                    style="color:var(--cor-primaria); width:32px; height:32px;"></i> Evolua seu Negócio</h1>
-            <p style="color: var(--texto-secundario); margin-top: 5px;">Escolha o plano ideal para gerenciar suas
-                finanças de forma ilimitada</p>
+            <h1 style="font-size: 2rem; font-weight: 800; color: var(--texto-principal); display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <i data-lucide="rocket" style="color:var(--cor-primaria); width:28px; height:28px;"></i> Evolua seu Negócio
+            </h1>
+            <p style="color: var(--texto-secundario); margin-top: 6px; font-size: 0.95rem;">Escolha o plano ideal para gerenciar suas finanças de forma ilimitada</p>
         </div>
 
         <div class="planos-container">
@@ -305,43 +166,6 @@
             </div>
         </div>
     </div>
-
-    <style>
-        /* Estilos do Modal de Checkout */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 10000;
-            backdrop-filter: blur(5px);
-        }
-        .checkout-modal {
-            background: #1e293b; border: 1px solid var(--borda-cor); border-radius: 16px;
-            width: 100%; max-width: 450px; padding: 25px; position: relative;
-        }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .btn-close { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; }
-        
-        .metodos-pagamento { display: flex; flex-direction: column; gap: 12px; }
-        .metodo-item {
-            background: rgba(255,255,255,0.03); border: 1px solid var(--borda-cor);
-            padding: 15px; border-radius: 10px; display: flex; align-items: center; gap: 15px;
-            cursor: pointer; transition: all 0.2s;
-        }
-        .metodo-item:hover { background: rgba(56, 189, 248, 0.1); border-color: var(--cor-primaria); }
-        .metodo-item i { color: var(--cor-primaria); }
-
-        .input-checkout {
-            width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--borda-cor);
-            border-radius: 8px; color: white; margin-bottom: 10px; outline: none;
-        }
-        .input-checkout:focus { border-color: var(--cor-primaria); }
-
-        .loader {
-            border: 4px solid #334155; border-top: 4px solid var(--cor-primaria);
-            border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(3600deg); } }
-    </style>
 
     <script type="module">
         import { assinarPlanoPremium, verificarStatusPlano } from './js/planos.js';

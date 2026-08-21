@@ -6,15 +6,27 @@
     <title>Nova Senha - FinMEI fluxo inteligente</title>
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="login-page">
-    <div class="login-wrapper">
-        <div class="login-header">
-            <h1>Nova Senha</h1>
-            <p>Digite sua nova senha abaixo.</p>
+    <!-- Branding Panel -->
+    <div class="login-branding">
+        <div class="brand-content">
+            <div class="brand-logo">MEI</div>
+            <h2 class="brand-title">Nova Senha</h2>
+            <p class="brand-subtitle">Escolha uma senha forte e segura para sua conta.</p>
         </div>
+    </div>
 
-        <div class="formulario">
+    <!-- Nova Senha Form -->
+    <div class="login-form-panel">
+        <div class="login-wrapper">
+            <div class="login-header">
+                <div class="brand-icon-small">MEI</div>
+                <h1>Definir nova senha</h1>
+                <p>Digite sua nova senha abaixo.</p>
+            </div>
+
             <form id="formNovaSenha">
                 <div class="input-group">
                     <label>Nova Senha</label>
@@ -29,5 +41,6 @@
         </div>
     </div>
     <script type="module" src="js/auth.js"></script>
+    <script>lucide.createIcons();</script>
 </body>
 </html>

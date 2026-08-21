@@ -218,7 +218,10 @@ export async function injetarBannerPlano() {
     const mainContent = document.querySelector('.main-content');
     if (!mainContent) return;
 
+    if (document.getElementById('banner-plano-teste')) return;
+
     const banner = document.createElement('div');
+    banner.id = 'banner-plano-teste';
     banner.style.width = '100%';
     banner.style.padding = '12px 20px';
     banner.style.textAlign = 'center';

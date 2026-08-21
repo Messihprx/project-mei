@@ -19,31 +19,30 @@
         </div>
         <nav class="sidebar-nav">
             <a href="index.html" class="nav-item">
-                <i data-lucide="layout-dashboard"></i> Dashboard
+                <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
             </a>
             <a href="vendas.html" class="nav-item">
-                <i data-lucide="shopping-cart"></i> Vendas
+                <i data-lucide="shopping-cart"></i> <span>Vendas</span>
             </a>
             <a href="gastos.html" class="nav-item">
-                <i data-lucide="trending-down"></i> Gastos
+                <i data-lucide="trending-down"></i> <span>Gastos</span>
             </a>
             <a href="clientes.html" class="nav-item">
-                <i data-lucide="users"></i> Clientes
+                <i data-lucide="users"></i> <span>Clientes</span>
             </a>
             <a href="devendo.html" class="nav-item active">
-                <i data-lucide="alert-circle"></i> Devedores
-            </a>
-            
-            <div class="sidebar-divider">ATALHOS</div>
-            <a href="novo-cliente.html" class="nav-item">
-                <i data-lucide="user-plus"></i> Novo Cliente
-            </a>
-            <a href="nova-venda.html" class="nav-item">
-                <i data-lucide="plus-circle"></i> Nova Venda
+                <i data-lucide="alert-circle"></i> <span>Devedores</span>
             </a>
 
-            <hr>
-            <button onclick="logout()" class="btn-logout">
+            <div class="sidebar-divider">ATALHOS</div>
+            <a href="novo-cliente.html" class="nav-item">
+                <i data-lucide="user-plus"></i> <span>Novo Cliente</span>
+            </a>
+            <a href="nova-venda.html" class="nav-item">
+                <i data-lucide="plus-circle"></i> <span>Nova Venda</span>
+            </a>
+
+            <button onclick="logout()" class="btn-logout" style="margin-top: auto;">
                 <i data-lucide="log-out"></i> <span>Sair</span>
             </button>
         </nav>
@@ -61,7 +60,7 @@
 
             <div class="user-info devedores-header-pc" style="display: flex; gap: 1rem; align-items: center;">
                 <div class="filtro-mes-devendo">
-                    <label for="filtroMesDevendo" style="font-size: 0.75rem; color: var(--texto-secundario); margin-bottom: 4px;">Filtrar mês</label>
+                    <label for="filtroMesDevendo" style="font-size: 0.72rem; color: var(--texto-faint); margin-bottom: 4px;">Filtrar mês</label>
                     <input type="month" id="filtroMesDevendo" class="input-mes" style="margin-top: 0; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
                 </div>
                 <div class="contador-pendentes">

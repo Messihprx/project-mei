@@ -6,31 +6,44 @@
     <title>Confirme seu e-mail - FinMEI fluxo inteligente</title>
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="login-page">
-    <div class="login-wrapper confirmar-email-wrapper">
-        <div class="login-header">
-            <h1>FinMEI fluxo inteligente</h1>
+    <!-- Branding Panel -->
+    <div class="login-branding">
+        <div class="brand-content">
+            <div class="brand-logo">MEI</div>
+            <h2 class="brand-title">Quase lá!</h2>
+            <p class="brand-subtitle">Confirme seu e-mail para ativar sua conta e começar a usar.</p>
         </div>
+    </div>
 
-        <div class="icone-email-pulsante">✉️</div>
+    <!-- Confirmar Email -->
+    <div class="login-form-panel">
+        <div class="login-wrapper confirmar-email-wrapper">
+            <div class="login-header">
+                <div class="brand-icon-small">MEI</div>
+                <h1>Confirme seu e-mail</h1>
+            </div>
 
-        <h2 class="titulo-login">Confirme seu e-mail</h2>
-        <p style="color: var(--texto-secundario); margin: 0 0 1rem; font-size: 0.9rem;">
-            Enviamos um link de confirmação para o seu e-mail.<br>
-            Clique no link recebido para ativar sua conta.
-        </p>
+            <div class="icone-email-pulsante">✉️</div>
 
-        <div class="spinner-confirmacao"></div>
-        <p id="statusTexto" style="color: var(--texto-secundario); font-size: 0.85rem; margin-top: 1rem;">
-            Aguardando confirmação...
-        </p>
+            <p style="color: var(--texto-secundario); margin: 0 0 1rem; font-size: 0.9rem; text-align: center;">
+                Enviamos um link de confirmação para o seu e-mail.<br>
+                Clique no link recebido para ativar sua conta.
+            </p>
 
-        <button type="button" class="btn-login" onclick="verificarConfirmacao()">Já confirmei meu e-mail</button>
+            <div class="spinner-confirmacao"></div>
+            <p id="statusTexto" style="color: var(--texto-secundario); font-size: 0.85rem; margin-top: 1rem; text-align: center;">
+                Aguardando confirmação...
+            </p>
 
-        <p class="cadastro-link">
-            Não recebeu? <a href="cadastro.html">Tente novamente</a> · <a href="login.html">Voltar para o login</a>
-        </p>
+            <button type="button" class="btn-login" onclick="verificarConfirmacao()" style="margin-top: 1rem;">Já confirmei meu e-mail</button>
+
+            <p class="cadastro-link">
+                Não recebeu? <a href="cadastro.html">Tente novamente</a> · <a href="login.html">Voltar para o login</a>
+            </p>
+        </div>
     </div>
 
     <script type="module">
@@ -40,7 +53,6 @@
             const statusTexto = document.getElementById('statusTexto');
             const { data: { session } } = await supabase.auth.getSession();
 
-            // Caso 1: confirmou no MESMO dispositivo -> sessão já existe
             if (session) {
                 statusTexto.textContent = 'E-mail confirmado! Entrando...';
                 statusTexto.style.color = 'var(--cor-sucesso)';
@@ -48,7 +60,6 @@
                 return true;
             }
 
-            // Caso 2: confirmou em OUTRO dispositivo -> verifica no servidor
             const email = localStorage.getItem('emailConfirmacao');
             if (email) {
                 try {
@@ -73,10 +84,8 @@
             }
         });
 
-        // Checa a cada 3 segundos até o usuário confirmar
-        setInterval(() => {
-            verificarConfirmacao();
-        }, 3000);
+        setInterval(() => { verificarConfirmacao(); }, 3000);
     </script>
+    <script>lucide.createIcons();</script>
 </body>
 </html>

@@ -19,30 +19,30 @@
         </div>
         <nav class="sidebar-nav">
             <a href="index.html" class="nav-item">
-                <i data-lucide="layout-dashboard"></i> Dashboard
+                <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
             </a>
             <a href="vendas.html" class="nav-item">
-                <i data-lucide="shopping-cart"></i> Vendas
+                <i data-lucide="shopping-cart"></i> <span>Vendas</span>
             </a>
             <a href="gastos.html" class="nav-item">
-                <i data-lucide="trending-down"></i> Gastos
+                <i data-lucide="trending-down"></i> <span>Gastos</span>
             </a>
             <a href="clientes.html" class="nav-item active">
-                <i data-lucide="users"></i> Clientes
+                <i data-lucide="users"></i> <span>Clientes</span>
             </a>
             <a href="devendo.html" class="nav-item">
-                <i data-lucide="alert-circle"></i> Devedores
-            </a>
-            
-            <div class="sidebar-divider">ATALHOS</div>
-            <a href="novo-cliente.html" class="nav-item">
-                <i data-lucide="user-plus"></i> Novo Cliente
-            </a>
-            <a href="nova-venda.html" class="nav-item">
-                <i data-lucide="plus-circle"></i> Nova Venda
+                <i data-lucide="alert-circle"></i> <span>Devedores</span>
             </a>
 
-            <button onclick="logout()" class="btn-logout" style="margin-top: auto; margin-bottom: 20px; width: calc(100% - 32px); margin-left: 16px;">
+            <div class="sidebar-divider">ATALHOS</div>
+            <a href="novo-cliente.html" class="nav-item">
+                <i data-lucide="user-plus"></i> <span>Novo Cliente</span>
+            </a>
+            <a href="nova-venda.html" class="nav-item">
+                <i data-lucide="plus-circle"></i> <span>Nova Venda</span>
+            </a>
+
+            <button onclick="logout()" class="btn-logout" style="margin-top: auto;">
                 <i data-lucide="log-out"></i> <span>Sair</span>
             </button>
         </nav>
@@ -57,20 +57,20 @@
                 <h3>Meus Clientes</h3>
                 <p>Visualize e gerencie seus contatos</p>
             </div>
-            <div class="user-info" style="display: flex; gap: 10px;">
-                <button id="btnExportarClientes" class="btn-secondary" style="padding: 0.6rem 1.2rem; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; background: rgba(56, 189, 248, 0.1); color: var(--cor-primaria); border: 1px solid var(--cor-primaria);">
-                    <i data-lucide="download" style="width: 16px;"></i> Exportar CSV
+            <div class="user-info" style="display: flex; gap: 8px;">
+                <button id="btnExportarClientes" class="btn-secondary" style="font-size: 0.82rem;">
+                    <i data-lucide="download" style="width: 15px;"></i> <span>Exportar CSV</span>
                 </button>
-                <a href="novo-cliente.html" class="btn-primary" style="padding: 0.6rem 1.2rem; text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="user-plus" style="width: 16px;"></i> Novo Cliente
+                <a href="novo-cliente.html" class="btn-primary" style="width: auto; padding: 0.55rem 1.1rem; text-decoration: none; font-size: 0.85rem;">
+                    <i data-lucide="user-plus" style="width: 15px;"></i> <span>Novo Cliente</span>
                 </a>
             </div>
         </header>
 
         <section class="content-wrapper">
-            <div class="card-buscar" style="margin-bottom: 2rem;">
-                <label for="buscarCliente" style="font-size: 0.8rem; color: var(--texto-secundario); display: block; margin-bottom: 5px;">Pesquisar por nome</label>
-                <input type="text" id="buscarCliente" placeholder="Digite o nome do cliente..." style="width: 100%; padding: 0.8rem; background: var(--fundo-cor); border: 1px solid var(--borda-cor); border-radius: 0.5rem; color: white;">
+            <div class="card-buscar" style="margin-bottom: 1.5rem;">
+                <label for="buscarCliente">Pesquisar por nome</label>
+                <input type="text" id="buscarCliente" placeholder="Digite o nome do cliente...">
             </div>
 
             <div id="listaClientes">
@@ -81,9 +81,9 @@
     <div id="modalEditar" class="modal">
         <div class="modal-content card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h3 style="color: var(--cor-primaria);">Editar Cliente</h3>
-                <button onclick="fecharModal()" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer;">
-                    <i data-lucide="x"></i>
+                <h3 style="color: var(--cor-primaria); font-size: 1.1rem;">Editar Cliente</h3>
+                <button onclick="fecharModal()" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer; font-size: 1.2rem;">
+                    &times;
                 </button>
             </div>
             
@@ -101,7 +101,7 @@
                 </div>
                 <div class="form-group">
                     <label>Observação</label>
-                    <textarea id="editObs" rows="3" style="width: 100%; background: var(--fundo-cor); border: 1px solid var(--borda-cor); color: white; border-radius: 0.5rem; padding: 0.8rem; margin-top: 0.5rem;"></textarea>
+                    <textarea id="editObs" rows="3" style="width: 100%; background: var(--fundo-cor); border: 1px solid var(--borda-cor); color: white; border-radius: var(--radius-sm); padding: 0.75rem; margin-top: 0.4rem; font-family: inherit; resize: vertical;"></textarea>
                 </div>
                 <div id="erro-formEditarCliente" class="erro-campo erro-formulario"></div>
                 <div style="display: flex; gap: 10px; margin-top: 1.5rem;">

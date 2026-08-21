@@ -6,74 +6,16 @@
     <title>Pagamento Falhou | FinMEI</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        body {
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #0f172a;
-            color: white;
-            text-align: center;
-            padding: 20px;
-        }
-        .status-card {
-            background: rgba(30, 41, 59, 0.5);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            padding: 40px;
-            border-radius: 20px;
-            max-width: 500px;
-            width: 100%;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-            animation: slideUp 0.6s ease-out;
-        }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .icon-box {
-            width: 80px;
-            height: 80px;
-            background: #ef4444;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 25px;
-            box-shadow: 0 0 30px rgba(239, 68, 68, 0.4);
-        }
-        h1 { font-size: 2rem; margin-bottom: 10px; color: #fff; }
-        p { color: #94a3b8; font-size: 1.1rem; line-height: 1.6; margin-bottom: 30px; }
-        
-        .btn-try-again {
-            display: inline-block;
-            background: var(--cor-primaria);
-            color: white;
-            padding: 14px 30px;
-            border-radius: 12px;
-            text-decoration: none;
-            font-weight: 700;
-            transition: all 0.3s;
-            box-shadow: 0 10px 20px rgba(56, 189, 248, 0.3);
-        }
-        .btn-try-again:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(56, 189, 248, 0.4);
-        }
-    </style>
 </head>
-<body>
+<body class="login-page status-page">
     <div class="status-card">
-        <div class="icon-box">
-            <i data-lucide="x-circle" style="width: 45px; height: 45px; color: white;"></i>
+        <div class="icon-box erro">
+            <i data-lucide="x-circle" style="width: 40px; height: 40px; color: var(--cor-erro);"></i>
         </div>
         <h1>Pagamento Não Concluído</h1>
         <p>Houve um erro ao processar seu pagamento. Não se preocupe, nenhuma cobrança foi feita. Por favor, tente novamente ou escolha outro método.</p>
-        
-        <a href="planos.html" class="btn-try-again">Voltar para Planos</a>
+        <a href="planos.html" class="btn-status">Voltar para Planos</a>
     </div>
-
-    <script>
-        lucide.createIcons();
-    </script>
+    <script>lucide.createIcons();</script>
 </body>
 </html>

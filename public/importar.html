@@ -17,45 +17,45 @@
                 <i data-lucide="arrow-left"></i> Voltar ao Dashboard
             </a>
             <h2 style="margin-top: 1rem;">Importação Geral</h2>
-            <p style="color: gray; font-size: 0.9rem;">Siga a ordem numérica para garantir a integridade dos dados.</p>
+            <p style="color: var(--texto-secundario); font-size: 0.88rem;">Siga a ordem numérica para garantir a integridade dos dados.</p>
         </header>
 
-        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div style="display: flex; flex-direction: column; gap: 1.2rem;">
             
-            <div class="card-item-flex" style="flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1.5rem;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="background: var(--cor-primaria); color: white; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.8rem;">1</span>
-                    <h4 style="margin:0">Clientes</h4>
+            <div class="card" style="padding: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.8rem;">
+                    <span style="background: linear-gradient(135deg, var(--cor-primaria), #0b6fd1); color: white; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.75rem; box-shadow: 0 2px 8px rgba(31,166,252,.3);">1</span>
+                    <h4 style="margin:0; font-size: 0.95rem; font-weight: 600;">Clientes</h4>
                 </div>
-                <p style="font-size: 0.8rem; color: #666;">Importe primeiro os clientes para que as vendas possam ser vinculadas a eles.</p>
+                <p style="font-size: 0.8rem; color: var(--texto-secundario); margin-bottom: 0.8rem;">Importe primeiro os clientes para que as vendas possam ser vinculadas a eles.</p>
                 <input type="file" id="csvClientes" accept=".csv,.txt" style="display: none;">
-                <button onclick="document.getElementById('csvClientes').click()" class="btn-acao" style="background: #eee; width: 100%; justify-content: center; border: 1px solid #ccc;">
-                    <i data-lucide="file-up"></i> Selecionar Clientes_Geral.csv
+                <button onclick="document.getElementById('csvClientes').click()" class="btn-secondary" style="width: 100%; justify-content: center; padding: 0.7rem;">
+                    <i data-lucide="file-up" style="width: 16px;"></i> Selecionar Clientes_Geral.csv
                 </button>
                 <div id="statusClientes" class="status-msg"></div>
             </div>
 
-            <div class="card-item-flex" style="flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1.5rem;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="background: var(--cor-primaria); color: white; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.8rem;">2</span>
-                    <h4 style="margin:0">Gastos (Despesas)</h4>
+            <div class="card" style="padding: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.8rem;">
+                    <span style="background: linear-gradient(135deg, var(--cor-primaria), #0b6fd1); color: white; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.75rem; box-shadow: 0 2px 8px rgba(31,166,252,.3);">2</span>
+                    <h4 style="margin:0; font-size: 0.95rem; font-weight: 600;">Gastos (Despesas)</h4>
                 </div>
                 <input type="file" id="csvGastos" accept=".csv,.txt" style="display: none;">
-                <button onclick="document.getElementById('csvGastos').click()" class="btn-acao" style="background: #eee; width: 100%; justify-content: center; border: 1px solid #ccc;">
-                    <i data-lucide="file-up"></i> Selecionar Gastos_Mes.csv
+                <button onclick="document.getElementById('csvGastos').click()" class="btn-secondary" style="width: 100%; justify-content: center; padding: 0.7rem;">
+                    <i data-lucide="file-up" style="width: 16px;"></i> Selecionar Gastos_Mes.csv
                 </button>
                 <div id="statusGastos" class="status-msg"></div>
             </div>
 
-            <div class="card-item-flex" style="flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1.5rem;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="background: var(--cor-primaria); color: white; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.8rem;">3</span>
-                    <h4 style="margin:0">Vendas</h4>
+            <div class="card" style="padding: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.8rem;">
+                    <span style="background: linear-gradient(135deg, var(--cor-primaria), #0b6fd1); color: white; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.75rem; box-shadow: 0 2px 8px rgba(31,166,252,.3);">3</span>
+                    <h4 style="margin:0; font-size: 0.95rem; font-weight: 600;">Vendas</h4>
                 </div>
-                <p style="font-size: 0.8rem; color: #666;">As vendas serão conectadas aos clientes pelo nome automaticamente.</p>
+                <p style="font-size: 0.8rem; color: var(--texto-secundario); margin-bottom: 0.8rem;">As vendas serão conectadas aos clientes pelo nome automaticamente.</p>
                 <input type="file" id="csvVendas" accept=".csv,.txt" style="display: none;">
-                <button onclick="document.getElementById('csvVendas').click()" class="btn-acao" style="background: #eee; width: 100%; justify-content: center; border: 1px solid #ccc;">
-                    <i data-lucide="file-up"></i> Selecionar Vendas_Mes.csv
+                <button onclick="document.getElementById('csvVendas').click()" class="btn-secondary" style="width: 100%; justify-content: center; padding: 0.7rem;">
+                    <i data-lucide="file-up" style="width: 16px;"></i> Selecionar Vendas_Mes.csv
                 </button>
                 <div id="statusVendas" class="status-msg"></div>
             </div>
@@ -64,10 +64,10 @@
     </div>
 
     <style>
-        .status-msg { font-size: 0.8rem; margin-top: 5px; font-weight: 600; min-height: 1.2em; }
-        .success { color: #10b981; }
-        .error { color: #ef4444; }
-        .loading { color: #f59e0b; }
+        .status-msg { font-size: 0.78rem; margin-top: 5px; font-weight: 600; min-height: 1.2em; }
+        .success { color: var(--cor-sucesso); }
+        .error { color: var(--cor-erro); }
+        .loading { color: var(--cor-alerta); }
     </style>
 
     <script type="module">

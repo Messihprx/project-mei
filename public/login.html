@@ -7,35 +7,72 @@
     <title>Login - FinMEI fluxo inteligente</title>
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body class="login-page">
-    <div class="login-wrapper">
-        <div class="login-header">
-            <h1>FinMEI fluxo inteligente</h1>
-            <p>Gerencie seu negócio de forma simples e rápida.</p>
+    <!-- Branding Panel -->
+    <div class="login-branding">
+        <div class="brand-content">
+            <div class="brand-logo">MEI</div>
+            <h2 class="brand-title">FinMEI</h2>
+            <p class="brand-subtitle">A plataforma inteligente que transforma a gestão financeira do seu negócio.</p>
+            <div class="brand-features">
+                <div class="brand-feature">
+                    <i data-lucide="check-circle"></i>
+                    <span>Dashboard com gráficos em tempo real</span>
+                </div>
+                <div class="brand-feature">
+                    <i data-lucide="check-circle"></i>
+                    <span>Controle completo de vendas e despesas</span>
+                </div>
+                <div class="brand-feature">
+                    <i data-lucide="check-circle"></i>
+                    <span>Relatórios avançados de BI</span>
+                </div>
+                <div class="brand-feature">
+                    <i data-lucide="check-circle"></i>
+                    <span>Gestão de clientes integrada</span>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <div class="formulario">
+    <!-- Login Form -->
+    <div class="login-form-panel">
+        <div class="login-wrapper">
+            <div class="login-header">
+                <div class="brand-icon-small">MEI</div>
+                <h1>Bem-vindo de volta</h1>
+                <p>Acesse sua conta para continuar.</p>
+            </div>
+
             <form id="formLogin">
-                <h2 class="titulo-login">Acesse sua conta</h2>
-
                 <div class="input-group">
                     <label>Email</label>
-                    <input type="email" id="emailLogin" placeholder="exemplo@email.com" required>
+                    <input type="email" id="emailLogin" placeholder="seu@email.com" required>
                 </div>
 
                 <div class="input-group">
                     <label>Senha</label>
-                    <input type="password" id="senhaLogin" placeholder="Sua senha" required>
-                    <a href="recuperar.html"
-                        style="font-size: 0.8rem; color: #38bdf8; text-decoration: none; display: block; margin-top: 5px;">Esqueceu
-                        sua senha?</a>
+                    <div class="input-senha-container">
+                        <input type="password" id="senhaLogin" placeholder="Sua senha" required>
+                        <button type="button" class="btn-ver-senha" onclick="togglePassword('senhaLogin')" tabindex="-1">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                    <a href="recuperar.html" style="font-size: 0.78rem; color: var(--cor-primaria); text-decoration: none; display: block; margin-top: 6px; font-weight: 500;">Esqueceu sua senha?</a>
                 </div>
 
                 <button type="submit" class="btn-login">Entrar</button>
 
-                <div style="text-align: center; margin: 10px 0; color: #94a3b8;">ou</div>
+                <div style="text-align: center; margin: 14px 0; color: var(--texto-faint); font-size: 0.82rem; position: relative;">
+                    <span style="background: var(--fundo-cor); padding: 0 12px; position: relative; z-index: 1;">ou</span>
+                    <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--borda-cor);"></div>
+                </div>
 
                 <button type="button" onclick="loginGoogle()" class="btn-google" id="btnGoogle">
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18">
@@ -50,6 +87,15 @@
     </div>
 
     <script type="module" src="js/auth.js"></script>
+    <script>
+        function togglePassword(id) {
+            const input = document.getElementById(id);
+            const btn = input.parentElement.querySelector('.btn-ver-senha');
+            input.type = input.type === "password" ? "text" : "password";
+            btn.classList.toggle('slash');
+        }
+        lucide.createIcons();
+    </script>
 </body>
 
 </html>
