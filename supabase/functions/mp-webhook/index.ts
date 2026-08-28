@@ -2,6 +2,13 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { MercadoPagoConfig, Payment } from "npm:mercadopago@2.0.9";
 
+function normalizePaymentStatus(status: string | undefined) {
+    if (status === 'approved' || status === 'authorized') return 'approved';
+    if (status === 'pending' || status === 'in_process') return 'pending';
+    if (status === 'cancelled' || status === 'refunded' || status === 'charged_back') return 'cancelled';
+    return 'refused';
+}
+
 serve(async (req) => {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
@@ -11,67 +18,111 @@ serve(async (req) => {
     const body = await req.json();
     console.log("Webhook recebido no Supabase:", JSON.stringify(body));
 
-    // O Mercado Pago envia o ID do pagamento no campo data.id
     if (body.type === "payment" && body.data && body.data.id) {
         const paymentId = body.data.id;
-        
-        // 1. Configura o Mercado Pago para buscar os detalhes reais do pagamento
-        const client = new MercadoPagoConfig({ 
-            accessToken: Deno.env.get("MP_ACCESS_TOKEN")! 
-        });
-        const payment = new Payment(client);
-        
-        // Busca os detalhes reais no servidor do MP
-        const paymentInfo = await payment.get({ id: paymentId });
-        
-        // 2. Só atualiza o banco se o pagamento foi REALMENTE aprovado
-        if (paymentInfo.status === "approved" || paymentInfo.status === "authorized") {
-            const userId = paymentInfo.external_reference; // O ID do usuário que enviamos no checkout!
 
-            if (userId) {
+        // Busca access token: primeiro do banco, depois fallback pra env var
+        let accessToken = Deno.env.get("MP_ACCESS_TOKEN");
+
+        try {
+          const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+          const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+          const supabaseConfig = createClient(supabaseUrl, supabaseKey);
+
+          const { data: config } = await supabaseConfig
+            .from('gateway_config')
+            .select('access_token')
+            .eq('gateway_name', 'mercado_pago')
+            .eq('active', true)
+            .single();
+
+          if (config?.access_token) {
+            accessToken = config.access_token;
+          }
+        } catch (e) {
+          console.log("Usando MP_ACCESS_TOKEN da env var (fallback):", e.message);
+        }
+
+        if (!accessToken) {
+          throw new Error("Access token do Mercado Pago não configurado");
+        }
+
+        const client = new MercadoPagoConfig({ accessToken });
+        const payment = new Payment(client);
+
+        const paymentInfo = await payment.get({ id: paymentId });
+
+        const userId = paymentInfo.external_reference;
+        const paymentStatus = normalizePaymentStatus(paymentInfo.status);
+        const approved = paymentStatus === "approved";
+
+        if (userId) {
                 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
                 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-                
-                // Cria um cliente com permissão de Admin (Service Role)
                 const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
-                // 3. Busca a expiração atual do usuário para decidir se soma ou inicia do zero
-                const { data: perfilAtual } = await supabaseAdmin
-                    .from('perfis')
-                    .select('expira_em')
-                    .eq('id', userId)
-                    .single();
+                const { data: existingPayment, error: existingPaymentError } = await supabaseAdmin
+                    .from('pagamentos')
+                    .select('payment_id, status')
+                    .eq('payment_id', String(paymentId))
+                    .maybeSingle();
 
-                const hoje = new Date();
-                let novaExpira = new Date();
-
-                // Se o usuário já for premium e a data de expiração for no FUTURO, somamos à ela
-                if (perfilAtual && perfilAtual.expira_em) {
-                    const expiraAtual = new Date(perfilAtual.expira_em);
-                    if (expiraAtual > hoje) {
-                        // O usuário está renovando antecipado! Somamos 30 dias à data que ele já tem.
-                        novaExpira = expiraAtual;
-                    }
+                if (existingPaymentError) throw existingPaymentError;
+                if (existingPayment?.status === 'approved' && approved) {
+                    return new Response(JSON.stringify({ received: true }), {
+                        headers: { "Content-Type": "application/json" },
+                        status: 200
+                    });
                 }
 
-                novaExpira.setDate(novaExpira.getDate() + 30); // Adiciona os 30 dias contratados
+                if (approved) {
+                    const { data: perfilAtual } = await supabaseAdmin
+                        .from('perfis')
+                        .select('expira_em')
+                        .eq('id', userId)
+                        .single();
 
-                // 4. Atualiza o banco de dados
-                const { error } = await supabaseAdmin
-                    .from('perfis')
-                    .update({ 
-                        plano: 'premium', 
-                        expira_em: novaExpira.toISOString() 
-                    })
-                    .eq('id', userId);
+                    const hoje = new Date();
+                    let novaExpira = new Date();
 
-                if (error) throw error;
-                console.log(`✅ Pagamento Aprovado! Usuário ID: ${userId} agora é PREMIUM.`);
-            }
+                    if (perfilAtual && perfilAtual.expira_em) {
+                        const expiraAtual = new Date(perfilAtual.expira_em);
+                        if (expiraAtual > hoje) {
+                            novaExpira = expiraAtual;
+                        }
+                    }
+
+                    novaExpira.setDate(novaExpira.getDate() + 30);
+
+                    const { error } = await supabaseAdmin
+                        .from('perfis')
+                        .update({
+                            plano: 'premium',
+                            assinatura_status: 'active',
+                            expira_em: novaExpira.toISOString()
+                        })
+                        .eq('id', userId);
+
+                    if (error) throw error;
+                }
+
+                const { error: paymentError } = await supabaseAdmin
+                    .from('pagamentos')
+                    .upsert({
+                        payment_id: String(paymentId),
+                        user_id: userId,
+                        valor: Number(paymentInfo.transaction_amount || 0),
+                        plano: 'premium',
+                        status: paymentStatus,
+                        gateway: 'mercado_pago',
+                        external_reference: paymentInfo.external_reference || null
+                    }, { onConflict: 'payment_id' });
+
+                if (paymentError) throw paymentError;
+                console.log(`✅ Pagamento ${paymentStatus} registrado. Usuário ID: ${userId}.`);
         }
     }
 
-    // Sempre retorne 200 pro Mercado Pago para ele parar de enviar a mesma notificação
     return new Response(JSON.stringify({ received: true }), { 
         headers: { "Content-Type": "application/json" },
         status: 200 

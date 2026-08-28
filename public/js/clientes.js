@@ -1,4 +1,5 @@
 import { supabase } from './auth.js';
+import { formatarTelefone } from './novo-cliente.js';
 
 // --- FUNÇÕES DE ERRO INLINE ---
 function mostrarErro(campoId, mensagem) {
@@ -127,6 +128,19 @@ window.editarCliente = (id, nome, telefone, observacao) => {
     document.getElementById("modalEditar").style.display = "flex";
 };
 
+// Máscara telefone no modal de edição
+const inputTelefoneEdit = document.getElementById("editTelefone");
+if (inputTelefoneEdit) {
+    inputTelefoneEdit.addEventListener("input", (e) => {
+        let value = e.target.value.replace(/\D/g, "");
+        if (value.length > 0) value = "(" + value;
+        if (value.length > 3) value = value.slice(0, 3) + ") " + value.slice(3);
+        if (value.length > 10) value = value.slice(0, 10) + "-" + value.slice(10, 14);
+        e.target.value = value.slice(0, 15);
+        limparErro('editTelefone');
+    });
+}
+
 window.fecharModal = () => {
     limparTodosErros();
     document.getElementById("modalEditar").style.display = "none";
@@ -173,7 +187,7 @@ if (formEditar) {
 
             const { error } = await supabase
                 .from('clientes')
-                .update({ nome, telefone: telefone.replace(/\D/g, ""), observacao })
+                .update({ nome, telefone: formatarTelefone(telefone), observacao })
                 .eq('id', id);
 
             if (error) throw error;
@@ -199,7 +213,8 @@ window.onclick = (event) => {
 
 // --- 3. DELETAR CLIENTE ---
 window.deletarCliente = async (id) => {
-    if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
+    const confirmed = await confirmModal("Excluir cliente", "Tem certeza que deseja excluir este cliente? Essa ação não pode ser desfeita.");
+    if (!confirmed) return;
 
     try {
         const { error } = await supabase

@@ -1,9 +1,9 @@
 import { supabase } from './auth.js';
 
-// Variável global para armazenar os clientes e facilitar a busca do ID pelo nome
 let listaDeClientesGlobal = [];
+let listaDeProdutosGlobal = [];
 
-// 1. FUNÇÃO PARA POPULAR O DATALIST COM SUGESTÕES
+// 1. SUGESTÕES DE CLIENTES
 async function popularSugestoesClientes() {
     const datalist = document.getElementById("listaClientesSugestoes");
     if (!datalist) return;
@@ -16,49 +16,91 @@ async function popularSugestoesClientes() {
 
         if (error) throw error;
 
-        listaDeClientesGlobal = clientes; // Salva na variável global
-
-        // Preenche o datalist com as opções de nomes
+        listaDeClientesGlobal = clientes;
         datalist.innerHTML = clientes.map(c => `<option value="${c.nome}"></option>`).join('');
-
     } catch (err) {
         console.error("Erro ao carregar sugestões:", err.message);
     }
 }
 
-// 2. FUNÇÃO PARA SALVAR A VENDA
+// 2. SUGESTÕES DE PRODUTOS
+async function popularSugestoesProdutos() {
+    const datalist = document.getElementById("listaProdutosSugestoes");
+    if (!datalist) return;
+
+    try {
+        const { data: produtos, error } = await supabase
+            .from('produtos')
+            .select('id, nome, valor, descricao')
+            .order('nome', { ascending: true });
+
+        if (error) throw error;
+
+        listaDeProdutosGlobal = produtos;
+        datalist.innerHTML = produtos.map(p =>
+            `<option value="${p.nome}" data-id="${p.id}" data-valor="${p.valor}" data-desc="${p.descricao || ''}"></option>`
+        ).join('');
+    } catch (err) {
+        console.error("Erro ao carregar produtos:", err.message);
+    }
+}
+
+// 3. AUTO-PREENCHIMENTO AO SELECIONAR PRODUTO
+const inputProduto = document.getElementById("produtoVendaInput");
+const inputProdutoId = document.getElementById("produtoIdSelecionado");
+const inputServico = document.getElementById("servicoVenda");
+const inputValor = document.getElementById("valorVenda");
+
+if (inputProduto) {
+    inputProduto.addEventListener("input", () => {
+        const nomeDigitado = inputProduto.value.trim();
+        const produto = listaDeProdutosGlobal.find(p => p.nome === nomeDigitado);
+
+        if (produto) {
+            inputProdutoId.value = produto.id;
+            inputServico.value = produto.nome;
+            inputValor.value = parseFloat(produto.valor).toFixed(2);
+        } else {
+            inputProdutoId.value = '';
+        }
+    });
+
+    // Limpar ID se o usuário apagar o campo
+    inputProduto.addEventListener("blur", () => {
+        const nomeDigitado = inputProduto.value.trim();
+        if (!nomeDigitado) {
+            inputProdutoId.value = '';
+        }
+    });
+}
+
+// 4. SALVAR VENDA
 const formNovaVenda = document.getElementById("formNovaVenda");
 import { protegerAcao } from './planos.js';
 
 if (formNovaVenda) {
-    // Proteger formulário na renderização
     protegerAcao("formNovaVenda", "movimentacao");
 
     formNovaVenda.addEventListener("submit", async (e) => {
         e.preventDefault();
-        
-        // Verificação extra antes do processo
-        if(await protegerAcao("formNovaVenda", "movimentacao")) return;
+
+        if (await protegerAcao("formNovaVenda", "movimentacao")) return;
 
         const btn = formNovaVenda.querySelector('button');
-        
-        // Pega os elementos do DOM
-        const inputValor = document.getElementById("valorVenda");
+
         const nomeDigitado = document.getElementById("clienteVendaInput").value;
         const descricao = document.getElementById("servicoVenda").value.trim();
         const valor = inputValor.value;
         const status = document.getElementById("statusVenda").value;
+        const produtoId = inputProdutoId.value || null;
 
-        // --- CORREÇÃO DO TRATAMENTO DE ERRO ---
-        const valorNumerico = parseFloat(valor); // Aqui estava o erro (valorInput não existia)
+        const valorNumerico = parseFloat(valor);
 
         if (isNaN(valorNumerico) || valorNumerico <= 0) {
             mostrarModal('Valor inválido', 'Por favor, insira um valor de venda válido e maior que zero.', 'alerta');
-            return; 
+            return;
         }
-        // ------------------------------------------
 
-        // Tenta encontrar o ID correspondente ao nome digitado
         const clienteEncontrado = listaDeClientesGlobal.find(c => c.nome === nomeDigitado);
 
         if (!clienteEncontrado) {
@@ -75,7 +117,8 @@ if (formNovaVenda) {
             const { error } = await supabase.from('vendas').insert([
                 {
                     user_id: user.id,
-                    cliente_id: clienteEncontrado.id, 
+                    cliente_id: clienteEncontrado.id,
+                    produto_id: produtoId,
                     descricao: descricao,
                     valor: valorNumerico,
                     status: status
@@ -96,5 +139,5 @@ if (formNovaVenda) {
     });
 }
 
-// Inicializa as sugestões ao carregar a página
 popularSugestoesClientes();
+popularSugestoesProdutos();

@@ -4,7 +4,13 @@ import { verificarStatusPlano } from './planos.js';
 const filtroMes = document.getElementById("filtroMesGastos");
 const formGasto = document.getElementById("formNovoGasto");
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+        window.location.href = "login.html";
+        return;
+    }
+
     if (filtroMes) {
         if (!filtroMes.value) {
             const hoje = new Date();
@@ -12,6 +18,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         filtroMes.addEventListener("change", carregarGastos);
     }
+
+    carregarGastos();
 
     if (formGasto) {
         formGasto.addEventListener("submit", async (e) => {
@@ -157,16 +165,25 @@ async function carregarGastos() {
         lista.innerHTML = gastos.map(g => {
             total += parseFloat(g.valor);
             return `
-                <div class="card card-venda-premium" style="margin-bottom: 0.8rem; border-left: 4px solid var(--cor-erro);">
-                    <div style="flex: 1;">
-                        <h4 style="margin: 0;">${g.descricao}</h4>
-                        <small style="color: var(--texto-secundario);">${g.categoria} • ${new Date(g.data + 'T12:00:00').toLocaleDateString('pt-BR')}</small>
+                <div class="gasto-card">
+                    <div class="gasto-info">
+                        <div class="gasto-icone">
+                            <i data-lucide="trending-down" style="width: 20px;"></i>
+                        </div>
+                        <div class="gasto-texto">
+                            <h4>${g.descricao}</h4>
+                            <small>${g.categoria} • ${new Date(g.data + 'T12:00:00').toLocaleDateString('pt-BR')}</small>
+                        </div>
                     </div>
-                    <div style="text-align: right;">
-                        <div style="color: var(--cor-erro); font-weight: 700; margin-bottom: 8px;">- R$ ${parseFloat(g.valor).toFixed(2)}</div>
-                        <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                            <button onclick="abrirEditarGasto('${g.id}')" style="background:none; border:none; color:var(--cor-primaria); cursor:pointer;"><i data-lucide="edit-2" style="width: 16px;"></i></button>
-                            <button onclick="deletarGasto('${g.id}')" style="background:none; border:none; color:var(--cor-erro); cursor:pointer;"><i data-lucide="trash-2" style="width: 16px;"></i></button>
+                    <div class="gasto-preco-acoes">
+                        <span class="gasto-valor">- R$ ${parseFloat(g.valor).toFixed(2)}</span>
+                        <div class="gasto-acoes">
+                            <button onclick="abrirEditarGasto('${g.id}')" class="btn-acao btn-edit" title="Editar">
+                                <i data-lucide="edit-2"></i>
+                            </button>
+                            <button onclick="deletarGasto('${g.id}')" class="btn-acao btn-delete" title="Excluir">
+                                <i data-lucide="trash-2"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -204,7 +221,8 @@ window.fecharModalEditarGasto = function() {
 };
 
 window.deletarGasto = async function(id) {
-    if (!confirm("Tem certeza que deseja excluir este gasto?")) return;
+    const confirmed = await confirmModal("Excluir gasto", "Tem certeza que deseja excluir este gasto? Essa ação não pode ser desfeita.");
+    if (!confirmed) return;
     try {
         const { error } = await supabase.from('despesas').delete().eq('id', id);
         if (error) throw error;
@@ -239,5 +257,4 @@ if (formEditarGasto) {
     });
 }
 
-// Inicializa a lista
-carregarGastos();
+

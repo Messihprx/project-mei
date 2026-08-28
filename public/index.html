@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FinMEI | Gestão Financeira e Fluxo de Caixa para MEI</title>
 
     <meta name="description"
@@ -50,6 +50,14 @@
             <a href="devendo.html" class="nav-item">
                 <i data-lucide="alert-circle"></i> <span>Devedores</span>
             </a>
+            <a href="produtos.html" class="nav-item">
+                <i data-lucide="package"></i> <span>Produtos</span>
+            </a>
+
+            <div class="sidebar-divider">ASSISTENTE</div>
+            <a href="ia.html" class="nav-item">
+                <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
+            </a>
 
             <div class="sidebar-divider">ATALHOS</div>
             <a href="nova-venda.html" class="nav-item">
@@ -73,17 +81,6 @@
             </a>
         </nav>
 
-        <div class="sidebar-footer">
-            <button onclick="abrirRelatorioAnalitico()" class="btn-bi">
-                <i data-lucide="bar-chart-2"></i> <span>Relatórios Avançados</span>
-            </button>
-            <a href="#" onclick="abrirImportacao()" class="nav-item" style="background: var(--cor-primaria-soft); color: var(--cor-primaria); font-weight: 600;">
-                <i data-lucide="database-backup"></i> <span>Importar dados</span>
-            </a>
-            <button onclick="logout()" class="btn-logout">
-                <i data-lucide="log-out"></i> <span>Sair</span>
-            </button>
-        </div>
     </aside>
 
     <main class="main-content">
@@ -98,33 +95,58 @@
                 <p>Gerencie suas finanças em tempo real</p>
             </div>
             <div class="top-actions">
-                <a href="nova-venda.html" class="top-action-primary"><i data-lucide="plus"></i><span>Nova venda</span></a>
-                <a href="novo-cliente.html" class="top-action-secondary"><i data-lucide="user-plus"></i><span>Novo cliente</span></a>
+                <a href="nova-venda.html" class="top-action-primary"><i data-lucide="plus"></i><span>Nova
+                        venda</span></a>
+                <a href="novo-cliente.html" class="top-action-secondary"><i data-lucide="user-plus"></i><span>Novo
+                        cliente</span></a>
                 <div class="user-info">
-                <img id="fotoUsuario" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Perfil">
+                    <div class="profile-dropdown">
+                        <button class="profile-toggle" onclick="toggleProfileDropdown(event)">
+                            <img id="fotoUsuario" src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                                alt="Perfil">
+                        </button>
+                        <div class="dropdown-menu" id="profileDropdown">
+                        <div class="dropdown-header">Minha Conta</div>
+                        <a href="#" onclick="abrirImportacao()" class="dropdown-item">
+                            <i data-lucide="database-backup"></i> <span>Importar dados</span>
+                        </a>
+                        <a href="#" onclick="abrirRelatorioAnalitico()" class="dropdown-item">
+                            <i data-lucide="bar-chart-2"></i> <span>Relatórios Avançados</span>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" onclick="logout()" class="dropdown-item logout">
+                            <i data-lucide="log-out"></i> <span>Sair</span>
+                        </a>
+                    </div>
+                    </div>
                 </div>
-            </div>
         </header>
 
         <section class="content-wrapper">
             <div class="card-buscar dashboard-filtros-mobile dashboard-filtros-pc" style="margin-bottom: 1.5rem;">
                 <div class="filtro-mes-dashboard" style="display: flex; align-items: center; gap: 12px;">
-                    <div class="icon-venda pago" style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <div class="icon-venda pago"
+                        style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <i data-lucide="calendar" style="width: 18px;"></i>
                     </div>
                     <div>
-                        <label for="filtroMesDashboard" style="font-size: 0.72rem; color: var(--texto-faint); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Mês de Análise</label>
-                        <input type="month" id="filtroMesDashboard" class="input-mes input-mes-dashboard" style="border: none; padding: 0; background: transparent; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-top: 0;">
+                        <label for="filtroMesDashboard"
+                            style="font-size: 0.72rem; color: var(--texto-faint); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Mês
+                            de Análise</label>
+                        <input type="month" id="filtroMesDashboard" class="input-mes input-mes-dashboard"
+                            style="border: none; padding: 0; background: transparent; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-top: 0;">
                     </div>
                 </div>
-                <button id="btnLimparFiltro" class="btn-secondary" style="font-size: 0.78rem; padding: 0.45rem 0.9rem; white-space: nowrap;">
+                <button id="btnLimparFiltro" class="btn-secondary"
+                    style="font-size: 0.78rem; padding: 0.45rem 0.9rem; white-space: nowrap;">
                     Mês Atual
                 </button>
             </div>
 
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 1rem;">
                 <i data-lucide="bar-chart-3" style="color: var(--cor-primaria); width: 18px;"></i>
-                <h4 style="color: var(--texto-principal); font-weight: 600; font-size: 0.95rem;">Desempenho no Período</h4>
+                <h4 style="color: var(--texto-principal); font-weight: 600; font-size: 0.95rem;">Desempenho no Período
+                </h4>
             </div>
 
             <div class="resumo-cards">
@@ -164,7 +186,8 @@
             <div class="card highlight">
                 <div>
                     <span class="metric-label" style="letter-spacing: 2px;">Saldo Geral Disponível</span>
-                    <p style="font-size: 0.78rem; color: var(--texto-faint); margin-top: 4px;">Patrimônio acumulado (Entradas Totais - Gastos Totais)</p>
+                    <p style="font-size: 0.78rem; color: var(--texto-faint); margin-top: 4px;">Patrimônio acumulado
+                        (Entradas Totais - Gastos Totais)</p>
                 </div>
                 <h1 id="saldoGeralTotal" class="big">R$ 0,00</h1>
             </div>
@@ -237,9 +260,31 @@
 
     <script type="module" src="js/auth.js"></script>
     <script type="module" src="js/dashboard.js"></script>
+    <script type="module" src="js/ai-fab.js"></script>
     <script>
         // Inicializa os ícones
         lucide.createIcons();
+
+        // Dropdown do perfil
+        function toggleProfileDropdown(event) {
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.classList.toggle('active');
+            // Fechar se clicar fora
+            if (!event.target.closest('.profile-dropdown')) {
+                dropdown.classList.remove('active');
+            }
+        }
+
+        // Fechar dropdown ao clicar fora
+        document.addEventListener('click', (e) => {
+            const profileDropdown = document.querySelector('.profile-dropdown');
+            const profileToggle = document.querySelector('.profile-toggle');
+            if (profileDropdown && profileToggle) {
+                if (!e.target.closest('.profile-dropdown')) {
+                    profileDropdown.classList.remove('active');
+                }
+            }
+        });
     </script>
 </body>
 

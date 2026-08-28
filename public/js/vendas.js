@@ -147,7 +147,8 @@ window.fecharModalEditarVenda = () => {
 };
 
 window.deletarVenda = async (id) => {
-    if (!confirm("Deseja realmente excluir esta venda?")) return;
+    const confirmed = await confirmModal("Excluir venda", "Tem certeza que deseja excluir esta venda? Essa ação não pode ser desfeita.");
+    if (!confirmed) return;
     try {
         const { error } = await supabase.from('vendas').delete().eq('id', id);
         if (error) throw error;

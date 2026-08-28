@@ -55,6 +55,14 @@ if (inputTelefone) {
     });
 }
 
+// --- FORMATAR TELEFONE ---
+function formatarTelefone(tel) {
+    const nums = tel.replace(/\D/g, '');
+    if (nums.length === 11) return `(${nums.slice(0,2)}) ${nums.slice(2,7)}-${nums.slice(7)}`;
+    if (nums.length === 10) return `(${nums.slice(0,2)}) ${nums.slice(2,6)}-${nums.slice(6)}`;
+    return tel;
+}
+
 // --- VALIDAÇÃO EM TEMPO REAL (blur) ---
 const nomeInput = document.getElementById("nomeCliente");
 if (nomeInput) {
@@ -143,7 +151,7 @@ if (formNovoCliente) {
 
             const { error } = await supabase.from('clientes').insert([{
                 nome,
-                telefone: telefone.replace(/\D/g, ""),
+                telefone: formatarTelefone(telefone),
                 observacao,
                 user_id: user.id
             }]);
@@ -163,4 +171,4 @@ if (formNovoCliente) {
 }
 
 // Exporta para uso no clientes.js
-export { mostrarErro, limparErro, limparTodosErros, validarNomeCliente, validarTelefone, verificarDuplicata };
+export { mostrarErro, limparErro, limparTodosErros, validarNomeCliente, validarTelefone, verificarDuplicata, formatarTelefone };

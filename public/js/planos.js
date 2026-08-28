@@ -69,7 +69,7 @@ export async function assinarPlanoPremium(emailDoUsuario) {
                     {
                         title: 'Assinatura Premium FinMEI',
                         quantity: 1,
-                        unit_price: 1.00
+                        unit_price: 15.90
                     }
                 ],
                 payerEmail: session.user.email,
@@ -163,51 +163,13 @@ export async function injetarBannerPlano() {
             if (mainContent && !document.getElementById('banner-premium-expiring')) {
                 const banner = document.createElement('div');
                 banner.id = 'banner-premium-expiring';
-                banner.style.width = '100%';
-                banner.style.padding = '12px 20px';
-                banner.style.textAlign = 'center';
-                banner.style.fontWeight = '600';
-                banner.style.display = 'flex';
-                banner.style.justifyContent = 'center';
-                banner.style.alignItems = 'center';
-                banner.style.gap = '15px';
-                banner.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-                banner.style.flexWrap = 'wrap';
-                banner.style.zIndex = '9999';
-                banner.style.backgroundColor = '#f59e0b'; // Amarelo de atenção
-                banner.style.color = '#fff';
-                banner.style.animation = 'pulse-banner 2s infinite';
+                banner.className = 'notice-banner premium-expiring-banner';
                 
-                if (!document.getElementById('style-pulse-banner')) {
-                    const style = document.createElement('style');
-                    style.id = 'style-pulse-banner';
-                    style.innerHTML = `
-                        @keyframes pulse-banner {
-                            0% { opacity: 0.9; transform: scale(1); }
-                            50% { opacity: 1; transform: scale(1.005); }
-                            100% { opacity: 0.9; transform: scale(1); }
-                        }
-                    `;
-                    document.head.appendChild(style);
-                }
-
                 banner.innerHTML = `
-                    <span><i data-lucide="alert-circle" style="width: 18px; position:relative; top:3px;"></i> Sua assinatura Premium expira em ${status.diasRestantesPremium} dia(s).</span>
+                    <span class="notice-banner-text"><i data-lucide="alert-circle" style="width: 18px; position:relative; top:3px;"></i> Sua assinatura Premium expira em ${status.diasRestantesPremium} dia(s).</span>
                     <a href="planos.html" class="btn-upgrade">Renovar Agora</a>
                 `;
                 mainContent.prepend(banner);
-
-                const btn = banner.querySelector('.btn-upgrade');
-                if (btn) {
-                    btn.style.backgroundColor = '#fff';
-                    btn.style.color = '#f59e0b';
-                    btn.style.padding = '6px 16px';
-                    btn.style.borderRadius = '6px';
-                    btn.style.textDecoration = 'none';
-                    btn.style.fontSize = '0.9rem';
-                    btn.style.fontWeight = '700';
-                    btn.style.transition = 'all 0.2s';
-                }
             }
         }
 
@@ -220,69 +182,109 @@ export async function injetarBannerPlano() {
 
     if (document.getElementById('banner-plano-teste')) return;
 
+    // Injeta o CSS uma única vez
+    if (!document.getElementById('style-trial-banner')) {
+        const style = document.createElement('style');
+        style.id = 'style-trial-banner';
+        style.innerHTML = `
+            .trial-bar{
+                position:fixed;top:0;left:0;
+                width:100%;
+                z-index:9999;
+                display:flex;align-items:center;justify-content:center;gap:12px;
+                padding:10px 20px;
+                font-size:13px;font-weight:600;color:#fff;
+                animation:trialSlide .3s ease;
+                box-sizing:border-box;
+            }
+            @keyframes trialSlide{from{opacity:0;transform:translateY(-100%)}to{opacity:1;transform:translateY(0)}}
+            .trial-bar .trial-text{display:flex;align-items:center;gap:7px}
+            .trial-bar .trial-text svg{width:15px;height:15px}
+            .trial-bar .trial-divider{width:1px;height:16px;background:rgba(255,255,255,.25);margin:0 2px}
+            .trial-bar .trial-btn{
+                padding:5px 14px;border-radius:7px;
+                font-size:12px;font-weight:700;text-decoration:none;
+                transition:all .15s;white-space:nowrap;
+            }
+
+            /* Trial normal (verde) */
+            .trial-bar.trial-active{
+                background:linear-gradient(135deg,#059669,#10b981);
+                box-shadow:0 2px 12px rgba(16,185,129,.25);
+            }
+            .trial-bar.trial-active .trial-btn{
+                background:rgba(255,255,255,.2);color:#fff;
+                border:1px solid rgba(255,255,255,.3);
+            }
+            .trial-bar.trial-active .trial-btn:hover{
+                background:rgba(255,255,255,.3);
+            }
+
+            /* Trial poucos dias (amarelo) */
+            .trial-bar.trial-warn{
+                background:linear-gradient(135deg,#d97706,#f59e0b);
+                box-shadow:0 2px 12px rgba(245,158,11,.25);
+            }
+            .trial-bar.trial-warn .trial-btn{
+                background:rgba(255,255,255,.2);color:#fff;
+                border:1px solid rgba(255,255,255,.3);
+            }
+            .trial-bar.trial-warn .trial-btn:hover{
+                background:rgba(255,255,255,.3);
+            }
+
+            /* Trial expirado / premium expirando (vermelho) */
+            .trial-bar.trial-danger{
+                background:linear-gradient(135deg,#dc2626,#ef4444);
+                box-shadow:0 2px 12px rgba(239,68,68,.25);
+            }
+            .trial-bar.trial-danger .trial-btn{
+                background:rgba(255,255,255,.2);color:#fff;
+                border:1px solid rgba(255,255,255,.3);
+            }
+            .trial-bar.trial-danger .trial-btn:hover{
+                background:rgba(255,255,255,.3);
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     const banner = document.createElement('div');
     banner.id = 'banner-plano-teste';
-    banner.style.width = '100%';
-    banner.style.padding = '12px 20px';
-    banner.style.textAlign = 'center';
-    banner.style.fontWeight = '600';
-    banner.style.display = 'flex';
-    banner.style.justifyContent = 'center';
-    banner.style.alignItems = 'center';
-    banner.style.gap = '15px';
-    banner.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-    banner.style.flexWrap = 'wrap';
-    banner.style.zIndex = '9999';
+    banner.className = 'trial-bar';
 
     if (status.expirado) {
-        banner.style.backgroundColor = '#ef4444'; // Cor Erro (Vermelho)
-        banner.style.color = '#fff';
+        banner.classList.add('trial-danger');
         banner.innerHTML = `
-            <span><i data-lucide="alert-triangle" style="width: 18px; position:relative; top:3px;"></i> Seu período de teste expirou. Você não pode adicionar novos registros.</span>
-            <a href="planos.html" class="btn-upgrade">Assinar Premium</a>
+            <span class="trial-text">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                Seu período gratuito expirou
+            </span>
+            <span class="trial-divider"></span>
+            <a href="planos.html" class="trial-btn">Assinar Premium</a>
         `;
     } else {
-        const poucosDias = status.diasRestantes <= 3;
-        banner.style.backgroundColor = poucosDias ? '#ef4444' : '#f59e0b'; // Vermelho se estiver acabando
-        banner.style.color = '#fff';
-        
-        // Adiciona uma pulsação se estiver acabando
-        if (poucosDias) {
-            banner.style.animation = 'pulse-banner 2s infinite';
-            if (!document.getElementById('style-pulse-banner')) {
-                const style = document.createElement('style');
-                style.id = 'style-pulse-banner';
-                style.innerHTML = `
-                    @keyframes pulse-banner {
-                        0% { opacity: 0.9; transform: scale(1); }
-                        50% { opacity: 1; transform: scale(1.005); }
-                        100% { opacity: 0.9; transform: scale(1); }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-        }
+        const dias = status.diasRestantes;
+        const variant = dias <= 3 ? 'trial-danger' : dias <= 7 ? 'trial-warn' : 'trial-active';
+        banner.classList.add(variant);
+
+        const icon = dias <= 3
+            ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+            : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
 
         banner.innerHTML = `
-            <span><i data-lucide="${poucosDias ? 'alert-triangle' : 'clock'}" style="width: 18px; position:relative; top:3px;"></i> Você está no modo de teste. Restam ${status.diasRestantes} dias gratuitos.</span>
-            <a href="planos.html" class="btn-upgrade">Ver Planos</a>
+            <span class="trial-text">
+                ${icon}
+                Teste gratuito — <span style="font-weight:800">${dias} dia${dias !== 1 ? 's' : ''}</span> restante${dias !== 1 ? 's' : ''}
+            </span>
+            <span class="trial-divider"></span>
+            <a href="planos.html" class="trial-btn">Ver planos</a>
         `;
     }
 
-    // Configura os botões internos do banner dinamicamente depois de append
-    mainContent.prepend(banner);
-
-    const btn = banner.querySelector('.btn-upgrade');
-    if (btn) {
-        btn.style.backgroundColor = '#fff';
-        btn.style.color = banner.style.backgroundColor; // Usa a mesma cor de fundo para o texto do botão
-        btn.style.padding = '6px 16px';
-        btn.style.borderRadius = '6px';
-        btn.style.textDecoration = 'none';
-        btn.style.fontSize = '0.9rem';
-        btn.style.fontWeight = '700';
-        btn.style.transition = 'all 0.2s';
-    }
+    // Prender no body pra não ser cortado por overflow
+    document.body.prepend(banner);
+    document.body.style.paddingTop = '40px';
 
     if (window.lucide) window.lucide.createIcons();
 }

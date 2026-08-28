@@ -33,6 +33,14 @@
             <a href="devendo.html" class="nav-item">
                 <i data-lucide="alert-circle"></i> <span>Devedores</span>
             </a>
+            <a href="produtos.html" class="nav-item">
+                <i data-lucide="package"></i> <span>Produtos</span>
+            </a>
+
+            <div class="sidebar-divider">ASSISTENTE</div>
+            <a href="ia.html" class="nav-item">
+                <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
+            </a>
 
             <div class="sidebar-divider">ATALHOS</div>
             <a href="novo-cliente.html" class="nav-item">
@@ -72,6 +80,13 @@
                         <input type="hidden" id="clienteIdSelecionado">
                     </div>
                     <div class="input-group">
+                        <label>Produto (opcional)</label>
+                        <input type="text" id="produtoVendaInput" placeholder="Pesquisar produto..." autocomplete="off" list="listaProdutosSugestoes">
+                        <datalist id="listaProdutosSugestoes"></datalist>
+                        <input type="hidden" id="produtoIdSelecionado">
+                        <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Se selecionar, preenche nome e valor automaticamente</small>
+                    </div>
+                    <div class="input-group">
                         <label>Descrição do Serviço/Produto</label>
                         <input type="text" id="servicoVenda" placeholder="Ex: Manutenção de Ar-condicionado" required>
                     </div>
@@ -97,6 +112,7 @@
     </main>
 
     <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/ai-fab.js"></script>
     <script type="module" src="js/nova-venda.js"></script>
     <script>lucide.createIcons();</script>
 </body>

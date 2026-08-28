@@ -144,9 +144,21 @@ const isPaginaProtegida = !paginasPublicas.includes(paginaAtual);
 // Verifica se veio do OAuth (tokens na URL)
 const temHashTokens = window.location.hash.includes('access_token');
 
+let initialSessionChecked = false;
+
 function inicializarPagina(session) {
     injetarBannerPlano();
     inicializarMenuMobileGlobal();
+}
+
+function handleAuthRedirect(session) {
+    if (session && isPaginaProtegida) {
+        inicializarPagina(session);
+    } else if (session && (paginaAtual === "login" || paginaAtual === "cadastro" || paginaAtual === "confirmar-email")) {
+        window.location.href = "index.html";
+    } else if (!session && isPaginaProtegida && !temHashTokens && initialSessionChecked) {
+        window.location.href = "login.html";
+    }
 }
 
 // Escuta mudanças de autenticação PRIMEIRO (captura o retorno do Google)
@@ -158,13 +170,13 @@ supabase.auth.onAuthStateChange((event, session) => {
         return;
     }
 
-    if (session && isPaginaProtegida) {
-        inicializarPagina(session);
-    } else if (session && (paginaAtual === "login" || paginaAtual === "cadastro" || paginaAtual === "confirmar-email")) {
-        window.location.href = "index.html";
-    } else if (!session && isPaginaProtegida && !temHashTokens) {
-        window.location.href = "login.html";
+    if (event === "INITIAL_SESSION") {
+        initialSessionChecked = true;
+        handleAuthRedirect(session);
+        return;
     }
+
+    handleAuthRedirect(session);
 });
 
 // Só verifica a sessão DEPOIS de dar tempo pro Supabase processar os tokens
@@ -176,13 +188,8 @@ supabase.auth.onAuthStateChange((event, session) => {
 
     const { data: { session } } = await supabase.auth.getSession();
 
-    if (session && isPaginaProtegida) {
-        inicializarPagina(session);
-    } else if (session && (paginaAtual === "login" || paginaAtual === "cadastro" || paginaAtual === "confirmar-email")) {
-        window.location.href = "index.html";
-    } else if (!session && isPaginaProtegida && !temHashTokens) {
-        window.location.href = "login.html";
-    }
+    initialSessionChecked = true;
+    handleAuthRedirect(session);
 })();
 
 // --- LOGICA DE MENU MOBILE GLOBAL ---
@@ -191,6 +198,10 @@ function inicializarMenuMobileGlobal() {
     const sidebar = document.querySelector(".sidebar");
     
     if (!btn || !sidebar) return;
+
+    // Evitar inicialização dupla
+    if (btn._menuInitialized) return;
+    btn._menuInitialized = true;
 
     // Criar overlay se não existir
     let overlay = document.querySelector(".sidebar-overlay");
@@ -204,6 +215,12 @@ function inicializarMenuMobileGlobal() {
         const estaAtivo = sidebar.classList.toggle("active");
         overlay.classList.toggle("active");
         
+        // Esconder/mostrar banners de aviso quando menu abre/fecha
+        const bannerPremium = document.getElementById("banner-premium-expiring");
+        const bannerTrial = document.getElementById("banner-plano-teste");
+        if (bannerPremium) bannerPremium.style.display = estaAtivo ? "none" : "flex";
+        if (bannerTrial) bannerTrial.style.display = estaAtivo ? "none" : "flex";
+
         // Trocar ícone do botão
         const icon = btn.querySelector("i");
         if (icon) {
@@ -407,7 +424,7 @@ const loginGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { 
-            redirectTo: window.location.origin + '/index.html',
+            redirectTo: window.location.origin + '/public/index.html',
             queryParams: {
                 access_type: 'offline',
                 prompt: 'select_account',

@@ -20,6 +20,9 @@
             <a href="gastos.html" class="nav-item active"><i data-lucide="trending-down"></i> <span>Gastos</span></a>
             <a href="clientes.html" class="nav-item"><i data-lucide="users"></i> <span>Clientes</span></a>
             <a href="devendo.html" class="nav-item"><i data-lucide="alert-circle"></i> <span>Devedores</span></a>
+            <a href="produtos.html" class="nav-item"><i data-lucide="package"></i> <span>Produtos</span></a>
+            <div class="sidebar-divider">ASSISTENTE</div>
+            <a href="ia.html" class="nav-item"><i data-lucide="sparkles"></i> <span>FinMEI IA</span></a>
             <div class="sidebar-divider">ATALHOS</div>
             <a href="novo-cliente.html" class="nav-item">
                 <i data-lucide="user-plus"></i> <span>Novo Cliente</span>
@@ -40,11 +43,11 @@
                 <h3>Controle de Gastos</h3>
                 <p>Gerencie suas saídas e despesas</p>
             </div>
-            <div class="user-info" style="display: flex; gap: 8px;">
-                <button id="btnExportarGastos" class="btn-secondary" style="font-size: 0.82rem;">
+            <div class="user-info">
+                <button id="btnExportarGastos" class="btn-secondary">
                     <i data-lucide="download" style="width: 15px;"></i> <span>Exportar CSV</span>
                 </button>
-                <button onclick="abrirModalGasto()" class="btn-primary" style="width: auto; padding: 0.55rem 1.1rem;">
+                <button onclick="abrirModalGasto()" class="btn-primary gasto-btn-novo">
                     <i data-lucide="plus-circle" style="width: 15px;"></i> <span>Novo Gasto</span>
                 </button>
             </div>
@@ -53,7 +56,7 @@
         <section class="content-wrapper">
             <div class="card-buscar card-gastos-mobile">
                 <div class="gastos-selecao-mes">
-                    <label style="font-size: 0.8rem; color: var(--texto-secundario);">Mês de Referência:</label>
+                    <label>Mês de Referência:</label>
                     <input type="month" id="filtroMesGastos" class="input-mes input-mes-gastos">
                 </div>
                 <div class="card card-total-gasto">
@@ -62,16 +65,15 @@
                 </div>
             </div>
 
-            <div id="listaGastos" style="margin-top: 1.5rem;">
-                </div>
+            <div id="listaGastos" class="gastos-lista"></div>
         </section>
     </main>
 
     <div id="modalGasto" class="modal">
         <div class="modal-content card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h3 style="color: var(--cor-erro); font-size: 1.1rem;">Registrar Saída</h3>
-                <button onclick="fecharModalGasto()" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer; font-size: 1.2rem;">&times;</button>
+            <div class="modal-header-flex">
+                <h3 style="color: var(--cor-erro);">Registrar Saída</h3>
+                <button onclick="fecharModalGasto()" class="btn-close-modal">&times;</button>
             </div>
             
             <form id="formNovoGasto">
@@ -79,7 +81,7 @@
                     <label>Descrição do Gasto</label>
                     <input type="text" id="descGasto" placeholder="Ex: Compra de embalagens" required>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="produto-form-grid">
                     <div class="input-group">
                         <label>Valor (R$)</label>
                         <input type="number" id="valorGasto" placeholder="0,00" step="0.01" min="0.01" required>
@@ -99,16 +101,16 @@
                         <option value="Outros">Outros</option>
                     </select>
                 </div>
-                <button type="submit" class="btn-primary" style="background: var(--cor-erro); margin-top: 1.2rem;">Salvar Gasto</button>
+                <button type="submit" class="btn-primary gasto-btn-salvar">Salvar Gasto</button>
             </form>
         </div>
     </div>
 
     <div id="modalEditarGasto" class="modal">
         <div class="modal-content card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h3 style="color: var(--cor-primaria); font-size: 1.1rem;">Editar Saída</h3>
-                <button onclick="fecharModalEditarGasto()" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer; font-size: 1.2rem;">&times;</button>
+            <div class="modal-header-flex">
+                <h3>Editar Saída</h3>
+                <button onclick="fecharModalEditarGasto()" class="btn-close-modal">&times;</button>
             </div>
             
             <form id="formEditarGasto">
@@ -117,7 +119,7 @@
                     <label>Descrição do Gasto</label>
                     <input type="text" id="editDescGasto" required>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="produto-form-grid">
                     <div class="input-group">
                         <label>Valor (R$)</label>
                         <input type="number" id="editValorGasto" step="0.01" min="0.01" required>
@@ -137,12 +139,14 @@
                         <option value="Outros">Outros</option>
                     </select>
                 </div>
-                <button type="submit" class="btn-primary" style="margin-top: 1.2rem;">Salvar Alterações</button>
+                <button type="submit" class="btn-primary">Salvar Alterações</button>
             </form>
         </div>
     </div>
 
     <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/ai-fab.js"></script>
+    <script src="js/confirm-modal.js"></script>
     <script type="module" src="js/gastos.js"></script>
     <script>setTimeout(() => lucide.createIcons(), 500);</script>
 </body>
