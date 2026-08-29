@@ -102,11 +102,12 @@ if (formNovaVenda) {
             return;
         }
 
-        const clienteEncontrado = listaDeClientesGlobal.find(c => c.nome === nomeDigitado);
-
-        if (!clienteEncontrado) {
-            mostrarModal('Cliente inválido', 'Por favor, selecione um cliente válido da lista de sugestões.', 'alerta');
-            return;
+        let clienteId = null;
+        if (nomeDigitado && nomeDigitado.trim()) {
+            const clienteEncontrado = listaDeClientesGlobal.find(c => c.nome === nomeDigitado);
+            if (clienteEncontrado) {
+                clienteId = clienteEncontrado.id;
+            }
         }
 
         try {
@@ -118,7 +119,7 @@ if (formNovaVenda) {
             const { error } = await supabase.from('vendas').insert([
                 {
                     user_id: user.id,
-                    cliente_id: clienteEncontrado.id,
+                    cliente_id: clienteId,
                     produto_id: produtoId,
                     descricao: descricao,
                     valor: valorNumerico,

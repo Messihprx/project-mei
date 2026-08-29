@@ -61,7 +61,7 @@ async function carregarDevedores() {
                             <i data-lucide="clock"></i>
                         </div>
                         <div class="venda-detalhes">
-                            <h4>${esc(venda.clientes?.nome || 'Cliente Excluído')}</h4>
+                            <h4>${esc(venda.clientes?.nome || 'Cliente avulso')}</h4>
                             <p>${esc(venda.descricao || 'Sem descrição')}</p>
                             <span class="venda-data">${new Date(venda.data_venda || venda.created_at).toLocaleDateString('pt-BR')}</span>
                         </div>

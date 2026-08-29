@@ -85,12 +85,13 @@
             <div class="formulario">
                 <form id="formNovaVenda">
                     <div class="input-group">
-                        <label>Cliente</label>
-                        <input type="text" id="clienteVendaInput" placeholder="Digite o nome do cliente..." autocomplete="off" required list="listaClientesSugestoes">
+                        <label>Cliente (opcional)</label>
+                        <input type="text" id="clienteVendaInput" placeholder="Digite o nome ou deixe vazio para avulso..." autocomplete="off" list="listaClientesSugestoes">
                         
                         <datalist id="listaClientesSugestoes"></datalist>
                         
                         <input type="hidden" id="clienteIdSelecionado">
+                        <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Se vazio, será registrado como cliente avulso</small>
                     </div>
                     <div class="input-group">
                         <label>Produto (opcional)</label>

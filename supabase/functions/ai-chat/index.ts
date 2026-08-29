@@ -59,8 +59,12 @@ const SYSTEM_PROMPT = `Você é o FinMei, assistente financeiro inteligente do F
 
 ### Cadastro de Venda (criar_venda)
 - OBRIGATÓRIO: descrição, valor e data
-- OPCIONAL: cliente (se não informado, fica como "cliente avulso"), produto
+- OPCIONAL: cliente (use cliente_nome — o sistema busca pelo nome; se não encontrar, cria automaticamente como cliente avulso e avisa), produto
 - Status padrão: "pago" (se não informado)
+- FLUXO COM CLIENTE: se o usuário informar um nome de cliente, use cliente_nome
+  - 1 resultado → vincula automaticamente
+  - Múltiplos → pede para especificar
+  - Nenhum → cria cliente avulso automaticamente e AVISA ao usuário
 - FLUXO COM PRODUTO: PRIMEIRO use buscar_produtos para verificar se o produto existe
   - 1 resultado → vincule automaticamente (use produto_id, valor e descrição do produto; mas se o usuário deu valor explícito diferente, use o valor do usuário)
   - Múltiplos resultados → mostre nomes e preços, peça para o usuário escolher
@@ -291,7 +295,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "criar_venda",
-      description: "Cria uma nova venda para o usuário. Só chame quando descrição, valor e data estiverem informados. Se faltar algum, pergunte ao usuário e aguarde. Se o usuário mencionou um produto, use buscar_produtos antes para tentar vincular (produto_id). Se o produto não for encontrado, crie sem vínculo.",
+      description: "Cria uma nova venda para o usuário. Só chame quando descrição, valor e data estiverem informados. Se faltar algum, pergunte ao usuário e aguarde. Se o usuário mencionou um produto, use buscar_produtos antes para tentar vincular (produto_id). Se o produto não for encontrado, crie sem vínculo. Se o usuário informar um nome de cliente, use cliente_nome (o sistema busca ou cria automaticamente como avulso).",
       parameters: {
         type: "object",
         properties: {
@@ -299,7 +303,8 @@ const TOOLS = [
           valor: { type: "number", description: "Valor da venda em reais" },
           status: { type: "string", description: "Status: pago, pendente, cancelado" },
           data_venda: { type: "string", description: "Data da venda (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
-          cliente_id: { type: "string", description: "ID do cliente (opcional)" },
+          cliente_nome: { type: "string", description: "Nome do cliente. Se informado, o sistema busca automaticamente; se não encontrar, cria como cliente avulso." },
+          cliente_id: { type: "string", description: "ID do cliente (opcional, use apenas se já tiver o ID)" },
           produto_id: { type: "string", description: "ID do produto para vincular à venda (opcional). Use o retornado por buscar_produtos." }
         },
         required: ["descricao", "valor", "data_venda"]
@@ -782,7 +787,35 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       }
 
       let clienteId = null;
-      if (args.cliente_id) {
+      let clienteAvulso = false;
+
+      // Fluxo: se cliente_nome informado, buscar ou criar avulso
+      if (args.cliente_nome && textoValido(args.cliente_nome)) {
+        const nomeBusca = String(args.cliente_nome).trim();
+        const { data: clientesEncontrados } = await supabaseAdmin.from('clientes')
+          .select('id, nome').eq('user_id', userId).eq('ativo', true)
+          .ilike('nome', nomeBusca).limit(5);
+
+        if (clientesEncontrados?.length === 1) {
+          clienteId = clientesEncontrados[0].id;
+        } else if (clientesEncontrados?.length > 1) {
+          const nomes = clientesEncontrados.map(c => `"${c.nome}"`).join(', ');
+          return { error: `Encontrei vários clientes com nome similar: ${nomes}. Use cliente_id para especificar.` };
+        } else {
+          // Não encontrou — criar cliente avulso
+          const { data: novoCliente, error: erroCreate } = await supabaseAdmin.from('clientes').insert({
+            user_id: userId,
+            nome: nomeBusca,
+            telefone: '',
+            observacao: 'Cliente avulso criado automaticamente via chat',
+            ativo: true
+          }).select('id, nome').single();
+
+          if (erroCreate) return { error: `Erro ao criar cliente avulso: ${erroCreate.message}` };
+          clienteId = novoCliente.id;
+          clienteAvulso = true;
+        }
+      } else if (args.cliente_id) {
         if (!idValido(args.cliente_id)) return { error: 'O ID do cliente é inválido.' };
         const { data: cliente, error: clienteError } = await supabaseAdmin.from('clientes')
           .select('id').eq('id', args.cliente_id).eq('user_id', userId).eq('ativo', true).maybeSingle();
@@ -821,6 +854,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         cliente_id: clienteId, produto_id: produtoId
       }).select().single();
       if (error) return { error: error.message };
+      data._cliente_avulso = clienteAvulso;
       return data;
     }
     case "criar_devedor": {
@@ -1863,7 +1897,7 @@ function gerarRespostaTools(toolResults: any[]): string {
         responses.push(r.mensagem || 'Cliente excluído.');
         break;
       case 'criar_venda':
-        responses.push(`Venda "${r.descricao}" cadastrada: R$ ${Number(r.valor).toFixed(2)} (${r.status || 'pago'}).`);
+        responses.push(`Venda "${r.descricao}" cadastrada: R$ ${Number(r.valor).toFixed(2)} (${r.status || 'pago'}).${r._cliente_avulso ? ' ⚠️ Cliente não encontrado — foi criado como cliente avulso.' : ''}`);
         break;
       case 'criar_produto':
         responses.push(`Produto "${r.nome}" cadastrado: R$ ${Number(r.valor).toFixed(2)}. Adicione a foto pelo site se quiser.`);
