@@ -1,0 +1,335 @@
+================================================================================
+                    RESUMO DAS FUNCIONALIDADES - FINMEI
+================================================================================
+
+--------------------------------------------------------------------------------
+1. CADASTRO DE PRODUTOS
+--------------------------------------------------------------------------------
+
+BANCO DE DADOS:
+  Tabela: produtos
+  Campos: id (uuid PK), user_id (uuid FK -> auth.users), nome (text NOT NULL),
+          descricao (text), foto_url (text), valor (numeric 10,2 NOT NULL),
+          created_at (timestamptz)
+  RLS: cada usuario so acessa seus proprios produtos (auth.uid() = user_id)
+
+3 FORMAS DE CADASTRAR:
+
+  A) TELA WEB (produtos.html + js/produtos.js)
+     - Botao "Novo Produto" abre modal com: nome, descricao, valor, upload de foto
+     - Foto suporta drag-and-drop
+     - Imagem comprimida automaticamente para JPEG 800px, qualidade 0.7
+     - Upload para Supabase Storage bucket 'produtos' em caminho {userId}/{timestamp}.{ext}
+     - Antes de inserir, verifica limite do plano via funcao protegerAcao()
+
+  B) IA CONVERSACIONAL (ai-chat/index.ts)
+     - Usuario pede "criar produto X por R$50"
+     - IA valida campos obrigatorios (nome, descricao, valor)
+     - Verifica duplicatas (ilike no nome)
+     - Insere direto no banco via supabaseAdmin
+
+  C) VENDA VINCULADA (nova-venda.html + js/nova-venda.js)
+     - Ao criar venda, um <datalist> sugere produtos cadastrados
+     - Se selecionado, nome e valor preenchem automaticamente
+     - Venda armazena produto_id como FK opcional (ON DELETE SET NULL)
+
+LIMITES POR PLANO (trigger trg_plano_produtos):
+  - Gratuito: 20 produtos max
+  - Premium: ilimitado
+  - Admin: ilimitado
+  Trigger checa plano_ativo() e limite_disponivel('produto') antes de cada INSERT
+
+FLUXO DE DADOS:
+  Frontend/IA -> compressao de imagem (opcional) -> upload Storage
+  -> INSERT produtos -> trigger valida plano -> OK
+
+ARQUIVOS RELACIONADOS:
+  - sql/produtos.sql (DDL, RLS, storage)
+  - sql/vendas_add_produto.sql (FK produto_id na tabela vendas)
+  - sql/plano_limites.sql (limites por plano, triggers)
+  - public/produtos.html (pagina de gerenciamento)
+  - public/js/produtos.js (logica CRUD frontend)
+  - public/nova-venda.html (campo de autocomplete de produtos)
+  - public/js/nova-venda.js (auto-preenchimento)
+  - supabase/functions/ai-chat/index.ts (tools de produto na IA)
+
+
+--------------------------------------------------------------------------------
+2. TELA DE ADMIN
+--------------------------------------------------------------------------------
+
+ARQUITETURA:
+  SPA separada em /admin/ com autenticacao via Supabase Auth
+  Verificacao de role = 'admin' no banco (coluna role na tabela perfis)
+  Todas as edge functions validam role server-side
+  RLS policies especiais para admin (acesso total a todas as tabelas)
+
+PAGINAS (7):
+
+  1) DASHBOARD (admin.js linhas 478-662)
+     - KPIs: total de usuarios, assinaturas ativas, assinaturas expiradas,
+       receita total, receita de assinaturas, total de transacoes
+     - Grafico: Faturamento ao longo do tempo (linha)
+     - Grafico: Usuarios cadastrados ao longo do tempo (barras)
+     - Grafico: Assinaturas ativas x expiradas (donut)
+     - Grafico: Distribuicao por plano (donut)
+     - Tabela: Receita gerada por usuario (clicavel)
+
+  2) USUARIOS (admin.js linhas 664-1385)
+     - Listagem com colunas: Nome, Email, Data cadastro, Plano, Valor,
+       Status assinatura, Inicio, Expiracao, Status pagamento, Uso IA hoje, Acoes
+     - Busca por nome/email
+     - Filtro por plano (gratuito/premium)
+     - "+ Novo usuario" -> modal: nome, email, senha, role (user/admin), plano inicial
+       (criacao de admins e bloqueada, deve ser feita no Supabase)
+     - Detalhe do usuario:
+       * Card dados: nome, email, role, data cadastro
+       * Card assinatura: plano, valor, status (active/expired/blocked/trial),
+         inicio, expiracao
+       * Card uso IA hoje: mensagens usadas, limite efetivo, limite plano,
+         limite custom
+       * Card ultima transacao: ID, valor, data, status, gateway
+       * Historico de pagamentos
+     - Acoes de gerenciamento:
+       * Alterar plano (modal com seletor)
+       * Alterar expiracao (apenas premium)
+       * Alterar limite da IA (override individual)
+       * Bloquear (status -> 'blocked')
+       * Desativar (status -> 'expired')
+     - Deletar usuario (com modal de confirmacao)
+
+  3) ASSINATURAS (admin.js linhas 1387-1532)
+     - Cards resumo: ativas, trial, expiradas/bloqueadas
+     - Busca por nome do usuario
+     - Filtro por status (active/trial/expired/blocked)
+     - Tabela: Usuario, Plano, Valor, Status, Inicio, Expiracao, Acoes
+     - Botao "Gerenciar" vai pro detalhe do usuario
+
+  4) PAGAMENTOS (admin.js linhas 1534-1625)
+     - Filtro por status (approved/pending/refused/cancelled)
+     - Tabela: Usuario, Valor, Plano, Data, Status, Transaction ID, Gateway
+     - Clica no pagamento -> detalhe do usuario
+
+  5) CONFIG. PAGAMENTO / MERCADOPAGO (admin.js linhas 1627-1937)
+     - Status: Gateway conectado, webhook configurado, preco do plano
+     - Credenciais (mascaradas com reveal on-demand):
+       * Access Token (olho pra revelar)
+       * Public Key
+       * Webhook Secret (olho pra revelar)
+     - Config do plano: nome, descricao, preco mensal, max parcelas
+     - Checkboxes: gateway ativo, assinatura recorrente
+     - URLs: webhook, sucesso, fracasso, pendente
+     - Diagrama do fluxo: Usuario assina -> Checkout criado -> Pagamento processado
+
+  6) PLANOS E LIMITES (admin.js linhas 2598-2773)
+     - Cards resumo: usuarios no gratuito, premium ativos, admins
+     - Tabela editavel por plano (gratuito/premium/admin):
+       * Max clientes
+       * Max movimentacoes
+       * Max produtos
+       * Dias de trial
+       * Checkbox ativo
+     - Botao "Salvar configuracoes" grava na tabela plano_limites
+
+  7) CONFIG. IA (admin.js linhas 1939-3223) - 4 sub-abas:
+
+     A) PROVEDORES
+        - Stats: mensagens esta semana, provedores ativos, total
+        - Cards de provedor: nome, tipo, toggle ativo, delete, API Key (mascarada),
+          API URL, modelo (com botao "Buscar" pra listar modelos), prioridade,
+          max tokens, tipo (OpenAI/Gemini/Anthropic), temperature
+        - Secao avancada: auth header, auth prefix, headers extras, models URL
+        - 12 presets: OpenAI, Gemini, Groq, OpenRouter, NVIDIA, Together AI,
+          Cerebras, Hugging Face, Anthropic, LiteLLM, Ollama, Custom URL
+        - Limites por plano: msgs/dia, tokens/msg, historico
+        - Uso recente (7 dias): usuario, data, mensagens, tokens
+
+     B) PLAYGROUND
+        - Seletor de provedor, campo modelo (override)
+        - Textarea com botoes de preenchimento rapido
+        - Checkbox "usar contexto real e tools"
+        - Resposta: sucesso/falha, tempo (ms), tokens, provedor, modelo,
+          tools chamadas, texto
+
+     C) DIAGNOSTICO
+        - Checkbox "incluir tools de escrita" (cria registros [TESTE] e deleta)
+        - Roda cada tool contra a conta do admin
+        - Log estilo console: [ok] ou [falha] por tool com tempo
+
+     D) ERROS
+        - Cards: falhas ultimas 24h, provedor pior, tool pior
+        - Filtro por tipo: Provider/Tool/Arguments/Fallback/Configuration
+        - Tabela: timestamp, tipo, provedor, tool, HTTP status, mensagem
+        - Modal de detalhe (log estilo console)
+        - Botao "Limpar antigos" (deleta logs > 30 dias via limpar_ai_logs RPC)
+
+AUTENTICACAO E SEGURANCA:
+  - Login: email + senha -> Supabase Auth -> verifica role='admin' em perfis
+  - Se nao for admin, faz signout e mostra "Acesso bloqueado"
+  - requireAdmin() chamado em cada carregamento de admin.html
+  - Auto-redirect: admin logado em admin-login.html vai direto pra admin.html
+  - Service Worker exclui o admin do cache
+  - Segredos (API keys, tokens) nunca sao enviados em texto plano
+  - GET retorna mascarado, reveal on-demand com log no console
+  - Campos vazios no form = manter valor atual (nao sobrescrever com vazio)
+
+ARQUIVOS RELACIONADOS:
+  - public/admin/admin-login.html
+  - public/admin/admin.html
+  - public/admin/js/admin.js (3223 linhas - toda logica do painel)
+  - public/admin/js/supabase-client.js
+  - public/admin/css/admin.css
+  - supabase/functions/admin-users/index.ts
+  - supabase/functions/ai-config/index.ts
+  - supabase/functions/mp-config/index.ts
+  - sql/admin_supabase.sql
+  - sql/plano_limites.sql
+  - sql/ai_config.sql
+  - sql/ai_logs.sql
+  - sql/gateway_config.sql
+
+
+--------------------------------------------------------------------------------
+3. IA DO SITE
+--------------------------------------------------------------------------------
+
+ARQUITETURA:
+  Assistente conversacional com TOOL-CALLING que executa CRUD real no banco
+  Multi-provedor com fallback automatico
+
+ONDE ESTA DISPONIVEL:
+  - Paginha dedicada: /ia.html (secao de sessoes, historico, chat)
+  - Botao flutuante (FAB): disponivel em TODAS as paginas do site
+    (index, clientes, devendo, gastos, vendas, produtos, novo-cliente,
+     nova-venda, importar)
+
+PROVEDORES SUPORTADOS (3 adaptadores):
+
+  1) OPENAI-COMPATIBLE (callOpenAICompatible)
+     - OpenAI (gpt-4o)
+     - Groq (openai/gpt-oss-120b)
+     - OpenRouter (meta-llama/llama-3.3-70b-instruct)
+     - NVIDIA NIM (meta/llama-3.3-70b-instruct)
+     - Together AI (meta-llama/Llama-3.3-70B-Instruct-Turbo)
+     - Cerebras (llama-3.3-70b)
+     - Hugging Face (meta-llama/Llama-3.3-70B-Instruct)
+     - LiteLLM (local, padrao)
+     - Ollama (local, llama3.1)
+
+  2) ANTHROPIC/CLAUDE (callAnthropic)
+     - Claude Sonnet (claude-sonnet-4-20250514)
+
+  3) GOOGLE GEMINI (callGemini)
+     - Gemini 2.5 Flash
+
+SISTEMA DE FALLBACK:
+  - Providers ordenados por campo 'prioridade'
+  - Se um falha, tenta o proximo na fila
+  - Timeout: 30s por chamada, 100s total
+  - Retry em erros transitorios (408, 425, 429, 500, 502, 503, 504)
+  - Se tool de escrita ja executou, cancela fallback pra evitar duplicatas
+
+22 TOOLS DISPONIVEIS:
+
+  BUSCA:
+  - buscar_vendas: busca por periodo, status, cliente
+  - buscar_gastos: busca por periodo, categoria
+  - buscar_clientes: busca por nome/telefone
+  - buscar_produtos: busca por nome
+  - resumo_financeiro: total vendas, gastos, lucro, ticket medio
+  - top_gastos: maiores gastos por valor
+  - vendas_por_cliente: vendas agrupadas por cliente
+  - resumo_por_categoria: gastos agrupados por categoria
+  - verificar_duplicata: verifica registros duplicados antes de criar
+
+  CRIACAO:
+  - criar_cliente (nome + telefone obrigatorios)
+  - criar_venda (descricao + valor + data obrigatorios)
+  - criar_gasto (descricao + valor + data + categoria obrigatorios)
+  - criar_produto (nome + descricao + valor obrigatorios)
+  - criar_devedor (venda pendente)
+
+  EDICAO:
+  - editar_cliente
+  - editar_venda
+  - editar_gasto
+  - editar_produto
+
+  EXCLUSAO (com confirmacao):
+  - excluir_cliente
+  - excluir_venda
+  - excluir_gasto
+  - excluir_produto
+
+CONTEXTO AUTOMATICO:
+  Cada mensagem recebe bloco com dados do usuario:
+  - Nome e empresa
+  - Plano e limites atuais
+  - Mes atual: vendas, gastos, lucro
+  - Comparacao com mes anterior
+  - Valores pendentes (devedores)
+  - Ticket medio
+  - Top categorias de gastos
+  - Ultimas 5 vendas
+  - Ultimos 5 devedores
+  - Todos os produtos cadastrados
+
+SYSTEM PROMPT (ai-chat/index.ts, linha 39):
+  - Personalidade: curto, direto, max 3-4 linhas, 1-2 emojis
+  - Moeda: R$, datas: dd/mm/yyyy
+  - Nunca inventa dados, sempre consulta o banco
+  - Regras detalhadas para cada operacao CRUD
+
+LIMITES POR PLANO:
+  Gratuito:  10 msgs/dia,  1000 tokens/msg, 10 historico
+  Premium:   50 msgs/dia,  2000 tokens/msg, 20 historico
+  Admin:    999 msgs/dia,  4000 tokens/msg, 50 historico
+
+  Override individual: coluna ai_daily_limit na tabela perfis
+
+BANCO DE DADOS:
+  - ai_providers: configuracoes de provedores
+  - ai_limits: limites por plano
+  - ai_usage: uso diario por usuario
+  - ai_conversations: historico de mensagens
+  - ai_sessions: sessoes de conversa
+  - ai_error_logs: registro de erros
+
+FLUXO COMPLETO:
+  Usuario digita mensagem
+  -> Frontend (ia.js / ai-fab.js) POST para ai-chat Edge Function
+  -> Auth check -> plano check -> uso check -> carrega historico
+  -> Monta contexto do usuario + system prompt + historico + mensagem
+  -> Loop de providers (por prioridade):
+     -> callAIStream() -> adaptador OpenAI/Anthropic/Gemini
+     -> Se tool_calls retornada -> executeTool() -> Supabase DB (CRUD)
+     -> Volta pro LLM com resultado da tool
+     -> Resposta final em texto
+  -> Salva em ai_conversations + incrementa ai_usage
+  -> Stream SSE de volta pro frontend
+
+STREAMING:
+  - OpenAI-compatible: SSE real com eventos delta
+  - Gemini/Anthropic: resposta completa em um unico delta
+  - Eventos: status, delta, replace, reset, done, error
+
+ADMIN (já detalhado na seção 2):
+  - Providers: adicionar/editar/deletar provedores
+  - Playground: testar qualquer provedor com qualquer mensagem
+  - Diagnostico: rodar todas as tools pra verificar funcionamento
+  - Erros: visualizar logs de erro com limpeza
+
+ARQUIVOS RELACIONADOS:
+  - public/ia.html (pagina dedicada do chat)
+  - public/js/ia.js (logica do chat completo)
+  - public/js/ai-fab.js (botao flutuante em todas as paginas)
+  - public/js/dom-utils.js (lerStreamIA - leitura SSE)
+  - supabase/functions/ai-chat/index.ts (backend principal - 2825 linhas)
+  - supabase/functions/ai-config/index.ts (config de provedores)
+  - sql/ai_config.sql (DDL das tabelas de IA)
+  - sql/ai_logs.sql (tabela de erros)
+  - sql/ai_sessions.sql (sessoes)
+  - sql/ai_individual_limits.sql (override individual)
+  - sql/ai_providers_extra.sql (colunas extras de provedores)
+
+================================================================================

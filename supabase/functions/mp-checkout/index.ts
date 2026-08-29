@@ -7,30 +7,78 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Base do site que originou a chamada.
+//
+// Evita domínio fixo no código: publicado ou rodando local, o retorno
+// do pagamento cai sempre no endereço certo.
+//
+// A base vem do corpo da requisição (o navegador sabe onde está), mas
+// só é aceita se a origem bater com o header Origin — esse header é
+// definido pelo próprio navegador e não pode ser forjado pela página.
+// Assim o caminho é flexível e o domínio continua confiável.
+function baseDoSite(req: Request, informada: unknown): string | null {
+  const origem = req.headers.get('origin');
+  if (!origem || typeof informada !== 'string' || !informada) return null;
+  try {
+    const url = new URL(informada);
+    if (url.origin !== origem) return null;
+    const base = new URL('./', url).href;
+    return base.endsWith('/') ? base : base + '/';
+  } catch {
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { payerEmail, userId } = await req.json();
+    const supabaseUrlAuth = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKeyAuth = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAuth = createClient(supabaseUrlAuth, supabaseKeyAuth);
+
+    // Autenticação: o usuário vem SEMPRE do token, nunca do body.
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Não autenticado' }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Token inválido' }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
+
+    const userId = user.id;
+    const payerEmail = user.email;
+    const corpo = await req.json().catch(() => ({}));
+
+    // Base do site (validada contra o Origin). Sem ela, cai no
+    // endereço de produção como último recurso.
+    const base = baseDoSite(req, corpo.baseUrl)
+      || "https://project-finmei-ub.netlify.app/";
 
     // Busca config do gateway no banco de dados
     let accessToken = Deno.env.get("MP_ACCESS_TOKEN");
     let webhookUrl = "https://grszaitpgnyrbxktxauc.supabase.co/functions/v1/mp-webhook";
-    let successUrl = "https://project-mei-ub.netlify.app/checkout_sucesso.html";
-    let failureUrl = "https://project-mei-ub.netlify.app/checkout_erro.html";
-    let pendingUrl = "https://project-mei-ub.netlify.app/checkout_pendente.html";
+    let successUrl = base + "checkout_sucesso.html";
+    let failureUrl = base + "checkout_erro.html";
+    let pendingUrl = base + "checkout_pendente.html";
     let price = 15.90;
     let maxInstallments = 12;
     let planDescription = "Assinatura Premium FinMEI";
 
     try {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
-      const { data: config } = await supabase
+      const { data: config } = await supabaseAuth
         .from('gateway_config')
         .select('*')
         .eq('gateway_name', 'mercado_pago')

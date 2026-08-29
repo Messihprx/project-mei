@@ -111,7 +111,7 @@ async function verificarDuplicata(nome, telefone, userId, excluirId = null) {
 
 // --- ENVIO DO FORMULÁRIO ---
 const formNovoCliente = document.getElementById("formNovoCliente");
-import { protegerAcao } from './planos.js';
+import { protegerAcao, invalidarCachePlano } from './planos.js';
 
 if (formNovoCliente) {
     // Proteger formulário caso o teste tenha expirado
@@ -157,6 +157,9 @@ if (formNovoCliente) {
             }]);
 
             if (error) throw error;
+            // A contagem mudou: o aviso de limite não pode continuar
+            // mostrando o número anterior a esta operação.
+            invalidarCachePlano();
 
             window.location.href = "clientes.html";
 

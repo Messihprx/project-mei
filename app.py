@@ -50,36 +50,105 @@ st.markdown("""
 
 
 # --- CONEXÃO SUPABASE ---
-@st.cache_resource
-def get_supabase():
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    if not url or not key:
-        st.error("Credenciais do Supabase não configuradas. Veja o arquivo .streamlit/secrets.toml")
-        st.stop()
-    return create_client(url, key)
+#
+# Este app NÃO usa mais a service role. Ele autentica o usuário por um
+# código de handoff de uso único e passa a consultar com a chave anon
+# carregando o JWT dele — quem filtra os dados é o RLS do Postgres, não
+# o código Python. Mesmo que um filtro aqui tenha bug, o banco recusa
+# linhas de outro usuário.
+def _segredo(nome, padrao=None):
+    try:
+        valor = st.secrets[nome]
+    except (KeyError, FileNotFoundError):
+        valor = padrao
+    return valor
 
 
-supabase = get_supabase()
+SUPABASE_URL = _segredo("SUPABASE_URL")
+SUPABASE_ANON_KEY = _segredo("SUPABASE_ANON_KEY") or _segredo("SUPABASE_KEY")
+BI_SHARED_SECRET = _segredo("BI_SHARED_SECRET")
+
+if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+    st.error("Credenciais do Supabase não configuradas. Veja o arquivo .streamlit/secrets.toml")
+    st.stop()
+
+
+def resgatar_handoff(codigo):
+    """Troca o código de uso único pela sessão do usuário.
+
+    O código vale 5 minutos e só pode ser trocado uma vez — quem
+    controla isso é a edge function bi-token.
+    """
+    import urllib.request
+    import urllib.error
+    import json as _json
+
+    if not BI_SHARED_SECRET:
+        return None, "BI_SHARED_SECRET não configurado no Streamlit."
+
+    req = urllib.request.Request(
+        f"{SUPABASE_URL}/functions/v1/bi-token",
+        data=_json.dumps({"token": codigo}).encode(),
+        headers={
+            "Content-Type": "application/json",
+            "x-bi-secret": BI_SHARED_SECRET,
+            "apikey": SUPABASE_ANON_KEY,
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return _json.loads(resp.read().decode()), None
+    except urllib.error.HTTPError as e:
+        try:
+            erro = _json.loads(e.read().decode()).get("error", str(e))
+        except Exception:
+            erro = str(e)
+        return None, erro
+    except Exception as e:
+        return None, str(e)
+
+
+def criar_cliente_usuario(access_token):
+    """Cliente Supabase com a chave anon carregando o JWT do usuário."""
+    cli = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+    cli.postgrest.auth(access_token)
+    return cli
 
 
 # --- EXTRAÇÃO DE DADOS ---
-@st.cache_data(ttl=120)
-def carregar_dados():
-    v_res = supabase.from_('vendas').select('*, clientes(nome)').execute()
-    g_res = supabase.from_('despesas').select('*').execute()
-    p_res = supabase.from_('perfis').select('*').execute()
+# O cache recebe user_id na assinatura de propósito: antes ele era
+# global e um usuário podia receber o DataFrame já carregado de outro.
+@st.cache_data(ttl=120, show_spinner=False)
+def carregar_dados(user_id, is_admin, _cli):
+    vendas_q = _cli.from_('vendas').select('*, clientes(nome)')
+    gastos_q = _cli.from_('despesas').select('*')
+    perfis_q = _cli.from_('perfis').select('id, nome_completo, email, plano, role, criado_em, expira_em')
 
-    try:
-        u_res = supabase.auth.admin.list_users()
-        users_list = u_res if isinstance(u_res, list) else getattr(u_res, 'users', [])
-        users_map = {u.id: u.email for u in users_list} if users_list else {}
-    except Exception:
-        users_map = {}
+    # Usuário comum: filtra na query. O RLS já garantiria, mas filtrar
+    # aqui evita trazer dado à toa quando o admin usa a mesma função.
+    if not is_admin:
+        vendas_q = vendas_q.eq('user_id', user_id)
+        gastos_q = gastos_q.eq('user_id', user_id)
+        perfis_q = perfis_q.eq('id', user_id)
+
+    v_res = vendas_q.execute()
+    g_res = gastos_q.execute()
+    p_res = perfis_q.execute()
 
     df_v = pd.DataFrame(v_res.data) if v_res.data else pd.DataFrame()
     df_g = pd.DataFrame(g_res.data) if g_res.data else pd.DataFrame()
     df_p = pd.DataFrame(p_res.data) if p_res.data else pd.DataFrame()
+
+    # O mapa user_id -> e-mail vinha de auth.admin.list_users(), que
+    # exigia service role. Agora sai de perfis.email, que o admin já
+    # pode ler pelas policies admins_select_all_*.
+    users_map = {}
+    if not df_p.empty and 'email' in df_p.columns:
+        users_map = {
+            r['id']: (r.get('nome_completo') or r.get('email') or str(r['id'])[:8])
+            for _, r in df_p.iterrows()
+        }
 
     return df_v, df_g, users_map, df_p
 
@@ -145,10 +214,70 @@ def aplicar_layout(fig, **overrides):
     return fig
 
 
+# ===================== AUTENTICAÇÃO =====================
+#
+# O acesso vem de um código de handoff de uso único gerado pelo site
+# (?t=...). Não existe mais ?user_id= nem ?admin_access= — quem sabia
+# o UUID de alguém via o financeiro daquela pessoa, e a senha mestra
+# tinha um valor padrão embutido no código.
+
+if "bi_sessao" not in st.session_state:
+    codigo = st.query_params.get("t")
+
+    if not codigo:
+        st.error("🚫 Acesso não autorizado.")
+        st.info("Abra o relatório pelo botão **Relatórios BI** dentro do FinMEI.")
+        st.stop()
+
+    dados_sessao, erro_sessao = resgatar_handoff(codigo)
+
+    if erro_sessao or not dados_sessao:
+        st.error("🔒 Link inválido ou expirado.")
+        st.info(f"Gere um novo relatório pelo painel do FinMEI. ({erro_sessao or 'código não encontrado'})")
+        st.stop()
+
+    st.session_state["bi_sessao"] = dados_sessao
+    # Tira o código da URL: ele já foi consumido e não deve ficar no
+    # histórico do navegador.
+    st.query_params.clear()
+
+sessao = st.session_state["bi_sessao"]
+USER_ID = sessao["user_id"]
+ACCESS_TOKEN = sessao["access_token"]
+
+cliente = criar_cliente_usuario(ACCESS_TOKEN)
+
+# Papel e acesso saem do banco, com o JWT do próprio usuário.
+try:
+    _perfil_res = cliente.from_('perfis').select('role, plano, expira_em').eq('id', USER_ID).single().execute()
+    _perfil = _perfil_res.data or {}
+except Exception:
+    _perfil = {}
+
+is_admin = _perfil.get('role') == 'admin'
+
+# Uma única fonte de verdade para expiração, compartilhada com o site
+try:
+    _ativo_res = cliente.rpc('plano_ativo', {'uid': USER_ID}).execute()
+    acesso_ativo = bool(_ativo_res.data)
+except Exception:
+    acesso_ativo = True  # falha de rede não deve bloquear quem pagou
+
+is_premium = is_admin or (_perfil.get('plano') == 'premium' and acesso_ativo)
+
+if not acesso_ativo:
+    st.error("🔒 Seu período de acesso expirou!")
+    st.warning("O sistema de Big Data & Analytics é exclusivo para assinantes Premium ativos.")
+    st.info("Renove sua assinatura no painel principal para liberar o acesso.")
+    st.stop()
+
+
 # ===================== APP PRINCIPAL =====================
 
 try:
-    df_vendas_raw, df_gastos_raw, users_map, df_perfis_raw = carregar_dados()
+    df_vendas_raw, df_gastos_raw, users_map, df_perfis_raw = carregar_dados(
+        USER_ID, is_admin, cliente
+    )
 
     df_vendas = processar_vendas(df_vendas_raw, users_map)
     df_gastos = processar_gastos(df_gastos_raw)
@@ -161,65 +290,7 @@ try:
     st.sidebar.markdown("## 🕹️ Filtros")
     st.sidebar.markdown("---")
 
-    # Autenticação
-    user_id_url = st.query_params.get("user_id")
-    admin_key = st.query_params.get("admin_access")
-    MASTER_KEY = st.secrets.get("ADMIN_PASSWORD", "chave_provisoria_local")
-
-    is_admin = False
-    is_premium = False
-    is_expirado = False
-
-    if user_id_url:
-        if not df_perfis_raw.empty:
-            perfil_usuario = df_perfis_raw[df_perfis_raw['id'] == user_id_url]
-            if not perfil_usuario.empty:
-                raw_plano = perfil_usuario.iloc[0].get('plano', 'gratuito')
-                expira_em = perfil_usuario.iloc[0].get('expira_em')
-                criado_em = perfil_usuario.iloc[0].get('criado_em')
-
-                from datetime import datetime, timezone
-                hoje = datetime.now(timezone.utc)
-
-                if raw_plano == 'premium':
-                    if pd.notna(expira_em):
-                        data_expira = pd.to_datetime(expira_em)
-                        if data_expira.tzinfo is None:
-                            data_expira = data_expira.tz_localize('UTC')
-                        
-                        if hoje <= data_expira:
-                            is_premium = True
-                        else:
-                            is_premium = False # Vencido
-                            is_expirado = True # Bloqueio imediato para Premium vencido
-                    else:
-                        is_premium = True # Sem data de expira, assume ativo (legado)
-                else:
-                    # Plano Gratuito
-                    if pd.notna(criado_em):
-                        data_criacao = pd.to_datetime(criado_em)
-                        if data_criacao.tzinfo is None:
-                            data_criacao = data_criacao.tz_localize('UTC')
-                        dias_passados = (hoje - data_criacao).days
-                        if dias_passados >= 14:
-                            is_expirado = True
-
-        if is_expirado:
-            st.error("🔒 Seu período de acesso expirou!")
-            st.warning("O acesso ao sistema avançado de Big Data & Analytics é exclusivo para assinantes Premium ativos.")
-            st.info("Por favor, realize o pagamento da sua assinatura no painel principal para liberar o acesso.")
-            st.stop()
-
-        if not df_vendas.empty and user_id_url not in df_vendas['user_id'].values:
-            st.error("ID de usuário inválido ou sem vendas.")
-            # st.stop() - Allow seeing empty dashboard
-        dw_vendas = df_vendas[df_vendas['user_id'] == user_id_url] if not df_vendas.empty else df_vendas
-        dw_gastos = df_gastos[df_gastos['user_id'] == user_id_url] if not df_gastos.empty else df_gastos
-        st.sidebar.success("✅ Relatório Privado")
-
-    elif admin_key == MASTER_KEY:
-        is_admin = True
-        is_premium = True
+    if is_admin:
         st.sidebar.warning("🛡️ Modo Administrador")
 
         if not df_vendas.empty:
@@ -227,7 +298,7 @@ try:
             user_filter = st.sidebar.selectbox("👤 Empreendedor", lista_usuarios)
             if user_filter != "Todos":
                 dw_vendas = df_vendas[df_vendas['usuario'] == user_filter]
-                dw_gastos = df_gastos[df_gastos['user_id'] == dw_vendas['user_id'].iloc[0]] if not df_vendas.empty else df_gastos
+                dw_gastos = df_gastos[df_gastos['user_id'] == dw_vendas['user_id'].iloc[0]] if not dw_vendas.empty else df_gastos
             else:
                 dw_vendas = df_vendas
                 dw_gastos = df_gastos
@@ -235,9 +306,11 @@ try:
             dw_vendas = df_vendas
             dw_gastos = df_gastos
     else:
-        st.error("🚫 Acesso não autorizado.")
-        st.info("Acesse através do painel do Controle MEI.")
-        st.stop()
+        # O RLS já entregou só as linhas deste usuário; o filtro abaixo
+        # é redundante de propósito (defesa em profundidade).
+        dw_vendas = df_vendas[df_vendas['user_id'] == USER_ID] if not df_vendas.empty else df_vendas
+        dw_gastos = df_gastos[df_gastos['user_id'] == USER_ID] if not df_gastos.empty else df_gastos
+        st.sidebar.success("✅ Relatório Privado")
 
     # Filtro de mês (unifica vendas e gastos)
     meses_vendas = set(dw_vendas['mes_ano_key'].dropna().unique()) if not dw_vendas.empty else set()

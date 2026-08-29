@@ -1,4 +1,10 @@
 import { supabase } from './auth.js';
+import { esc, delegate } from './dom-utils.js';
+
+// Devedores da última renderização: o botão de cobrança recebia
+// telefone, nome e valor por dentro de um onclick inline — o nome
+// com apóstrofo quebrava o botão e o valor chegava como texto.
+let devedoresRenderizados = [];
 
 async function carregarDevedores() {
     const container = document.getElementById("listaDevedores");
@@ -16,7 +22,7 @@ async function carregarDevedores() {
                 clientes ( nome, telefone )
             `)
             .eq('status', 'pendente')
-            .order('created_at', { ascending: false });
+            .order('data_venda', { ascending: false });
 
         // Aplica o filtro de mês dinâmico (IGUAL AO DASHBOARD)
         if (filtroMesInput && filtroMesInput.value) {
@@ -27,7 +33,7 @@ async function carregarDevedores() {
             const ultimoDiaDinamico = new Date(ano, mes, 0).getDate();
             const dataFim = `${ano}-${mes}-${ultimoDiaDinamico}T23:59:59Z`;
             
-            query = query.gte('created_at', dataInicio).lte('created_at', dataFim);
+            query = query.gte('data_venda', dataInicio).lte('data_venda', dataFim);
         }
 
         const { data: vendas, error } = await query;
@@ -44,6 +50,8 @@ async function carregarDevedores() {
             return;
         }
 
+        devedoresRenderizados = vendas;
+
         container.innerHTML = vendas.map(venda => {
             somaPendentes += venda.valor;
             return `
@@ -53,18 +61,18 @@ async function carregarDevedores() {
                             <i data-lucide="clock"></i>
                         </div>
                         <div class="venda-detalhes">
-                            <h4>${venda.clientes?.nome || 'Cliente Excluído'}</h4>
-                            <p>${venda.descricao || 'Sem descrição'}</p>
-                            <span class="venda-data">${new Date(venda.created_at).toLocaleDateString('pt-BR')}</span>
+                            <h4>${esc(venda.clientes?.nome || 'Cliente Excluído')}</h4>
+                            <p>${esc(venda.descricao || 'Sem descrição')}</p>
+                            <span class="venda-data">${new Date(venda.data_venda || venda.created_at).toLocaleDateString('pt-BR')}</span>
                         </div>
                     </div>
                     <div class="venda-financeiro">
                         <span class="venda-valor">R$ ${venda.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                         <div class="acoes" style="margin-top: 8px;">
-                            <button onclick="enviarCobranca('${venda.clientes?.telefone}', '${venda.clientes?.nome}', '${venda.valor}')" class="btn-acao" title="Cobrar via WhatsApp" style="color: #25D366;">
+                            <button data-acao="cobrar" data-id="${esc(venda.id)}" class="btn-acao" title="Cobrar via WhatsApp" style="color: #25D366;">
                                 <i data-lucide="message-circle"></i>
                             </button>
-                            <button onclick="marcarComoPago('${venda.id}')" class="btn-acao btn-pago" title="Marcar como Recebido">
+                            <button data-acao="pago" data-id="${esc(venda.id)}" class="btn-acao btn-pago" title="Marcar como Recebido">
                                 <i data-lucide="check"></i>
                             </button>
                         </div>
@@ -87,6 +95,16 @@ async function carregarDevedores() {
 // --- INICIALIZAÇÃO E EVENTOS ---
 
 document.addEventListener("DOMContentLoaded", () => {
+    delegate(document.getElementById('listaDevedores'), 'button[data-acao]', 'click', (e, botao) => {
+        const venda = devedoresRenderizados.find(v => v.id === botao.dataset.id);
+        if (!venda) return;
+        if (botao.dataset.acao === 'cobrar') {
+            window.enviarCobranca(venda.clientes?.telefone, venda.clientes?.nome, Number(venda.valor));
+        } else if (botao.dataset.acao === 'pago') {
+            window.marcarComoPago(venda.id);
+        }
+    });
+
     const filtroMesDevendo = document.getElementById("filtroMesDevendo");
 
     if (filtroMesDevendo) {
@@ -122,6 +140,7 @@ window.marcarComoPago = async (id) => {
 
 window.enviarCobranca = (telefone, nome, valor) => {
     if (!telefone) return mostrarModal('Sem telefone', 'Cliente sem telefone cadastrado.', 'alerta');
+    valor = Number(valor) || 0;
     const numero = telefone.replace(/\D/g, "");
     const msg = encodeURIComponent(`Olá ${nome}, tudo bem? Passando para lembrar do valor de R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})} pendente. Como prefere pagar?`);
     window.open(`https://wa.me/55${numero}?text=${msg}`, '_blank');

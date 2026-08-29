@@ -6,6 +6,24 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Exportamos para que você possa usar "import { supabase } from './auth.js'" em outros arquivos
 export { supabase };
+// ------------------------------------------------------------------
+// Endereço absoluto de uma página do app
+//
+// Antes usávamos window.location.origin + '/pagina.html', o que só
+// funcionava quando a pasta public/ era a raiz do site (Netlify).
+// Rodando localmente, com o projeto aberto a partir da raiz do
+// repositório, as páginas ficam em /public/ e o link caía em 404 —
+// no login com Google, na confirmação de e-mail e na recuperação
+// de senha.
+//
+// Resolver relativo à página atual acerta nos dois casos, sem
+// configuração e sem precisar mexer no código ao publicar:
+//   .../public/login.html  ->  .../public/pagina.html
+//   .../login.html         ->  .../pagina.html
+export function urlDoApp(pagina) {
+    return new URL(pagina, window.location.href).href;
+}
+
 
 // --- FUNÇÕES DE VALIDAÇÃO ---
 function mostrarErro(campoId, mensagem) {
@@ -109,7 +127,17 @@ window.traduzirErro = traduzirErro;
 
 // --- TRADUÇÃO DE ERROS DO SUPABASE ---
 function traduzirErro(mensagem) {
-    const msg = (mensagem || '').toLowerCase();
+    const bruto = mensagem || "";
+
+    // Erros levantados pelas triggers de plano (sql/plano_limites.sql).
+    // Chegam com o prefixo e a mensagem já em português; aqui só tiramos
+    // o prefixo técnico antes de mostrar ao usuário.
+    const marcador = bruto.match(/(PLANO_EXPIRADO|LIMITE_ATINGIDO|USUARIO_INVALIDO):\s*(.+)/);
+    if (marcador) {
+        return marcador[2].trim();
+    }
+
+    const msg = bruto.toLowerCase();
     const erros = [
         ['invalid login credentials', 'E-mail ou senha incorretos. Verifique os dados e tente novamente.'],
         ['email not confirmed', 'Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada (e o spam).'],
@@ -319,7 +347,7 @@ if (formCadastro) {
                 password: senha,
                 options: { 
                     data: { nome: nome },
-                    emailRedirectTo: window.location.origin + '/confirmar-email.html'
+                    emailRedirectTo: urlDoApp('confirmar-email.html')
                 }
             });
 
@@ -424,7 +452,7 @@ const loginGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { 
-            redirectTo: window.location.origin + '/index.html',
+            redirectTo: urlDoApp('index.html'),
             queryParams: {
                 access_type: 'offline',
                 prompt: 'select_account',
@@ -477,7 +505,7 @@ if (formRecuperar) {
 
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
                 // Para onde o usuário vai depois de clicar no e-mail (crie esta página depois)
-                redirectTo: window.location.origin + '/redefinir-senha.html',
+                redirectTo: urlDoApp('redefinir-senha.html'),
             });
 
             if (error) throw error;

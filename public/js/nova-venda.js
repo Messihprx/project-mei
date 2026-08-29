@@ -1,4 +1,5 @@
 import { supabase } from './auth.js';
+import { esc } from './dom-utils.js';
 
 let listaDeClientesGlobal = [];
 let listaDeProdutosGlobal = [];
@@ -17,7 +18,7 @@ async function popularSugestoesClientes() {
         if (error) throw error;
 
         listaDeClientesGlobal = clientes;
-        datalist.innerHTML = clientes.map(c => `<option value="${c.nome}"></option>`).join('');
+        datalist.innerHTML = clientes.map(c => `<option value="${esc(c.nome)}"></option>`).join('');
     } catch (err) {
         console.error("Erro ao carregar sugestões:", err.message);
     }
@@ -76,7 +77,7 @@ if (inputProduto) {
 
 // 4. SALVAR VENDA
 const formNovaVenda = document.getElementById("formNovaVenda");
-import { protegerAcao } from './planos.js';
+import { protegerAcao, invalidarCachePlano } from './planos.js';
 
 if (formNovaVenda) {
     protegerAcao("formNovaVenda", "movimentacao");
@@ -126,6 +127,9 @@ if (formNovaVenda) {
             ]);
 
             if (error) throw error;
+            // A contagem mudou: o aviso de limite não pode continuar
+            // mostrando o número anterior a esta operação.
+            invalidarCachePlano();
 
             mostrarModal('Venda registrada!', 'Sua venda foi registrada com sucesso.', 'sucesso');
             setTimeout(() => { window.location.href = "vendas.html"; }, 1500);

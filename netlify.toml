@@ -1,2 +1,23 @@
 [build]
   publish = "public"
+
+# A pasta public vira a raiz do site aqui, então as páginas ficam em
+# /login.html e não em /public/login.html. Localmente é o contrário.
+#
+# O código já resolve os caminhos relativos à página atual, mas um link
+# antigo com /public/ ainda pode aparecer — num favorito, num e-mail de
+# confirmação gerado antes, ou num Redirect URL do Supabase configurado
+# durante os testes locais. Esta regra faz esses links continuarem
+# funcionando em vez de darem 404.
+[[redirects]]
+  from = "/public/*"
+  to = "/:splat"
+  status = 301
+  force = true
+
+# O service worker precisa ser servido sempre fresco, senão o navegador
+# pode segurar uma versão antiga do cache por horas depois de um deploy.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"

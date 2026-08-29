@@ -2,3 +2,27 @@
 .env
 .env.*
 supabase/.temp/
+node_modules/
+
+# Pastas não relacionadas ao projeto
+Site Mei/
+Adivinhar Copa/
+BACKUP_GACHA (antes do novo banner)/
+Bot IA/
+bot python/
+bot_tradutor/
+brincar/
+files zip bot tradutor/
+Gacha/
+Gacha2 (new db)/
+gacha_bk ()/
+jj/
+nmrd/
+pokeRPG/
+RPG/
+Repositório 1/
+aplicativo de pesquisas automaticas/
+# Arquivos avulsos
+bot messin.zip
+fhr-main.zip
+tradutor_mud.zip

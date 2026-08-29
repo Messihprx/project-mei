@@ -6,6 +6,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Nunca devolvemos um segredo em claro: só o suficiente para o admin
+// reconhecer qual chave está salva. Campo vazio no formulário significa
+// "manter a atual", por isso o valor mascarado precisa ser identificável.
+function mascarar<T extends Record<string, any>>(obj: T, campo: string) {
+  const copia: Record<string, any> = { ...obj };
+  const valor = copia[campo];
+  if (valor) {
+    copia[campo + "_masked"] = valor.length > 8
+      ? valor.substring(0, 4) + "••••••••" + valor.substring(valor.length - 4)
+      : "••••••••";
+    delete copia[campo];
+  }
+  return copia;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -59,15 +74,8 @@ serve(async (req) => {
 
       if (error) throw error;
 
-      // Mascara o access token: mostra só os primeiros e últimos 4 chars
-      const safeConfig = { ...data };
-      if (safeConfig.access_token) {
-        const t = safeConfig.access_token;
-        safeConfig.access_token_masked = t.length > 8
-          ? t.substring(0, 4) + '••••••••' + t.substring(t.length - 4)
-          : '••••••••';
-        delete safeConfig.access_token;
-      }
+      // Mascara os dois segredos antes de devolver
+      const safeConfig = mascarar(mascarar(data, "access_token"), "webhook_secret");
 
       return new Response(JSON.stringify(safeConfig), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -78,6 +86,33 @@ serve(async (req) => {
     // POST/PUT: Salvar config
     if (req.method === 'POST' || req.method === 'PUT') {
       const body = await req.json();
+
+      // Revelar um segredo do gateway (mesma regra do ai-config: só sai
+      // daqui quando o admin pede explicitamente, clicando no olho).
+      if (body.action === 'reveal') {
+        const permitidos = ['access_token', 'webhook_secret', 'public_key'];
+        const campo = String(body.campo || "");
+
+        if (!permitidos.includes(campo)) {
+          return new Response(JSON.stringify({ error: 'Campo inválido.' }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          });
+        }
+
+        const { data } = await supabase
+          .from('gateway_config')
+          .select(campo)
+          .eq('gateway_name', 'mercado_pago')
+          .maybeSingle();
+
+        console.log(`[reveal] admin ${user.email} revelou ${campo} do gateway`);
+
+        return new Response(JSON.stringify({ valor: (data as any)?.[campo] || "" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
 
       // Busca config atual
       const { data: existing } = await supabase
@@ -93,6 +128,7 @@ serve(async (req) => {
         plan_name: body.plan_name ?? 'premium',
         plan_description: body.plan_description ?? 'Assinatura Premium FinMEI',
         max_installments: body.max_installments ?? 12,
+        recurring_active: body.recurring_active ?? false,
       };
 
       // Só atualiza URLs se fornecidas
@@ -100,10 +136,18 @@ serve(async (req) => {
       if (body.success_url !== undefined) updateData.success_url = body.success_url;
       if (body.failure_url !== undefined) updateData.failure_url = body.failure_url;
       if (body.pending_url !== undefined) updateData.pending_url = body.pending_url;
+      if (body.back_url_assinatura !== undefined) updateData.back_url_assinatura = body.back_url_assinatura;
 
-      // Só atualiza access_token se fornecido (não vazio)
-      if (body.access_token && body.access_token.trim()) {
+      // Campo em branco = manter o que já está salvo. O valor mascarado
+      // nunca é gravado de volta (senão a chave viraria "abcd••••wxyz").
+      const naoEhMascara = (v: unknown) => typeof v === "string" && v.trim() && !v.includes("••••");
+
+      if (naoEhMascara(body.access_token)) {
         updateData.access_token = body.access_token.trim();
+      }
+
+      if (naoEhMascara(body.webhook_secret)) {
+        updateData.webhook_secret = body.webhook_secret.trim();
       }
 
       // Só atualiza public_key se fornecido
@@ -130,15 +174,8 @@ serve(async (req) => {
         result = data;
       }
 
-      // Retorna sem expor token
-      const safeResult = { ...result };
-      if (safeResult.access_token) {
-        const t = safeResult.access_token;
-        safeResult.access_token_masked = t.length > 8
-          ? t.substring(0, 4) + '••••••••' + t.substring(t.length - 4)
-          : '••••••••';
-        delete safeResult.access_token;
-      }
+      // Retorna sem expor nenhum segredo
+      const safeResult = mascarar(mascarar(result, "access_token"), "webhook_secret");
 
       return new Response(JSON.stringify(safeResult), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -1,5 +1,8 @@
 import { supabase } from './auth.js';
-import { verificarStatusPlano } from './planos.js';
+import { verificarStatusPlano, invalidarCachePlano } from './planos.js';
+import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais } from './dom-utils.js';
+
+let gastosRenderizados = [];
 
 const filtroMes = document.getElementById("filtroMesGastos");
 const formGasto = document.getElementById("formNovoGasto");
@@ -11,12 +14,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
+    // Delegação no lugar dos onclick inline
+    delegate(document.getElementById('listaGastos'), 'button[data-acao]', 'click', (e, botao) => {
+        const gasto = gastosRenderizados.find(g => g.id === botao.dataset.id);
+        if (!gasto) return;
+        if (botao.dataset.acao === 'editar') {
+            window.abrirEditarGasto(gasto.id);
+        } else if (botao.dataset.acao === 'excluir') {
+            window.deletarGasto(gasto.id);
+        }
+    });
+
     if (filtroMes) {
         if (!filtroMes.value) {
             const hoje = new Date();
             filtroMes.value = hoje.toISOString().substring(0, 7);
         }
-        filtroMes.addEventListener("change", carregarGastos);
+        filtroMes.addEventListener("change", () => carregarGastos(TAMANHO_PAGINA));
     }
 
     carregarGastos();
@@ -47,6 +61,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                 };
                 const { error } = await supabase.from('despesas').insert([dados]);
                 if (error) throw error;
+                // A contagem mudou: o aviso de limite não pode continuar
+                // mostrando o número anterior a esta operação.
+                invalidarCachePlano();
                 fecharModalGasto();
                 carregarGastos();
             } catch (err) {
@@ -80,7 +97,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             try {
                 const { data: gastos, error } = await supabase
                     .from('despesas')
-                    .select('*')
+                    .select('id, descricao, valor, data, categoria')
                     .gte('data', dataInicio)
                     .lte('data', dataFim)
                     .order('data', { ascending: false });
@@ -92,13 +109,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                     return;
                 }
 
-                // Gerar CSV
-                let csv = "Data;Descricao;Categoria;Valor\n";
-                gastos.forEach(g => {
-                    const dataFmt = new Date(g.data + 'T12:00:00').toLocaleDateString('pt-BR');
-                    const valor = parseFloat(g.valor).toFixed(2).replace('.', ',');
-                    csv += `${dataFmt};${g.descricao};${g.categoria};${valor}\n`;
-                });
+                // Gerar CSV (montarCsv neutraliza fórmulas: = + - @)
+                const csv = montarCsv(
+                    ["Data", "Descricao", "Categoria", "Valor"],
+                    gastos.map(g => [
+                        new Date(g.data + 'T12:00:00').toLocaleDateString('pt-BR'),
+                        g.descricao || '',
+                        g.categoria || '',
+                        parseFloat(g.valor).toFixed(2).replace('.', ',')
+                    ])
+                );
 
                 const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");
@@ -136,7 +156,10 @@ window.fecharModalGasto = function() {
 };
 
 // ... Resto das funções carregarGastos, fecharModalEditarGasto, etc. (mantendo a lógica existente)
-async function carregarGastos() {
+let limiteGastos = TAMANHO_PAGINA;
+
+async function carregarGastos(limite = limiteGastos) {
+    limiteGastos = limite;
     const mesSel = filtroMes.value;
     if (!mesSel) return;
 
@@ -146,10 +169,11 @@ async function carregarGastos() {
     try {
         const { data: gastos, error } = await supabase
             .from('despesas')
-            .select('*')
+            .select('id, descricao, valor, data, categoria')
             .gte('data', `${ano}-${mes}-01`)
             .lte('data', `${ano}-${mes}-${ultimoDia}`)
-            .order('data', { ascending: false });
+            .order('data', { ascending: false })
+            .limit(limite);
 
         if (error) throw error;
 
@@ -162,6 +186,8 @@ async function carregarGastos() {
             return;
         }
 
+        gastosRenderizados = gastos;
+
         lista.innerHTML = gastos.map(g => {
             total += parseFloat(g.valor);
             return `
@@ -171,17 +197,17 @@ async function carregarGastos() {
                             <i data-lucide="trending-down" style="width: 20px;"></i>
                         </div>
                         <div class="gasto-texto">
-                            <h4>${g.descricao}</h4>
-                            <small>${g.categoria} • ${new Date(g.data + 'T12:00:00').toLocaleDateString('pt-BR')}</small>
+                            <h4>${esc(g.descricao)}</h4>
+                            <small>${esc(g.categoria)} • ${new Date(g.data + 'T12:00:00').toLocaleDateString('pt-BR')}</small>
                         </div>
                     </div>
                     <div class="gasto-preco-acoes">
                         <span class="gasto-valor">- R$ ${parseFloat(g.valor).toFixed(2)}</span>
                         <div class="gasto-acoes">
-                            <button onclick="abrirEditarGasto('${g.id}')" class="btn-acao btn-edit" title="Editar">
+                            <button data-acao="editar" data-id="${esc(g.id)}" class="btn-acao btn-edit" title="Editar">
                                 <i data-lucide="edit-2"></i>
                             </button>
-                            <button onclick="deletarGasto('${g.id}')" class="btn-acao btn-delete" title="Excluir">
+                            <button data-acao="excluir" data-id="${esc(g.id)}" class="btn-acao btn-delete" title="Excluir">
                                 <i data-lucide="trash-2"></i>
                             </button>
                         </div>
@@ -189,6 +215,8 @@ async function carregarGastos() {
                 </div>
             `;
         }).join('');
+
+        botaoCarregarMais(lista, gastos.length, limite, carregarGastos);
 
         document.getElementById("totalGastoMes").textContent = `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
         lucide.createIcons();
@@ -200,7 +228,7 @@ async function carregarGastos() {
 
 window.abrirEditarGasto = async function(id) {
     try {
-        const { data, error } = await supabase.from('despesas').select('*').eq('id', id).single();
+        const { data, error } = await supabase.from('despesas').select('id, descricao, valor, data, categoria').eq('id', id).single();
         if (error) throw error;
 
         document.getElementById("editGastoId").value = data.id;
@@ -226,6 +254,9 @@ window.deletarGasto = async function(id) {
     try {
         const { error } = await supabase.from('despesas').delete().eq('id', id);
         if (error) throw error;
+        // A contagem mudou: o aviso de limite não pode continuar
+        // mostrando o número anterior a esta operação.
+        invalidarCachePlano();
         carregarGastos();
     } catch (err) {
         mostrarModal('Erro ao excluir', traduzirErro(err.message));
@@ -249,6 +280,9 @@ if (formEditarGasto) {
             };
             const { error } = await supabase.from('despesas').update(dados).eq('id', id);
             if (error) throw error;
+            // A contagem mudou: o aviso de limite não pode continuar
+            // mostrando o número anterior a esta operação.
+            invalidarCachePlano();
             fecharModalEditarGasto();
             carregarGastos();
         } catch (err) {

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1120">
+    <title>Sem conexão | FinMEI</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="login-page status-page">
+    <div class="status-card">
+        <div class="icon-box" style="background: rgba(255, 145, 0, .13);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
+                stroke="#ff9100" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 1l22 22" />
+                <path d="M16.72 11.06A10.94 10.94 0 0119 12.55" />
+                <path d="M5 12.55a10.94 10.94 0 015.17-2.39" />
+                <path d="M10.71 5.05A16 16 0 0122.58 9" />
+                <path d="M1.42 9a15.91 15.91 0 014.7-2.88" />
+                <path d="M8.53 16.11a6 6 0 016.95 0" />
+                <line x1="12" y1="20" x2="12.01" y2="20" />
+            </svg>
+        </div>
+        <h1>Você está sem internet</h1>
+        <p>
+            O FinMEI precisa de conexão para mostrar seus dados atualizados.
+            Assim que a internet voltar, é só tentar de novo — nada do que você
+            já cadastrou foi perdido.
+        </p>
+        <button onclick="location.reload()" class="btn-status">Tentar novamente</button>
+    </div>
+
+    <script>
+        // Volta sozinho assim que a conexão retornar
+        window.addEventListener('online', () => location.reload());
+    </script>
+</body>
+
+</html>

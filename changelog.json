@@ -1,6 +1,122 @@
 {
   "changelogs": [
     {
+      "data": "2026-08-28",
+      "resumo": "Limites de plano aplicados no banco, assinatura recorrente, relatório de BI protegido, dashboard agregado no servidor, painel de diagnóstico de IA e correções de segurança.",
+      "atualizacoes": [
+        {
+          "categoria": "Segurança",
+          "titulo": "Senha do administrador removida do código",
+          "descricao": "A senha de acesso ao painel estava escrita num comentário HTML dentro da página de login, visível para qualquer pessoa com Exibir código-fonte. O comentário foi removido e a senha precisa ser trocada no Supabase."
+        },
+        {
+          "categoria": "Segurança",
+          "titulo": "Relatórios de BI deixam de ser abertos por link adivinhável",
+          "descricao": "O relatório era aberto com o identificador do usuário na própria URL, e o app confiava nesse parâmetro lendo a base inteira com permissão total: quem tivesse o identificador de alguém via o financeiro daquela pessoa. Agora o site gera um código de uso único, válido por 5 minutos, e quem filtra os dados é o próprio banco. A senha mestra com valor padrão embutido no código foi eliminada."
+        },
+        {
+          "categoria": "Segurança",
+          "titulo": "Chaves de API não trafegam mais sem serem pedidas",
+          "descricao": "As chaves dos provedores de IA eram enviadas em texto puro para o navegador toda vez que a tela abria. Agora o servidor só informa se existe uma chave salva; o valor real só é buscado quando o administrador clica no olho, e o acesso fica registrado."
+        },
+        {
+          "categoria": "Segurança",
+          "titulo": "Checkout e webhook autenticados",
+          "descricao": "A geração de cobrança passou a exigir login e a identificar o usuário pelo token, em vez de aceitar o que viesse na requisição. O webhook do Mercado Pago passou a validar a assinatura HMAC, com proteção contra reenvio de notificações antigas."
+        },
+        {
+          "categoria": "Segurança",
+          "titulo": "Correção de XSS e do bug do apóstrofo",
+          "descricao": "Nome de cliente, descrição de venda e demais campos do banco passaram a ser escapados antes de ir para a tela. Os botões das listas deixaram de usar handlers inline: uma venda com apóstrofo no nome quebrava o botão de editar."
+        },
+        {
+          "categoria": "Planos",
+          "titulo": "Limites do plano aplicados no banco de dados",
+          "descricao": "Os limites do plano gratuito existiam apenas no JavaScript do navegador e podiam ser contornados pelo DevTools, por chamada direta à API ou pedindo ao chat de IA para cadastrar. Agora são aplicados por trigger no PostgreSQL, o que vale para todos os caminhos de uma vez."
+        },
+        {
+          "categoria": "Planos",
+          "titulo": "Nova aba Planos e limites no painel administrativo",
+          "descricao": "Quantos clientes, movimentações e produtos cada plano permite, e quantos dias dura o teste gratuito, agora são editáveis pela tela. Campo vazio significa ilimitado. Reduzir um limite não apaga nada de quem já passou dele: apenas impede novos cadastros."
+        },
+        {
+          "categoria": "Assinatura",
+          "titulo": "Assinatura recorrente no cartão de crédito",
+          "descricao": "O pagamento era avulso e o cliente precisava lembrar de renovar todo mês. Agora o cartão vira assinatura com cobrança automática. Ao cancelar, o acesso Premium continua até o fim do período já pago e só então expira. O PIX segue disponível como pagamento avulso de 30 dias, já que o Mercado Pago não permite recorrência nesse meio."
+        },
+        {
+          "categoria": "Dashboard",
+          "titulo": "Saldo Geral deixa de ficar errado em silêncio",
+          "descricao": "O dashboard buscava todo o histórico e somava no navegador. Como o Supabase corta em 1000 registros sem avisar, o Saldo Geral ficava incorreto assim que o usuário passava desse volume. Agora o cálculo é feito no banco, correto em qualquer quantidade."
+        },
+        {
+          "categoria": "Correções",
+          "titulo": "Data da venda unificada entre as telas",
+          "descricao": "Havia três convenções diferentes para a data da venda: o formulário, o chat de IA e a importação de CSV gravavam em campos distintos. Uma planilha de janeiro importada hoje aparecia inteira no mês corrente no dashboard. Todas as telas passaram a usar a data de negócio, e as vendas já importadas foram corrigidas."
+        },
+        {
+          "categoria": "IA",
+          "titulo": "Resposta aparece enquanto está sendo escrita",
+          "descricao": "O chat mostrava três pontinhos por 15 a 30 segundos e a resposta caía de uma vez. Agora o texto aparece conforme a IA escreve, e durante as ações o chat informa o que está fazendo, como consultando suas vendas."
+        },
+        {
+          "categoria": "IA",
+          "titulo": "Troca automática de provedor quando um falha",
+          "descricao": "Foram adicionados tempo limite por chamada, orçamento de tempo para a conversa inteira, fatia reservada para cada provedor da fila, nova tentativa apenas em falha passageira e detecção de resposta vazia. Um provedor com problema não impede mais que o próximo seja tentado."
+        },
+        {
+          "categoria": "IA",
+          "titulo": "Correção de cadastro duplicado",
+          "descricao": "Se um provedor falhasse depois de já ter cadastrado algo, o sistema tentava o próximo e a mesma venda ou cliente era criada duas vezes. O encadeamento agora é interrompido quando já houve gravação no banco."
+        },
+        {
+          "categoria": "IA",
+          "titulo": "Novos tipos de provedor e busca automática de modelos",
+          "descricao": "Adicionado suporte nativo ao Anthropic (Claude) e campos livres de autenticação, que permitem cadastrar Azure OpenAI, Ollama, LiteLLM e gateways corporativos sem alterar o código. O campo de modelo ganhou um botão que busca a lista disponível na conta, continuando a aceitar digitação manual."
+        },
+        {
+          "categoria": "IA",
+          "titulo": "Playground, diagnóstico e registro de erros",
+          "descricao": "A aba de IA ganhou quatro telas. O Playground testa um provedor antes mesmo de salvar. O Diagnóstico executa cada ação da IA e mostra o resultado. A tela de Erros registra falhas de provedor, de ação e de argumentos, com o motivo real e o código HTTP: antes esses erros só existiam no log da função."
+        },
+        {
+          "categoria": "IA",
+          "titulo": "Limites do plano respeitados pelo assistente",
+          "descricao": "As ações de cadastro do chat rodavam com permissão total e ignoravam o plano. Um usuário com o teste vencido também continuava com mensagens diárias disponíveis. Ambos os casos foram corrigidos."
+        },
+        {
+          "categoria": "Aplicativo",
+          "titulo": "Instalável no celular (PWA)",
+          "descricao": "O FinMEI pode ser adicionado à tela inicial e abrir em tela cheia, sem a barra do navegador. As telas ficam em cache e carregam instantaneamente na segunda visita, e sem internet aparece um aviso no visual do app. Dados financeiros nunca são armazenados em cache."
+        },
+        {
+          "categoria": "Correções",
+          "titulo": "Exportação de vendas e limite de produtos",
+          "descricao": "O CSV de vendas exportava uma coluna vazia por usar um nome de campo inexistente. As exportações passaram a neutralizar células que o Excel interpretaria como fórmula. A tela de produtos passou a avisar sobre o limite do plano antes do cadastro, como já acontecia em clientes e vendas."
+        },
+        {
+          "categoria": "Correções",
+          "titulo": "Formas de pagamento que não funcionavam",
+          "descricao": "A tela de planos tinha botões de PIX e cartão que chamavam funções inexistentes e davam erro ao clicar. Foram substituídos pelos dois caminhos reais de pagamento."
+        },
+        {
+          "categoria": "Correções",
+          "titulo": "Mesmo comportamento local e publicado",
+          "descricao": "Login com Google, confirmação de e-mail e recuperação de senha falhavam ao rodar o projeto localmente, porque os endereços assumiam a estrutura do site publicado. Os caminhos passaram a ser resolvidos a partir da página atual e funcionam nos dois ambientes sem alterar código."
+        },
+        {
+          "categoria": "Desempenho",
+          "titulo": "Índices e paginação",
+          "descricao": "Criados índices nas tabelas de vendas, gastos, clientes, produtos e pagamentos. As listagens passaram a carregar por página, com botão de carregar mais, em vez de buscar tudo de uma vez."
+        },
+        {
+          "categoria": "Documentação",
+          "titulo": "Documentação reescrita",
+          "descricao": "Adicionado README com visão geral, estrutura e decisões do projeto. O guia de configuração foi atualizado, a referência do banco foi refeita e os scripts SQL ganharam um índice explicando a ordem e o motivo de cada um."
+        }
+      ]
+    },
+    {
       "data": "2026-08-19",
       "resumo": "Validações em português com modal, tela de confirmação de e-mail, templates de e-mail, SMTP via Brevo e correção do preenchimento de perfil.",
       "atualizacoes": [

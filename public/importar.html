@@ -6,8 +6,21 @@
     <title>Importar Dados | FinMEI fluxo inteligente</title>
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <meta name="theme-color" content="#0b1120">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <script>
+        // PWA: deixa o app instalável na tela inicial do celular e
+        // guarda CSS/JS em cache para abrir rápido na segunda visita.
+        // Dado financeiro nunca é cacheado (ver public/sw.js).
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+    </script>
 </head>
 <body class="dashboard-layout" style="display: block;">
 
@@ -337,7 +350,11 @@
                                 descricao: buscarCol(v, 'Descricao', 'Descrição', 'descricao', 'descrição') || 'Venda',
                                 valor: parseFloat(valorRaw.replace(',', '.')),
                                 status: buscarCol(v, 'Status', 'status').toLowerCase() || 'pago',
-                                created_at: formatarDataParaBanco(buscarCol(v, 'Data', 'data'))
+                                // A data da planilha é a data da VENDA, não a de criação
+                                // do registro. Gravando em created_at, o dashboard (que
+                                // agrupa por data_venda) jogava a planilha inteira no mês
+                                // da importação.
+                                data_venda: formatarDataParaBanco(buscarCol(v, 'Data', 'data'))
                             });
 
                             if (errVenda) { erros.push(`Erro na venda de "${nomeCliente}": ${errVenda.message}`); }

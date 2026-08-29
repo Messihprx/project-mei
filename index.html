@@ -1,8 +1,46 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
+
 <head>
-  <meta http-equiv="refresh" content="0;url=public/login.html">
-  <script>window.location.href = 'public/login.html';</script>
+  <meta charset="UTF-8">
+  <title>FinMEI</title>
+  <script>
+    // Este arquivo existe para quando o projeto é aberto a partir da raiz
+    // do repositório: aí as páginas estão em public/. Num deploy que
+    // publica a pasta public como raiz do site (é o caso do Netlify, ver
+    // netlify.toml), ele nem chega a ser servido.
+    //
+    // Mesmo assim ele se vira sozinho nos dois casos: tenta public/ e,
+    // se não existir, cai para o mesmo diretório. Assim não é preciso
+    // editar nada ao publicar.
+    (function () {
+      var comPublic = 'public/login.html';
+      var semPublic = 'login.html';
+
+      // Sem fetch (file:// em navegador antigo) fica no padrão local
+      if (typeof fetch !== 'function') {
+        location.replace(comPublic);
+        return;
+      }
+
+      fetch(comPublic, { method: 'HEAD' })
+        .then(function (r) {
+          location.replace(r.ok ? comPublic : semPublic);
+        })
+        .catch(function () {
+          // file:// bloqueia o fetch: mantém o caminho local, que é o
+          // único cenário em que este arquivo é aberto direto do disco.
+          location.replace(comPublic);
+        });
+    })();
+  </script>
 </head>
-<body></body>
+
+<body>
+  <noscript>
+    <p>Abra <a href="public/login.html">public/login.html</a> (projeto local)
+      ou <a href="login.html">login.html</a> (site publicado).</p>
+  </noscript>
+</body>
+
 </html>

@@ -1,5 +1,6 @@
 import { supabase } from './auth.js';
 import { protegerAcao, verificarStatusPlano } from './planos.js';
+import { esc } from './dom-utils.js';
 
 const filtroMesInput = document.getElementById("filtroMesDashboard");
 
@@ -47,86 +48,46 @@ async function carregarDadosUsuario() {
 }
 
 // --- 2. CARREGAR DASHBOARD COMPLETO ---
+// --- 2. CARREGAR DASHBOARD ---
+//
+// Antes esta função buscava TODO o histórico de vendas e despesas e
+// somava no navegador. O PostgREST corta em 1000 linhas sem avisar,
+// então o "Saldo Geral" ficava errado em silêncio assim que o usuário
+// passava desse volume. Agora o Postgres agrega e devolve pronto.
 async function carregarDashboard() {
     if (!filtroMesInput) return;
     const mesSel = filtroMesInput.value;
     if (!mesSel) return;
 
-    const status = await verificarStatusPlano();
-    const [ano, mes] = mesSel.split('-');
-    const ultimoDia = new Date(ano, mes, 0).getDate();
-    
-    const inicioFiltroVendas = `${ano}-${mes}-01T00:00:00`;
-    const fimFiltroVendas = `${ano}-${mes}-${ultimoDia}T23:59:59`;
-
     try {
-        // 1. Busca os dados do mês
-        const [resVendasMes, resGastosMes] = await Promise.all([
-            supabase.from('vendas').select('*').gte('created_at', inicioFiltroVendas).lte('created_at', fimFiltroVendas),
-            supabase.from('despesas').select('*').gte('data', `${ano}-${mes}-01`).lte('data', `${ano}-${mes}-${ultimoDia}`)
-        ]);
+        const { data: resumo, error } = await supabase.rpc('dashboard_resumo', { p_mes: mesSel });
+        if (error) throw error;
+        if (!resumo || resumo.erro) return;
 
-        const vendasMes = resVendasMes.data || [];
-        const gastosMes = resGastosMes.data || [];
+        const mes = resumo.mes || {};
+        const serie = resumo.serie_mensal || [];
 
-        let vendasHisto = [];
-        let gastosHisto = [];
-
-        if (status.premium) {
-            // Se for Premium, buscamos o HISTÓRICO REAL
-            const [resHistoVendas, resHistoGastos] = await Promise.all([
-                supabase.from('vendas').select('valor, created_at').eq('status', 'pago'),
-                supabase.from('despesas').select('valor, data')
-            ]);
-            vendasHisto = resHistoVendas.data || [];
-            gastosHisto = resHistoGastos.data || [];
-        } else {
-            // Se for Gratuito, histórico limitado ao mês (Versão Simples)
-            vendasHisto = vendasMes.filter(v => v.status === 'pago');
-            gastosHisto = gastosMes;
-        }
-
-        // --- CÁLCULOS DO MÊS ---
-        let mEntradas = 0; 
-        let mPendentes = 0;
-        let mGastos = 0;
-
-        vendasMes.forEach(v => {
-            if (v.status === 'pago') mEntradas += (v.valor || 0);
-            else mPendentes += (v.valor || 0);
-        });
-        
-        gastosMes.forEach(g => mGastos += parseFloat(g.valor || 0));
-
-        const mLucroReal = mEntradas - mGastos;
-
-        // --- CÁLCULO TOTAL (HISTÓRICO) ---
-        const totalVendasHistorico = vendasHisto.reduce((acc, v) => acc + (v.valor || 0), 0);
-        const totalGastosHistorico = gastosHisto.reduce((acc, g) => acc + parseFloat(g.valor || 0), 0);
-        const saldoGeral = totalVendasHistorico - totalGastosHistorico;
-
-        // --- ATUALIZAR TELAS ---
         const atualizarTexto = (id, valor) => {
             const el = document.getElementById(id);
-            if (el) el.textContent = `R$ ${valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            if (el) el.textContent = `R$ ${Number(valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
         };
 
-        atualizarTexto("totalEntradas", mEntradas);
-        atualizarTexto("totalSaidas", mPendentes);
-        atualizarTexto("totalGastosDashboard", mGastos);
-        atualizarTexto("lucroReal", mLucroReal);
-        
+        atualizarTexto("totalEntradas", mes.entradas);
+        atualizarTexto("totalSaidas", mes.pendentes);
+        atualizarTexto("totalGastosDashboard", mes.gastos);
+        atualizarTexto("lucroReal", mes.lucro);
+
+        const saldoGeral = Number(resumo.saldo_geral || 0);
         const cardSaldo = document.getElementById("saldoGeralTotal");
         if (cardSaldo) {
-            cardSaldo.textContent = `R$ ${saldoGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            cardSaldo.textContent = `R$ ${saldoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
             cardSaldo.style.color = saldoGeral < 0 ? 'var(--cor-erro)' : 'var(--cor-primaria-strong)';
         }
 
-        renderizarMovimentacoes(vendasMes, gastosMes);
-        atualizarListaHistorica(vendasHisto, gastosHisto);
-
-        // --- RENDERIZAR GRÁFICOS ---
-        renderizarGraficos(vendasMes, gastosMes, vendasHisto, gastosHisto);
+        renderizarMovimentacoes(resumo.ultimas_movimentacoes || []);
+        atualizarListaHistorica(serie);
+        renderizarGraficos(serie, resumo.donut || []);
+        renderizarComparacao(mes, resumo.mes_anterior || {});
 
     } catch (err) {
         console.error("Erro ao processar dashboard:", err);
@@ -142,61 +103,47 @@ function formatarData(dataStr) {
     return new Date(dataStr).toLocaleDateString('pt-BR');
 }
 
-function renderizarMovimentacoes(vendas, gastos) {
+function renderizarMovimentacoes(movs) {
     const lista = document.getElementById("listaMovimentacoes");
     if (!lista) return;
 
-    const movs = [
-        ...vendas.map(v => ({ t: 'Venda', v: v.valor, d: v.created_at, s: v.status })),
-        ...gastos.map(g => ({ t: g.descricao, v: parseFloat(g.valor), d: g.data + 'T12:00:00', s: 'gasto' }))
-    ].sort((a, b) => new Date(b.d) - new Date(a.d));
-
-    if (movs.length === 0) {
+    if (!movs.length) {
         lista.innerHTML = '<p style="text-align:center; color:var(--texto-faint); padding: 1rem;">Nenhuma movimentação no mês.</p>';
         return;
     }
 
-    lista.innerHTML = movs.slice(0, 5).map(m => `
+    lista.innerHTML = movs.map(m => `
         <div class="item-venda" style="margin-bottom: 8px;">
-            <span style="color: var(--texto-secundario); font-size: 0.85rem;">${m.t} <br><small style="color: var(--texto-faint);">${formatarData(m.d)}</small></span>
-            <span style="color: ${m.s === 'gasto' ? 'var(--cor-erro)' : (m.s === 'pago' ? 'var(--cor-sucesso)' : 'var(--cor-alerta)')}; font-weight: 600;">
-                ${m.s === 'gasto' ? '-' : ''} R$ ${parseFloat(m.v || 0).toFixed(2)}
+            <span style="color: var(--texto-secundario); font-size: 0.85rem;">${esc(m.titulo)} <br><small style="color: var(--texto-faint);">${formatarData(m.data)}</small></span>
+            <span style="color: ${m.status === 'gasto' ? 'var(--cor-erro)' : (m.status === 'pago' ? 'var(--cor-sucesso)' : 'var(--cor-alerta)')}; font-weight: 600;">
+                ${m.status === 'gasto' ? '-' : ''} R$ ${Number(m.valor || 0).toFixed(2)}
             </span>
         </div>
     `).join('');
 }
 
-function atualizarListaHistorica(vendasPagas, todosGastos) {
+const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho',
+                  'julho','agosto','setembro','outubro','novembro','dezembro'];
+
+function rotuloMesExtenso(chave) {
+    const [ano, mes] = String(chave).split('-');
+    return `${MESES_PT[Number(mes) - 1] || mes} de ${ano}`;
+}
+
+function atualizarListaHistorica(serie) {
     const container = document.getElementById("listaLucroMensal");
     if (!container) return;
 
-    const entradas = {};
-
-    vendasPagas.forEach(v => {
-        const dataObj = v.created_at ? new Date(v.created_at) : new Date();
-        const mesAno = dataObj.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-        entradas[mesAno] = (entradas[mesAno] || 0) + (v.valor || 0);
-    });
-
-    const saidas = {};
-    todosGastos.forEach(g => {
-        const dataObj = new Date(g.data + 'T12:00:00');
-        const mesAno = dataObj.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-        saidas[mesAno] = (saidas[mesAno] || 0) + parseFloat(g.valor || 0);
-    });
-
-    const mesesLabels = [...new Set([...Object.keys(entradas), ...Object.keys(saidas)])];
-    
-    if (mesesLabels.length === 0) {
+    if (!serie.length) {
         container.innerHTML = '<p style="text-align:center; color:var(--texto-faint); padding: 1rem;">Sem histórico disponível.</p>';
         return;
     }
 
-    container.innerHTML = mesesLabels.map(mes => {
-        const lucro = (entradas[mes] || 0) - (saidas[mes] || 0);
+    container.innerHTML = serie.slice().reverse().map(item => {
+        const lucro = Number(item.lucro || 0);
         return `
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--borda-cor); padding: 0.8rem 0;">
-                <span style="color: var(--texto-secundario); text-transform: capitalize; font-size: 0.85rem;">${mes}</span>
+                <span style="color: var(--texto-secundario); text-transform: capitalize; font-size: 0.85rem;">${esc(rotuloMesExtenso(item.mes))}</span>
                 <span style="color: ${lucro >= 0 ? 'var(--cor-sucesso)' : 'var(--cor-erro)'}; font-weight: 700; font-size: 0.9rem;">
                     R$ ${lucro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
@@ -217,7 +164,9 @@ function getCssVar(name) {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-function renderizarGraficos(vendasMes, gastosMes, vendasHisto, gastosHisto) {
+// Os gráficos agora recebem a série já agregada pelo Postgres, em vez
+// de reagrupar milhares de linhas no navegador a cada troca de mês.
+function renderizarGraficos(serie, donut) {
     destroyCharts();
 
     const textoCor = getCssVar('--texto-faint') || '#8a9aa9';
@@ -233,53 +182,21 @@ function renderizarGraficos(vendasMes, gastosMes, vendasHisto, gastosHisto) {
         maintainAspectRatio: false,
         plugins: {
             legend: {
-                labels: {
-                    color: textoCor,
-                    boxWidth: 12,
-                    boxHeight: 12,
-                    usePointStyle: true
-                }
+                labels: { color: textoCor, boxWidth: 12, boxHeight: 12, usePointStyle: true }
             }
         },
         scales: {
-            x: {
-                grid: { color: gridCor },
-                ticks: { color: textoCor }
-            },
-            y: {
-                grid: { color: gridCor },
-                ticks: {
-                    color: textoCor,
-                    callback: v => 'R$ ' + v
-                }
-            }
+            x: { grid: { color: gridCor }, ticks: { color: textoCor } },
+            y: { grid: { color: gridCor }, ticks: { color: textoCor, callback: v => 'R$ ' + v } }
         }
     };
 
-    // --- Gráfico Receitas × Despesas (Barras Mensais) ---
+    const ultimos = serie.slice(-6);
+    const mesesLabels = ultimos.map(s => s.label);
+
+    // --- Receitas x Despesas (barras mensais) ---
     const ctxRevExp = document.getElementById('chRevExp');
     if (ctxRevExp) {
-        // Agrupar vendas pagas por mês (últimos 6 meses)
-        const mesesMap = {};
-        vendasHisto.forEach(v => {
-            if (!v.created_at) return;
-            const d = new Date(v.created_at);
-            const key = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-            if (!mesesMap[key]) mesesMap[key] = { receita: 0, despesa: 0 };
-            mesesMap[key].receita += v.valor || 0;
-        });
-        gastosHisto.forEach(g => {
-            if (!g.data) return;
-            const d = new Date(g.data + 'T12:00:00');
-            const key = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-            if (!mesesMap[key]) mesesMap[key] = { receita: 0, despesa: 0 };
-            mesesMap[key].despesa += parseFloat(g.valor || 0);
-        });
-
-        const mesesLabels = Object.keys(mesesMap).slice(-6);
-        const receitasVals = mesesLabels.map(m => Math.round(mesesMap[m].receita));
-        const despesasVals = mesesLabels.map(m => Math.round(mesesMap[m].despesa));
-
         charts['chRevExp'] = new Chart(ctxRevExp, {
             type: 'bar',
             data: {
@@ -287,13 +204,13 @@ function renderizarGraficos(vendasMes, gastosMes, vendasHisto, gastosHisto) {
                 datasets: [
                     {
                         label: 'Receitas',
-                        data: receitasVals,
+                        data: ultimos.map(s => Math.round(Number(s.receita || 0))),
                         backgroundColor: accentCor,
                         borderRadius: 4
                     },
                     {
                         label: 'Despesas',
-                        data: despesasVals,
+                        data: ultimos.map(s => Math.round(Number(s.despesa || 0))),
                         backgroundColor: negCor,
                         borderRadius: 4
                     }
@@ -309,35 +226,16 @@ function renderizarGraficos(vendasMes, gastosMes, vendasHisto, gastosHisto) {
         });
     }
 
-    // --- Gráfico Evolução do Lucro (Linha) ---
+    // --- Evolução do Lucro (linha) ---
     const ctxProfit = document.getElementById('chProfit');
     if (ctxProfit) {
-        const mesesMap = {};
-        vendasHisto.forEach(v => {
-            if (!v.created_at) return;
-            const d = new Date(v.created_at);
-            const key = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-            if (!mesesMap[key]) mesesMap[key] = { receita: 0, despesa: 0 };
-            mesesMap[key].receita += v.valor || 0;
-        });
-        gastosHisto.forEach(g => {
-            if (!g.data) return;
-            const d = new Date(g.data + 'T12:00:00');
-            const key = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-            if (!mesesMap[key]) mesesMap[key] = { receita: 0, despesa: 0 };
-            mesesMap[key].despesa += parseFloat(g.valor || 0);
-        });
-
-        const mesesLabels = Object.keys(mesesMap).slice(-6);
-        const lucroVals = mesesLabels.map(m => Math.round(mesesMap[m].receita - mesesMap[m].despesa));
-
         charts['chProfit'] = new Chart(ctxProfit, {
             type: 'line',
             data: {
                 labels: mesesLabels,
                 datasets: [{
                     label: 'Lucro',
-                    data: lucroVals,
+                    data: ultimos.map(s => Math.round(Number(s.lucro || 0))),
                     borderColor: posCor,
                     backgroundColor: 'transparent',
                     tension: 0.35,
@@ -350,105 +248,65 @@ function renderizarGraficos(vendasMes, gastosMes, vendasHisto, gastosHisto) {
         });
     }
 
-    // --- Gráfico Donut de Vendas por Produto ---
+    // --- Donut de vendas por produto ---
     const ctxDonut = document.getElementById('chDonut');
-    if (ctxDonut) {
-        const produtoMap = {};
-        vendasMes.forEach(v => {
-            const produto = v.descricao || 'Sem descrição';
-            produtoMap[produto] = (produtoMap[produto] || 0) + parseFloat(v.valor || 0);
-        });
-
-        const produtos = Object.keys(produtoMap);
-        const produtoVals = Object.values(produtoMap);
+    if (ctxDonut && donut.length) {
         const palette = [accentCor, '#8b5cf6', posCor, warnCor, '#ec4899', '#64748b', '#14b8a6', '#f97316'];
-
-        if (produtos.length > 0) {
-            charts['chDonut'] = new Chart(ctxDonut, {
-                type: 'doughnut',
-                data: {
-                    labels: produtos,
-                    datasets: [{
-                        data: produtoVals,
-                        backgroundColor: palette.slice(0, produtos.length),
-                        borderColor: surfaceCor,
-                        borderWidth: 3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '62%',
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: {
-                                color: textoCor,
-                                boxWidth: 12,
-                                boxHeight: 12,
-                                usePointStyle: true
-                            }
-                        }
+        charts['chDonut'] = new Chart(ctxDonut, {
+            type: 'doughnut',
+            data: {
+                labels: donut.map(d => d.label),
+                datasets: [{
+                    data: donut.map(d => Number(d.valor || 0)),
+                    backgroundColor: palette.slice(0, donut.length),
+                    borderColor: surfaceCor,
+                    borderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: textoCor, boxWidth: 12, boxHeight: 12, usePointStyle: true }
                     }
                 }
-            });
-        }
+            }
+        });
     }
-
-    // --- Comparação com o Mês Anterior ---
-    renderizarComparacao(vendasMes, gastosMes, vendasHisto, gastosHisto);
 }
 
-function renderizarComparacao(vendasMes, gastosMes, vendasHisto, gastosHisto) {
+function renderizarComparacao(mes, mesAnterior) {
     const insightEl = document.getElementById('insightComparacao');
     const gridEl = document.getElementById('comparacaoGrid');
     if (!insightEl || !gridEl) return;
 
-    // Calcular mês atual e anterior
-    let mEntradasAtual = 0, mGastosAtual = 0;
-    vendasMes.forEach(v => { if (v.status === 'pago') mEntradasAtual += (v.valor || 0); });
-    gastosMes.forEach(g => { mGastosAtual += parseFloat(g.valor || 0); });
-    const mLucroAtual = mEntradasAtual - mGastosAtual;
+    const entAtual = Number(mes.entradas || 0);
+    const lucroAtual = Number(mes.lucro || 0);
+    const entAnt = Number(mesAnterior.entradas || 0);
+    const lucroAnt = Number(mesAnterior.lucro || 0);
 
-    // Mês anterior
-    const agora = new Date();
-    const mesAnt = new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
-    const ultimoDiaAnt = new Date(mesAnt.getFullYear(), mesAnt.getMonth() + 1, 0).getDate();
-    const inicioAnt = `${mesAnt.getFullYear()}-${String(mesAnt.getMonth()+1).padStart(2,'0')}-01T00:00:00`;
-    const fimAnt = `${mesAnt.getFullYear()}-${String(mesAnt.getMonth()+1).padStart(2,'0')}-${ultimoDiaAnt}T23:59:59`;
+    const rotulo = (ref) => {
+        const [ano, m] = String(ref || '').split('-');
+        const nome = MESES_PT[Number(m) - 1];
+        return nome ? nome.charAt(0).toUpperCase() + nome.slice(1) : (ref || '');
+    };
+    const mesAtualLabel = rotulo(mes.referencia);
+    const mesAntLabel = rotulo(mesAnterior.referencia);
 
-    // Buscar dados do mês anterior
-    const vendasAnt = vendasHisto.filter(v => {
-        if (!v.created_at) return false;
-        const d = new Date(v.created_at);
-        return d >= new Date(inicioAnt) && d <= new Date(fimAnt);
-    });
-    const gastosAnt = gastosHisto.filter(g => {
-        if (!g.data) return false;
-        const d = new Date(g.data + 'T12:00:00');
-        return d >= new Date(inicioAnt + 'T12:00:00') && d <= new Date(fimAnt + 'T12:00:00');
-    });
-
-    let mEntradasAnt = 0, mGastosAnt = 0;
-    vendasAnt.forEach(v => { mEntradasAnt += v.valor || 0; });
-    gastosAnt.forEach(g => { mGastosAnt += parseFloat(g.valor || 0); });
-    const mLucroAnt = mEntradasAnt - mGastosAnt;
-
-    const mesesPT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-    const mesAtualLabel = mesesPT[agora.getMonth()];
-    const mesAntLabel = mesesPT[mesAnt.getMonth()];
-
-    if (mLucroAnt === 0 && mLucroAtual === 0) {
+    if (lucroAnt === 0 && lucroAtual === 0) {
         insightEl.innerHTML = '<i data-lucide="info"></i><div>Dados insuficientes para comparação entre meses.</div>';
         if (window.lucide) lucide.createIcons();
         gridEl.innerHTML = '';
         return;
     }
 
-    const variacao = mLucroAnt > 0 ? ((mLucroAtual / mLucroAnt - 1) * 100) : (mLucroAtual > 0 ? 100 : 0);
-    const variacaoReceita = mEntradasAnt > 0 ? ((mEntradasAtual / mEntradasAnt - 1) * 100) : 0;
-    const margemAtual = mEntradasAtual > 0 ? (mLucroAtual / mEntradasAtual * 100) : 0;
-    const margemAnt = mEntradasAnt > 0 ? (mLucroAnt / mEntradasAnt * 100) : 0;
+    const variacao = lucroAnt > 0 ? ((lucroAtual / lucroAnt - 1) * 100) : (lucroAtual > 0 ? 100 : 0);
+    const variacaoReceita = entAnt > 0 ? ((entAtual / entAnt - 1) * 100) : 0;
+    const margemAtual = entAtual > 0 ? (lucroAtual / entAtual * 100) : 0;
+    const margemAnt = entAnt > 0 ? (lucroAnt / entAnt * 100) : 0;
 
     const fmtPct = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
     const fmtBRL = v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 0 });
@@ -456,24 +314,24 @@ function renderizarComparacao(vendasMes, gastosMes, vendasHisto, gastosHisto) {
     insightEl.innerHTML = `
         <i data-lucide="info"></i>
         <div>
-            Sua receita cresceu <strong>${fmtPct(variacaoReceita)}</strong> e seu lucro
-            <strong>${fmtPct(variacao)}</strong> em relação a ${mesAntLabel}.
+            Sua receita variou <strong>${fmtPct(variacaoReceita)}</strong> e seu lucro
+            <strong>${fmtPct(variacao)}</strong> em relação a ${esc(mesAntLabel)}.
             A margem de lucro passou de <strong>${margemAnt.toFixed(1)}%</strong> para <strong>${margemAtual.toFixed(1)}%</strong>.
         </div>
     `;
 
     gridEl.innerHTML = `
         <div class="goal-stat">
-            <div class="g-label">${mesAntLabel}</div>
-            <div class="g-value">${fmtBRL(mLucroAnt)}</div>
+            <div class="g-label">${esc(mesAntLabel)}</div>
+            <div class="g-value">${fmtBRL(lucroAnt)}</div>
         </div>
         <div class="goal-stat">
-            <div class="g-label">${mesAtualLabel}</div>
-            <div class="g-value pos">${fmtBRL(mLucroAtual)}</div>
+            <div class="g-label">${esc(mesAtualLabel)}</div>
+            <div class="g-value pos">${fmtBRL(lucroAtual)}</div>
         </div>
         <div class="goal-stat">
             <div class="g-label">Variação</div>
-            <div class="g-value ${variacao >= 0 ? 'pos' : 'neg'}">${fmtPct(variacao)} (${fmtBRL(mLucroAtual - mLucroAnt)})</div>
+            <div class="g-value ${variacao >= 0 ? 'pos' : 'neg'}">${fmtPct(variacao)} (${fmtBRL(lucroAtual - lucroAnt)})</div>
         </div>
         <div class="goal-stat">
             <div class="g-label">Margem de Lucro</div>
@@ -508,15 +366,25 @@ window.abrirRelatorioAnalitico = async function() {
         return;
     }
 
-    const { data: { user }, error } = await supabase.auth.getUser();
-
-    if (error || !user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
         mostrarModal('Faça login', 'Por favor, faça login para acessar seus relatórios.');
         setTimeout(() => { window.location.href = "login.html"; }, 2000);
         return;
     }
 
-    const urlStreamlit = "https://project-mei-app-dw-e5jih2p8ek6plegymc93ot.streamlit.app/"; 
-    const linkFinal = `${urlStreamlit}?user_id=${user.id}`;
-    window.open(linkFinal, '_blank');
+    // Antes o link levava ?user_id=<uuid> e o Streamlit confiava nisso:
+    // quem tivesse o UUID de alguém via o financeiro daquela pessoa.
+    // Agora pedimos um código de uso único, válido por 5 minutos.
+    try {
+        const { data, error } = await supabase.functions.invoke('bi-token', { body: {} });
+        if (error) throw error;
+        if (!data?.token) throw new Error(data?.error || 'Não foi possível gerar o acesso.');
+
+        const urlStreamlit = "https://project-mei-app-dw-e5jih2p8ek6plegymc93ot.streamlit.app/";
+        window.open(`${urlStreamlit}?t=${encodeURIComponent(data.token)}`, '_blank');
+    } catch (e) {
+        console.error('Erro ao abrir relatório:', e);
+        mostrarModal('Erro', 'Não foi possível abrir o relatório agora. Tente novamente em instantes.', 'erro');
+    }
 }

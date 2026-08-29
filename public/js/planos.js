@@ -1,6 +1,70 @@
 import { supabase } from './auth.js';
 
-export async function verificarStatusPlano() {
+// ============================================================
+// Cache do estado do plano
+//
+// O site é multipágina: cada navegação recarrega tudo. Sem cache,
+// abrir 5 telas custava 5x (getSession + perfis + meu_uso_plano),
+// e meu_uso_plano sozinho faz ~7 consultas no Postgres. Isso pesa
+// no plano gratuito do Supabase sem trazer nada — o plano de
+// alguém não muda entre um clique e outro.
+//
+// sessionStorage (e não uma variável) porque precisa sobreviver à
+// troca de página. Vale só para a aba atual e some ao fechar.
+//
+// TTL curto e invalidação explícita em toda ação que muda a
+// contagem: cadastrar, excluir, assinar ou cancelar.
+// ============================================================
+
+const CACHE_TTL_MS = 60000;
+
+function lerCache(chave) {
+    try {
+        const bruto = sessionStorage.getItem(chave);
+        if (!bruto) return null;
+        const { valor, em } = JSON.parse(bruto);
+        if (Date.now() - em > CACHE_TTL_MS) return null;
+        return valor;
+    } catch {
+        return null;
+    }
+}
+
+function gravarCache(chave, valor) {
+    try {
+        sessionStorage.setItem(chave, JSON.stringify({ valor, em: Date.now() }));
+    } catch {
+        // Modo privado ou cota cheia: seguir sem cache é aceitável.
+    }
+}
+
+/** Zera o cache. Chamar depois de qualquer coisa que mude plano ou contagem. */
+export function invalidarCachePlano() {
+    _usoPlanoCache = null;
+    try {
+        sessionStorage.removeItem('finmei_uso_plano');
+        sessionStorage.removeItem('finmei_status_plano');
+    } catch { /* sem sessionStorage, nada a fazer */ }
+}
+
+// Base do site em que o app está rodando: ".../public/" quando aberto
+// da raiz do repositório, ".../" quando a pasta public é a raiz do
+// deploy. As Edge Functions usam isso para montar as URLs de retorno
+// do pagamento, em vez de terem um domínio fixo no código.
+function baseDoSite() {
+    return new URL('./', window.location.href).href;
+}
+
+export async function verificarStatusPlano(forcar = false) {
+    if (!forcar) {
+        const emCache = lerCache('finmei_status_plano');
+        if (emCache) {
+            // As datas voltam como texto do JSON
+            if (emCache.validadePremium) emCache.validadePremium = new Date(emCache.validadePremium);
+            return emCache;
+        }
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return { expirado: false, premium: false };
 
@@ -9,7 +73,7 @@ export async function verificarStatusPlano() {
     // Fetch perfil
     const { data: perfil, error } = await supabase
         .from('perfis')
-        .select('plano, criado_em, expira_em')
+        .select('plano, criado_em, expira_em, assinatura_status, metodo_assinatura, assinatura_cancelada_em')
         .eq('id', userId)
         .single();
 
@@ -40,21 +104,35 @@ export async function verificarStatusPlano() {
 
     const difTempo = hoje.getTime() - createdDate.getTime();
     const diasPassados = Math.floor(difTempo / (1000 * 3600 * 24));
-    const diasRestantesTrial = 14 - diasPassados;
+
+    // Os dias de teste são configuráveis no painel admin. Com o 14
+    // fixo aqui, mudar o limite fazia o banco bloquear numa data e o
+    // banner anunciar outra.
+    const uso = await carregarUsoPlano();
+    const diasTrial = Number(uso?.trial_dias ?? 14);
+    const diasRestantesTrial = diasTrial - diasPassados;
 
     // Está expirado se: 
     // 1. O Premium venceu (premiumVencido)
     // 2. OU não é premium e os 14 dias de teste acabaram
     const expirado = premiumVencido || (!isPremium && diasRestantesTrial <= 0);
 
-    return {
+    const resultado = {
         expirado,
         premiumVencido,
         diasRestantes: diasRestantesTrial < 0 ? 0 : diasRestantesTrial,
         premium: isPremium,
         validadePremium: expiracaoPremium,
-        diasRestantesPremium: diasRestantesPremium
+        diasRestantesPremium: diasRestantesPremium,
+        // Assinatura cancelada não derruba o acesso na hora: o usuário
+        // pagou o período corrente e segue premium até expira_em.
+        assinaturaCancelada: perfil?.assinatura_status === 'cancelled',
+        metodoAssinatura: perfil?.metodo_assinatura || null,
+        diasTrialConfigurados: diasTrial
     };
+
+    gravarCache('finmei_status_plano', resultado);
+    return resultado;
 }
 
 export async function assinarPlanoPremium(emailDoUsuario) {
@@ -65,6 +143,7 @@ export async function assinarPlanoPremium(emailDoUsuario) {
         // Agora chamamos a nossa Edge Function em vez de atualizar o banco direto!
         const { data, error } = await supabase.functions.invoke('mp-checkout', {
             body: {
+                baseUrl: baseDoSite(),
                 items: [
                     {
                         title: 'Assinatura Premium FinMEI',
@@ -81,6 +160,7 @@ export async function assinarPlanoPremium(emailDoUsuario) {
 
         // Se a função retornou o link do Mercado Pago com sucesso
         if (data && data.init_point) {
+            invalidarCachePlano();
             return { success: true, init_point: data.init_point };
         } else {
             throw new Error("Não foi possível gerar o link de pagamento.");
@@ -138,19 +218,26 @@ export async function injetarBannerPlano() {
                 card.style.justifyContent = 'space-between';
 
                 const expDate = status.validadePremium ? new Date(status.validadePremium).toLocaleDateString('pt-BR') : 'Ativa';
+                const cancelada = status.assinaturaCancelada;
 
                 card.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 15px;">
-                        <div style="background: var(--cor-primaria); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;">
-                            <i data-lucide="gem"></i>
+                        <div style="background: ${cancelada ? 'var(--cor-alerta)' : 'var(--cor-primaria)'}; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;">
+                            <i data-lucide="${cancelada ? 'alert-circle' : 'gem'}"></i>
                         </div>
                         <div>
-                            <h4 style="margin: 0; font-size: 1rem; color: var(--texto-principal);">Você é Premium!</h4>
-                            <p style="margin: 0; font-size: 0.8rem; color: var(--texto-secundario);">Sua assinatura está ativa até: <b>${expDate}</b></p>
+                            <h4 style="margin: 0; font-size: 1rem; color: var(--texto-principal);">${cancelada ? 'Assinatura cancelada' : 'Você é Premium!'}</h4>
+                            <p style="margin: 0; font-size: 0.8rem; color: var(--texto-secundario);">
+                                ${cancelada
+                                    ? `Seu acesso Premium continua até <b>${expDate}</b> e não será renovado.`
+                                    : `Sua assinatura está ativa até: <b>${expDate}</b>`}
+                            </p>
                         </div>
                     </div>
                     <div style="text-align: right;">
-                        <span style="font-size: 0.7rem; color: var(--cor-primaria); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Status: Ativo</span>
+                        ${cancelada
+                            ? `<a href="planos.html" class="btn-upgrade" style="font-size:0.75rem;">Reativar</a>`
+                            : `<span style="font-size: 0.7rem; color: var(--cor-primaria); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Status: Ativo</span>`}
                     </div>
                 `;
                 contentWrapper.prepend(card);
@@ -314,30 +401,35 @@ export async function protegerAcao(formId, tipoOperacao = 'none') {
         bloqueio = true;
         mensagemBloqueio = `<i data-lucide="lock" style="width: 18px; position:relative; top:3px;"></i> <b>Ação Bloqueada:</b> Seu período gratuito finalizou. <a href="planos.html" style="color: #ef4444; text-decoration: underline;">Faça o upgrade agora</a> para continuar utilizando.`;
     }
-    // 2. Bloqueio por Limite de Entidades do Plano Gratuito (msm dentro dos 14 dias)
+    // 2. Bloqueio por limite de entidades do plano
+    //    Os números vêm de plano_limites (editável no painel admin) via
+    //    RPC meu_uso_plano. Antes estavam cravados aqui como 10 e 50, o
+    //    que fazia a tela dizer "de 10" enquanto o banco já barrava em
+    //    outro valor. Quem barra de verdade é a trigger no Postgres —
+    //    isto aqui é só o aviso antecipado.
     else if (!status.premium && tipoOperacao !== 'none') {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-            const uid = session.user.id;
+        // forcar: o gate precisa da contagem de agora. Sem isso, quem
+        // acabou de cadastrar veria o número anterior ao próprio
+        // cadastro e o aviso de limite chegaria tarde.
+        const uso = await carregarUsoPlano(true);
 
-            if (tipoOperacao === 'cliente') {
-                const { count } = await supabase.from('clientes').select('*', { count: 'exact', head: true }).eq('user_id', uid);
-                if (count >= 10) {
-                    bloqueio = true;
-                    mensagemBloqueio = `<i data-lucide="users" style="width: 18px; position:relative; top:3px;"></i> <b>Limite Atingido:</b> O plano gratuito permite até 10 clientes. <a href="planos.html" style="color: #ef4444; text-decoration: underline;">Seja Premium</a> para ter clientes ilimitados!`;
-                } else {
-                    resmsg = `<b>Uso do Plano Gratuito:</b> ${count} de 10 clientes cadastrados.`;
-                }
-            } else if (tipoOperacao === 'movimentacao') {
-                const { count: countVendas } = await supabase.from('vendas').select('*', { count: 'exact', head: true }).eq('user_id', uid);
-                const { count: countDespesas } = await supabase.from('despesas').select('*', { count: 'exact', head: true }).eq('user_id', uid);
+        if (uso) {
+            const mapa = {
+                cliente:      { dados: uso.clientes,      rotulo: 'clientes',            icone: 'users' },
+                movimentacao: { dados: uso.movimentacoes, rotulo: 'registros financeiros', icone: 'bar-chart' },
+                produto:      { dados: uso.produtos,      rotulo: 'produtos',            icone: 'package' },
+            };
+            const item = mapa[tipoOperacao];
 
-                const totalMovimentacoes = (countVendas || 0) + (countDespesas || 0);
-                if (totalMovimentacoes >= 50) {
+            if (item && item.dados && item.dados.max != null) {
+                const usado = Number(item.dados.usado || 0);
+                const max = Number(item.dados.max);
+
+                if (usado >= max) {
                     bloqueio = true;
-                    mensagemBloqueio = `<i data-lucide="bar-chart" style="width: 18px; position:relative; top:3px;"></i> <b>Limite Atingido:</b> O plano gratuito permite até 50 registros financeiros. <a href="planos.html" style="color: #ef4444; text-decoration: underline;">Seja Premium</a> para fluxo de caixa livre!`;
+                    mensagemBloqueio = `<i data-lucide="${item.icone}" style="width: 18px; position:relative; top:3px;"></i> <b>Limite Atingido:</b> O plano gratuito permite até ${max} ${item.rotulo}. <a href="planos.html" style="color: #ef4444; text-decoration: underline;">Seja Premium</a> para uso ilimitado!`;
                 } else {
-                    resmsg = `<b>Uso do Plano Gratuito:</b> ${totalMovimentacoes} de 50 registros cadastrados.`;
+                    resmsg = `<b>Uso do Plano Gratuito:</b> ${usado} de ${max} ${item.rotulo}.`;
                 }
             }
         }
@@ -389,4 +481,76 @@ export async function protegerAcao(formId, tipoOperacao = 'none') {
     }
 
     return false;
+}
+
+// ============================================================
+// USO DO PLANO (limites vindos do banco)
+// ============================================================
+
+let _usoPlanoCache = null;
+
+export async function carregarUsoPlano(forcar = false) {
+    if (!forcar) {
+        if (_usoPlanoCache) return _usoPlanoCache;
+        const emCache = lerCache('finmei_uso_plano');
+        if (emCache) { _usoPlanoCache = emCache; return emCache; }
+    }
+    try {
+        const { data, error } = await supabase.rpc('meu_uso_plano');
+        if (error) throw error;
+        _usoPlanoCache = data;
+        gravarCache('finmei_uso_plano', data);
+        return data;
+    } catch (e) {
+        console.error('Erro ao carregar uso do plano:', e);
+        return null;
+    }
+}
+
+// ============================================================
+// ASSINATURA RECORRENTE (cartão)
+//
+// O Mercado Pago só faz cobrança automática no cartão de crédito —
+// PIX e boleto não podem ser recorrentes. Por isso o pagamento
+// avulso (assinarPlanoPremium) continua existindo em paralelo.
+// ============================================================
+
+export async function statusAssinatura() {
+    try {
+        const { data, error } = await supabase.functions.invoke('mp-subscription', { method: 'GET' });
+        if (error) throw error;
+        return data;
+    } catch (e) {
+        console.error('Erro ao consultar assinatura:', e);
+        return null;
+    }
+}
+
+export async function assinarRecorrente() {
+    try {
+        const { data, error } = await supabase.functions.invoke('mp-subscription', {
+            body: { action: 'create', baseUrl: baseDoSite() }
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        if (!data?.init_point) throw new Error('Não foi possível gerar o link da assinatura.');
+        invalidarCachePlano();
+        return { success: true, init_point: data.init_point };
+    } catch (e) {
+        return { success: false, message: e.message };
+    }
+}
+
+export async function cancelarAssinatura() {
+    try {
+        const { data, error } = await supabase.functions.invoke('mp-subscription', {
+            body: { action: 'cancel' }
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        invalidarCachePlano();
+        return { success: true, acessoAte: data.acesso_ate, mensagem: data.mensagem };
+    } catch (e) {
+        return { success: false, message: e.message };
+    }
 }

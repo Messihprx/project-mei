@@ -148,3 +148,28 @@ select{background:var(--surface);border:1px solid var(--border);border-radius:9p
   .content{padding:18px 16px 50px;} .topbar{padding:12px 16px;}
   .table-scroll{overflow-x:auto;} .table-scroll table{min-width:760px;}
 }
+
+/* ===== Diagnóstico de IA ===== */
+
+/* Área de log/console. Não existia nada monoespaçado no painel;
+   usada pelo playground, pelo teste de tools e pelo detalhe do erro. */
+.console-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;max-height:340px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:var(--text-soft)}
+.console-box.ok{border-color:rgba(0,229,117,.35)}
+.console-box.err{border-color:rgba(255,59,48,.35)}
+.console-box b{color:var(--text)}
+.console-box .c-ok{color:var(--positive)}
+.console-box .c-err{color:var(--negative)}
+.console-box .c-dim{color:var(--text-faint)}
+
+/* Barra de sub-abas dentro de uma página */
+.subtabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto}
+.subtab{padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--text-faint);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s}
+.subtab:hover{color:var(--text-soft)}
+.subtab.active{color:var(--accent-strong);border-bottom-color:var(--accent)}
+
+/* Bloco recolhível para os campos avançados do provedor */
+.avancado summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--text-faint);padding:6px 0;user-select:none}
+.avancado summary:hover{color:var(--text-soft)}
+.avancado[open] summary{margin-bottom:10px}
+
+textarea.form-input{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;resize:vertical;min-height:70px}

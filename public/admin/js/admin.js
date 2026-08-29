@@ -171,7 +171,10 @@ function toast(msg, type = 'ok') {
 }
 
 function statusPill(cls, label) {
-  const statusClass = String(cls).replace(/^s/, '');
+  // Antes: .replace(/^s/, ''), que removia o primeiro "s" de
+  // qualquer valor — 'success' virava 'st-uccess'. Só o prefixo
+  // legado "s-" deve sair.
+  const statusClass = String(cls).replace(/^s-/, '');
   return `<span class="status st-${statusClass}">${label}</span>`;
 }
 
@@ -427,6 +430,7 @@ const TITLES = {
   assinaturas: ['Assinaturas', 'Gerencie as assinaturas do sistema'],
   pagamentos: ['Pagamentos', 'Acompanhe os pagamentos realizados'],
   gateway: ['Configurações de pagamento', 'Integração com o Mercado Pago'],
+  planos: ['Planos e limites', 'Limites de uso por plano'],
   iaconfig: ['Configuração de IA', 'Provedores, limites e uso da inteligência artificial'],
 };
 
@@ -462,6 +466,7 @@ function renderPage(page) {
     assinaturas: renderAssinaturas,
     pagamentos: renderPagamentos,
     gateway: renderGateway,
+    planos: renderPlanoLimites,
     iaconfig: renderAIConfig,
   };
 
@@ -1641,6 +1646,7 @@ async function loadGatewayConfig() {
 async function saveGatewayConfig() {
   const payload = {
     access_token: document.getElementById('gwAccessToken')?.value?.trim() || '',
+    webhook_secret: document.getElementById('gwWebhookSecret')?.value?.trim() || '',
     public_key: document.getElementById('gwPublicKey')?.value?.trim() || '',
     webhook_url: document.getElementById('gwWebhookUrl')?.value?.trim() || '',
     success_url: document.getElementById('gwSuccessUrl')?.value?.trim() || '',
@@ -1651,6 +1657,8 @@ async function saveGatewayConfig() {
     plan_description: document.getElementById('gwPlanDesc')?.value?.trim() || 'Assinatura Premium FinMEI',
     max_installments: parseInt(document.getElementById('gwInstallments')?.value) || 12,
     active: document.getElementById('gwActive')?.checked ?? true,
+    recurring_active: document.getElementById('gwRecurring')?.checked ?? false,
+    back_url_assinatura: document.getElementById('gwBackAssinatura')?.value?.trim() || '',
   };
 
   try {
@@ -1677,6 +1685,7 @@ async function renderGateway() {
     const isActive = config?.active ?? false;
     const hasToken = !!(config?.access_token_masked);
     const webhookOk = !!(config?.webhook_url);
+    const assinaturaOk = !!(config?.webhook_secret_masked);
 
     contentEl.innerHTML = `
       <div class="page-head">
@@ -1700,10 +1709,16 @@ async function renderGateway() {
           <div class="metric-foot">${hasToken ? 'Access token configurado' : 'Insira o access token abaixo'}</div>
         </div>
 
-        <div class="card metric-card m-${webhookOk ? 'pos' : 'neg'}">
+        <div class="card metric-card m-${webhookOk && assinaturaOk ? 'pos' : (webhookOk ? 'warn' : 'neg')}">
           <div class="metric-label">Webhook</div>
-          <div class="metric-value" style="font-size:16px">${webhookOk ? 'Configurado' : 'Pendente'}</div>
-          <div class="metric-foot">${webhookOk ? 'Notificações automáticas' : 'Configure a URL de notificação'}</div>
+          <div class="metric-value" style="font-size:16px">${
+            !webhookOk ? 'Pendente' : (assinaturaOk ? 'Configurado' : 'Sem verificação')
+          }</div>
+          <div class="metric-foot">${
+            !webhookOk ? 'Configure a URL de notificação'
+              : (assinaturaOk ? 'Notificações verificadas por assinatura'
+                              : 'Falta a chave secreta — as notificações são aceitas sem conferir a origem')
+          }</div>
         </div>
 
         <div class="card metric-card m-acc">
@@ -1722,12 +1737,18 @@ async function renderGateway() {
 
           <div class="field">
             <label>Access Token</label>
-            <input
-              id="gwAccessToken"
-              type="password"
-              placeholder="${config?.access_token_masked || 'APP_USR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'}"
-              autocomplete="off"
-            >
+            <div style="position:relative">
+              <input
+                id="gwAccessToken"
+                type="password"
+                placeholder="${config?.access_token_masked || 'APP_USR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'}"
+                autocomplete="off"
+                style="width:100%;padding-right:40px"
+              >
+              <button type="button" id="gwTokenOlho"
+                onclick="revelarSegredoGateway('access_token', 'gwAccessToken', 'gwTokenOlho')"
+                style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:13px;padding:4px" title="Mostrar o token salvo">👁</button>
+            </div>
             <div style="font-size:11.5px;color:var(--text-faint);margin-top:4px">
               ${config?.access_token_masked
                 ? `Salvo: ${esc(config.access_token_masked)} — Deixe vazio para manter o atual`
@@ -1747,6 +1768,27 @@ async function renderGateway() {
               ${config?.public_key
                 ? `Salvo: ${esc(config.public_key.substring(0, 20))}...`
                 : 'Usada no frontend para checkout (opcional)'}
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Chave secreta do Webhook</label>
+            <div style="position:relative">
+              <input
+                id="gwWebhookSecret"
+                type="password"
+                placeholder="${config?.webhook_secret_masked || 'Cole a chave secreta gerada no painel do MP'}"
+                autocomplete="off"
+                style="width:100%;padding-right:40px"
+              >
+              <button type="button" id="gwSecretOlho"
+                onclick="revelarSegredoGateway('webhook_secret', 'gwWebhookSecret', 'gwSecretOlho')"
+                style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:13px;padding:4px" title="Mostrar a chave salva">👁</button>
+            </div>
+            <div style="font-size:11.5px;color:var(--text-faint);margin-top:4px">
+              ${config?.webhook_secret_masked
+                ? `Salvo: ${esc(config.webhook_secret_masked)} — Deixe vazio para manter a atual`
+                : 'Painel do Desenvolvedor → Webhooks → "Chave secreta". Sem ela, o sistema não consegue confirmar que a notificação veio mesmo do Mercado Pago.'}
             </div>
           </div>
 
@@ -1793,6 +1835,25 @@ async function renderGateway() {
             <label for="gwActive" style="text-transform:none;font-size:13.5px;color:var(--text);cursor:pointer">
               Gateway ativo (aceitar pagamentos)
             </label>
+          </div>
+
+          <div class="field" style="flex-direction:row;align-items:center;gap:10px;margin-top:4px">
+            <input
+              id="gwRecurring"
+              type="checkbox"
+              ${config?.recurring_active ? 'checked' : ''}
+              style="width:18px;height:18px;accent-color:var(--accent)"
+            >
+            <label for="gwRecurring" style="text-transform:none;font-size:13.5px;color:var(--text);cursor:pointer">
+              Assinatura recorrente no cartão (renova sozinha todo mês)
+            </label>
+          </div>
+
+          <div style="font-size:12px;color:var(--text-faint);line-height:1.6;margin-top:4px">
+            O Mercado Pago só faz cobrança recorrente no <b>cartão de crédito</b> —
+            PIX e boleto não podem ser recorrentes. Com esta opção ligada, a tela de
+            planos oferece as duas formas: assinatura no cartão e pagamento avulso de
+            30 dias no PIX. Ao cancelar, o acesso continua até o fim do período pago.
           </div>
         </div>
       </div>
@@ -1886,10 +1947,14 @@ const AI_PRESETS = {
   together: { name: 'Together AI', api_url: 'https://api.together.xyz/v1/chat/completions', model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', type: 'openai', color: '#6366f1', icon: 'T' },
   cerebras: { name: 'Cerebras', api_url: 'https://api.cerebras.ai/v1/chat/completions', model: 'llama-3.3-70b', type: 'openai', color: '#8b5cf6', icon: 'C' },
   huggingface: { name: 'Hugging Face', api_url: 'https://api-inference.huggingface.co/v1/chat/completions', model: 'meta-llama/Llama-3.3-70B-Instruct', type: 'openai', color: '#ffd21e', icon: 'HF' },
+  anthropic: { name: 'Anthropic', api_url: 'https://api.anthropic.com/v1/messages', model: 'claude-sonnet-4-20250514', type: 'anthropic', color: '#d97757', icon: 'A', auth_header: 'x-api-key', auth_prefix: '' },
+  // LiteLLM e Ollama falam o dialeto da OpenAI, então não precisam
+  // de adapter — só do endereço certo.
+  litellm: { name: 'LiteLLM', api_url: 'http://localhost:4000/v1/chat/completions', model: 'gpt-4o', type: 'openai', color: '#22c55e', icon: 'LL' },
+  ollama: { name: 'Ollama (local)', api_url: 'http://localhost:11434/v1/chat/completions', model: 'llama3.1', type: 'openai', color: '#64748b', icon: 'OL', auth_prefix: '' },
 };
 
 let aiProvidersList = [];
-let aiLimitsList = [];
 let aiDeletedProviders = [];
 
 function renderProviderCard(p, idx) {
@@ -1911,10 +1976,12 @@ function renderProviderCard(p, idx) {
       <div class="field">
         <label>API Key</label>
         <div style="position:relative">
-          <input id="aiKey_${idx}" type="password" value="${esc(p.api_key || '')}" placeholder="Cole sua API Key aqui" autocomplete="off" style="width:100%;padding-right:40px">
-          <button type="button" onclick="toggleKeyVis(${idx})" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:13px;padding:4px" title="Mostrar/esconder chave">👁</button>
+          <!-- Campo sempre vazio: a chave salva não volta do servidor,
+               nem em claro nem mascarada. Vazio = manter a atual. -->
+          <input id="aiKey_${idx}" type="password" value="" placeholder="${p.api_key ? 'Chave salva — preencha só para trocar' : 'Cole sua API Key aqui'}" autocomplete="off" style="width:100%;padding-right:40px">
+          <button type="button" id="aiKeyOlho_${idx}" onclick="toggleKeyVis(${idx})" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:13px;padding:4px" title="Mostrar a chave salva">👁</button>
         </div>
-        ${p.api_key ? '<div style="font-size:11px;color:var(--text-faint);margin-top:3px">Chave salva (deixe vazio pra manter)</div>' : ''}
+        ${p.api_key ? '<div style="font-size:11px;color:var(--positive);margin-top:3px">✓ Chave configurada</div>' : '<div style="font-size:11px;color:var(--text-faint);margin-top:3px">Nenhuma chave salva</div>'}
       </div>
       <div class="field">
         <label>URL da API</label>
@@ -1923,7 +1990,16 @@ function renderProviderCard(p, idx) {
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
         <div class="field">
           <label>Modelo</label>
-          <input id="aiModel_${idx}" type="text" value="${esc(p.model)}" placeholder="model-name">
+          <div style="display:flex;gap:6px">
+            <input id="aiModel_${idx}" type="text" list="aiModelos_${idx}" value="${esc(p.model)}" placeholder="model-name" style="flex:1;min-width:0">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="buscarModelos(${idx})"
+              title="Buscar os modelos disponíveis nesta conta" style="white-space:nowrap">Buscar</button>
+          </div>
+          <!-- datalist e não select: quem tem um modelo que a API não
+               lista (deployment do Azure, alias do LiteLLM) continua
+               podendo digitar à mão. -->
+          <datalist id="aiModelos_${idx}"></datalist>
+          <div id="aiModelosMsg_${idx}" style="font-size:11px;color:var(--text-faint);margin-top:3px"></div>
         </div>
         <div class="field">
           <label>Prioridade</label>
@@ -1934,13 +2010,51 @@ function renderProviderCard(p, idx) {
           <input id="aiTokensMax_${idx}" type="number" min="100" max="128000" value="${p.max_tokens ?? 2000}">
         </div>
       </div>
-      <div class="field">
-        <label>Tipo</label>
-        <select id="aiType_${idx}" style="width:200px">
-          <option value="openai" ${p.provider_type === 'openai' ? 'selected' : ''}>OpenAI-compatible</option>
-          <option value="gemini" ${p.provider_type === 'gemini' ? 'selected' : ''}>Google Gemini</option>
-        </select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field">
+          <label>Tipo</label>
+          <select id="aiType_${idx}">
+            <option value="openai" ${p.provider_type === 'openai' ? 'selected' : ''}>OpenAI-compatible</option>
+            <option value="gemini" ${p.provider_type === 'gemini' ? 'selected' : ''}>Google Gemini</option>
+            <option value="anthropic" ${p.provider_type === 'anthropic' ? 'selected' : ''}>Anthropic (Claude)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Temperatura</label>
+          <input id="aiTemp_${idx}" type="number" min="0" max="2" step="0.1" value="${p.temperature ?? 0.7}">
+        </div>
       </div>
+
+      <details class="avancado">
+        <summary>Autenticação e headers avançados</summary>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field">
+            <label>Header de auth</label>
+            <input id="aiAuthHeader_${idx}" type="text" value="${esc(p.auth_header ?? 'Authorization')}" placeholder="Authorization">
+          </div>
+          <div class="field">
+            <label>Prefixo</label>
+            <input id="aiAuthPrefix_${idx}" type="text" value="${esc(p.auth_prefix ?? 'Bearer ')}" placeholder="Bearer ">
+          </div>
+        </div>
+        <div class="field">
+          <label>Headers extras (JSON)</label>
+          <textarea id="aiExtraHeaders_${idx}" class="form-input" placeholder='{"X-Title": "FinMEI"}'>${esc(
+            typeof p.extra_headers === 'string'
+              ? p.extra_headers
+              : (p.extra_headers && Object.keys(p.extra_headers).length ? JSON.stringify(p.extra_headers, null, 2) : '')
+          )}</textarea>
+        </div>
+        <div class="field">
+          <label>URL de modelos</label>
+          <input id="aiModelsUrl_${idx}" type="text" value="${esc(p.models_url || '')}" placeholder="Vazio = derivada da URL da API">
+        </div>
+        <div style="font-size:11.5px;color:var(--text-faint);line-height:1.6">
+          É por aqui que entram os endpoints fora do padrão: o Azure OpenAI usa
+          <code>api-key</code> com prefixo vazio, gateways corporativos costumam usar
+          <code>X-Api-Key</code>, e o Ollama local não pede chave nenhuma.
+        </div>
+      </details>
     </div>
   `;
 }
@@ -1968,6 +2082,7 @@ function addProviderFromPreset(name) {
   const exists = aiProvidersList.find(p => p.provider_name === name);
   if (exists) { toast('Este provedor já foi adicionado.', 'err'); return; }
   aiProvidersList.push({
+    _novo: true,
     provider_name: name,
     provider_type: preset.type,
     api_key: '',
@@ -1977,6 +2092,10 @@ function addProviderFromPreset(name) {
     temperature: 0.7,
     priority: aiProvidersList.length,
     active: false,
+    auth_header: preset.auth_header ?? 'Authorization',
+    auth_prefix: preset.auth_prefix ?? 'Bearer ',
+    extra_headers: {},
+    models_url: '',
   });
   refreshProvidersList();
 }
@@ -1986,6 +2105,7 @@ function addCustomProvider() {
     const exists = aiProvidersList.find(p => p.provider_name === name.toLowerCase());
     if (exists) { toast('Já existe um provedor com esse nome.', 'err'); return; }
     aiProvidersList.push({
+      _novo: true,
       provider_name: name.toLowerCase(),
       provider_type: 'openai',
       api_key: '',
@@ -2008,7 +2128,9 @@ function removeProvider(idx) {
     `Tem certeza que deseja excluir <b>${esc(name)}</b>?<br><br>Isso é <b>irreversível</b>. A API Key configurada será perdida se você salvar sem este provedor.`,
     'Excluir',
     () => {
-      if (p?.provider_name && !String(p.provider_name).startsWith('_new_')) {
+      // Só entra na fila de exclusão quem já existe no banco. Antes
+      // a guarda testava um prefixo '_new_' que nunca era usado.
+      if (p?.provider_name && !p._novo) {
         aiDeletedProviders.push(p.provider_name);
       }
       aiProvidersList.splice(idx, 1);
@@ -2017,11 +2139,99 @@ function removeProvider(idx) {
   );
 }
 
-function toggleKeyVis(idx) {
+// ============================================================
+// Revelar segredos
+//
+// Nenhuma chave vem junto com o carregamento da tela: o servidor só
+// devolve "tem chave salva" ou não. Ao clicar no olho, pedimos aquele
+// segredo específico numa chamada própria — assim ele não fica indo e
+// voltando (nem parando no DOM) toda vez que a página é aberta.
+// ============================================================
+
+// Alterna entre esconder e mostrar. Na primeira vez que mostra, busca
+// o valor real no servidor.
+async function toggleKeyVis(idx) {
   const input = document.getElementById(`aiKey_${idx}`);
+  const botao = document.getElementById(`aiKeyOlho_${idx}`);
   if (!input) return;
-  input.type = input.type === 'password' ? 'text' : 'password';
+
+  // Já está visível: só esconder.
+  if (input.type === 'text') {
+    input.type = 'password';
+    if (botao) botao.textContent = '👁';
+    return;
+  }
+
+  const p = aiProvidersList[idx];
+  const temChaveSalva = Boolean(p?.api_key);
+  const digitando = input.value.trim().length > 0;
+
+  // Se o admin está digitando uma chave nova, mostra o que ele digitou.
+  if (digitando || !temChaveSalva) {
+    input.type = 'text';
+    if (botao) botao.textContent = '🙈';
+    return;
+  }
+
+  if (botao) botao.textContent = '…';
+  try {
+    const { data, error } = await supabase.functions.invoke('ai-config', {
+      method: 'POST',
+      body: { action: 'reveal_key', provider_name: p.provider_name },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+
+    input.value = data?.api_key || '';
+    input.type = 'text';
+    if (botao) botao.textContent = '🙈';
+
+    if (!data?.api_key) toast('Este provedor não tem chave salva.', 'err');
+  } catch (e) {
+    if (botao) botao.textContent = '👁';
+    toast(e.message || 'Não foi possível mostrar a chave.', 'err');
+  }
 }
+window.toggleKeyVis = toggleKeyVis;
+
+// Mesma ideia para os segredos do gateway de pagamento.
+async function revelarSegredoGateway(campo, inputId, botaoId) {
+  const input = document.getElementById(inputId);
+  const botao = document.getElementById(botaoId);
+  if (!input) return;
+
+  if (input.type === 'text') {
+    input.type = 'password';
+    if (botao) botao.textContent = '👁';
+    return;
+  }
+
+  if (input.value.trim()) {
+    input.type = 'text';
+    if (botao) botao.textContent = '🙈';
+    return;
+  }
+
+  if (botao) botao.textContent = '…';
+  try {
+    const { data, error } = await supabase.functions.invoke('mp-config', {
+      method: 'POST',
+      body: { action: 'reveal', campo },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+
+    input.value = data?.valor || '';
+    input.type = 'text';
+    if (botao) botao.textContent = '🙈';
+
+    if (!data?.valor) toast('Nada salvo neste campo ainda.', 'err');
+  } catch (e) {
+    if (botao) botao.textContent = '👁';
+    toast(e.message || 'Não foi possível mostrar o valor.', 'err');
+  }
+}
+window.revelarSegredoGateway = revelarSegredoGateway;
 
 function refreshProvidersList() {
   const container = document.getElementById('providersList');
@@ -2029,6 +2239,30 @@ function refreshProvidersList() {
     container.innerHTML = aiProvidersList.length
       ? aiProvidersList.map((p, i) => renderProviderCard(p, i)).join('')
       : '<div style="text-align:center;color:var(--text-faint);padding:20px">Nenhum provedor adicionado. Use os botões abaixo para adicionar.</div>';
+  }
+}
+
+// Temperatura era gravada fixa em 0.7 e não tinha campo na tela,
+// mesmo existindo a coluna no banco.
+function lerTemperatura(idx, atual) {
+  const v = parseFloat(document.getElementById(`aiTemp_${idx}`)?.value);
+  if (!Number.isFinite(v) || v < 0 || v > 2) return atual ?? 0.7;
+  return v;
+}
+
+// JSON inválido não pode virar erro no banco: avisa e mantém o que
+// já estava salvo.
+function lerHeadersExtras(idx) {
+  const el = document.getElementById(`aiExtraHeaders_${idx}`);
+  const texto = (el?.value || '').trim();
+  if (!texto) return {};
+  try {
+    const obj = JSON.parse(texto);
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) throw new Error('não é um objeto');
+    return obj;
+  } catch (e) {
+    toast(`Headers extras inválidos no provedor ${idx + 1}: ${e.message}`, 'err');
+    throw new Error(`headers_invalidos_${idx}`);
   }
 }
 
@@ -2040,14 +2274,29 @@ function collectProvidersFromUI() {
     api_url: document.getElementById(`aiUrl_${idx}`)?.value?.trim() || p.api_url,
     model: document.getElementById(`aiModel_${idx}`)?.value?.trim() || p.model,
     max_tokens: parseInt(document.getElementById(`aiTokensMax_${idx}`)?.value) || 2000,
-    temperature: 0.7,
-    priority: parseInt(document.getElementById(`aiPriority_${idx}`)?.value) ?? idx,
+    temperature: lerTemperatura(idx, p.temperature),
+    auth_header: document.getElementById(`aiAuthHeader_${idx}`)?.value?.trim() || 'Authorization',
+    auth_prefix: document.getElementById(`aiAuthPrefix_${idx}`)?.value ?? 'Bearer ',
+    extra_headers: lerHeadersExtras(idx),
+    models_url: document.getElementById(`aiModelsUrl_${idx}`)?.value?.trim() || null,
+    // parseInt devolve NaN (não null) quando o campo está vazio, então
+    // o ?? nunca agia e a prioridade ia como NaN para o banco.
+    priority: Number.isFinite(parseInt(document.getElementById(`aiPriority_${idx}`)?.value))
+      ? parseInt(document.getElementById(`aiPriority_${idx}`).value)
+      : idx,
     active: document.getElementById(`aiActive_${idx}`)?.checked ?? false,
   }));
 }
 
 async function saveAIConfig() {
-  const providers = collectProvidersFromUI();
+  // collectProvidersFromUI lança quando os headers extras não são um
+  // JSON válido — o toast já foi mostrado, aqui só interrompemos.
+  let providers;
+  try {
+    providers = collectProvidersFromUI();
+  } catch {
+    return;
+  }
   const limits = ['gratuito', 'premium', 'admin'].map(plan => ({
     plan_type: plan,
     daily_messages: parseInt(document.getElementById(`aiLimit_${plan}`)?.value) || 20,
@@ -2080,7 +2329,42 @@ async function loadAIConfig() {
   }
 }
 
+// A aba de IA ficou com quatro telas. Em vez de uma página gigante
+// que busca tudo de uma vez, cada sub-aba carrega os próprios dados
+// quando é aberta.
+let aiSubAba = 'provedores';
+
+const AI_SUBABAS = [
+  ['provedores',  'Provedores'],
+  ['playground',  'Playground'],
+  ['diagnostico', 'Diagnóstico'],
+  ['erros',       'Erros'],
+];
+
+function barraSubAbas() {
+  return `<div class="subtabs">    ${AI_SUBABAS.map(([id, rotulo]) => `
+      <button class="subtab ${aiSubAba === id ? 'active' : ''}" onclick="irParaSubAba('${id}')">${rotulo}</button>
+    `).join('')}
+  </div>`;
+}
+
+function irParaSubAba(id) {
+  aiSubAba = id;
+  renderAIConfig();
+}
+window.irParaSubAba = irParaSubAba;
+
 async function renderAIConfig() {
+  const telas = {
+    provedores: renderAIProvedores,
+    playground: renderAIPlayground,
+    diagnostico: renderAIDiagnostico,
+    erros: renderAIErros,
+  };
+  await (telas[aiSubAba] || renderAIProvedores)();
+}
+
+async function renderAIProvedores() {
   contentEl.innerHTML = '<div class="loading">Carregando configurações de IA...</div>';
 
   try {
@@ -2092,6 +2376,9 @@ async function renderAIConfig() {
     const usage = data.usage || [];
 
     aiProvidersList = providers.map(p => ({ ...p }));
+    // Zera a fila de exclusão: sair da aba e voltar não pode manter
+    // uma remoção pendente que o admin já abandonou.
+    aiDeletedProviders = [];
     const getLimit = (plan) => limits.find(l => l.plan_type === plan) || {};
 
     const totalUsage = usage.reduce((sum, u) => sum + (u.messages_used || 0), 0);
@@ -2108,6 +2395,8 @@ async function renderAIConfig() {
           Salvar configurações
         </button>
       </div>
+
+      ${barraSubAbas()}
 
       <!-- Stats -->
       <div class="grid grid-3" style="margin-bottom:20px">
@@ -2307,3 +2596,628 @@ async function checkSession() {
 
 document.addEventListener('DOMContentLoaded', init);
 document.addEventListener('DOMContentLoaded', checkSession);
+/* ============================================================
+   Planos e limites
+   Os limites do plano gratuito viviam cravados no JavaScript do
+   navegador. Agora estão na tabela plano_limites, aplicados por
+   trigger no Postgres, e editáveis aqui.
+
+   Sem edge function: a tabela não guarda segredo nenhum, só
+   números. O RLS (plano_limites_admin_all) garante que apenas
+   admin escreve.
+   ============================================================ */
+
+let planoLimitesCache = [];
+
+async function loadPlanoLimites() {
+  const [limitesRes, perfisRes] = await Promise.all([
+    supabase.from('plano_limites').select('*').order('plan_type'),
+    supabase.from('perfis').select('plano, expira_em, criado_em, role')
+  ]);
+  if (limitesRes.error) throw limitesRes.error;
+  return {
+    limites: limitesRes.data || [],
+    perfis: perfisRes.data || []
+  };
+}
+
+function inputLimite(id, valor) {
+  const v = (valor === null || valor === undefined) ? '' : valor;
+  return `<input id="${id}" type="number" min="0" step="1" value="${v}" placeholder="ilimitado"
+    style="width:110px;text-align:center;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:13px;color:var(--text)">`;
+}
+
+async function savePlanoLimites() {
+  // Campo vazio grava NULL, que limite_disponivel() lê como ilimitado.
+  const num = (id) => {
+    const el = document.getElementById(id);
+    if (!el || el.value.trim() === '') return null;
+    const n = parseInt(el.value, 10);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
+
+  const linhas = planoLimitesCache.map(l => ({
+    plan_type: l.plan_type,
+    max_clientes: num('plClientes_' + l.plan_type),
+    max_movimentacoes: num('plMov_' + l.plan_type),
+    max_produtos: num('plProdutos_' + l.plan_type),
+    trial_dias: num('plTrial_' + l.plan_type) ?? 0,
+    active: document.getElementById('plAtivo_' + l.plan_type)?.checked ?? true,
+  }));
+
+  try {
+    for (const linha of linhas) {
+      const { error } = await supabase
+        .from('plano_limites')
+        .update({
+          max_clientes: linha.max_clientes,
+          max_movimentacoes: linha.max_movimentacoes,
+          max_produtos: linha.max_produtos,
+          trial_dias: linha.trial_dias,
+          active: linha.active,
+        })
+        .eq('plan_type', linha.plan_type);
+      if (error) throw error;
+    }
+    toast('Limites salvos. Passam a valer no próximo cadastro.');
+    renderPlanoLimites();
+  } catch (e) {
+    toast(e.message || 'Erro ao salvar os limites.', 'err');
+  }
+}
+
+async function renderPlanoLimites() {
+  contentEl.innerHTML = '<div class="loading">Carregando limites...</div>';
+
+  try {
+    const { limites, perfis } = await loadPlanoLimites();
+    planoLimitesCache = limites;
+
+    const agora = Date.now();
+    const contarPlano = (tipo) => perfis.filter(p => {
+      if (p.role === 'admin') return tipo === 'admin';
+      if (tipo === 'premium') {
+        return p.plano === 'premium' && (!p.expira_em || new Date(p.expira_em).getTime() > agora);
+      }
+      if (tipo === 'gratuito') {
+        const vencido = p.plano === 'premium' && p.expira_em && new Date(p.expira_em).getTime() <= agora;
+        return p.plano !== 'premium' || vencido;
+      }
+      return false;
+    }).length;
+
+    const ordem = ['gratuito', 'premium', 'admin'];
+    const porTipo = (t) => limites.find(l => l.plan_type === t) || { plan_type: t };
+
+    contentEl.innerHTML = `
+      <div class="page-head">
+        <div>
+          <div class="page-title">Planos e limites</div>
+          <div class="page-desc">Quanto cada plano pode cadastrar no sistema.</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="savePlanoLimites()" style="width:auto">
+          Salvar configurações
+        </button>
+      </div>
+
+      <div class="grid grid-3" style="margin-bottom:20px">
+        <div class="card metric-card m-acc">
+          <div class="metric-label">No plano gratuito</div>
+          <div class="metric-value">${contarPlano('gratuito')}</div>
+          <div class="metric-foot">Usuários sujeitos aos limites</div>
+        </div>
+        <div class="card metric-card m-pos">
+          <div class="metric-label">Premium ativos</div>
+          <div class="metric-value">${contarPlano('premium')}</div>
+          <div class="metric-foot">Sem limite de cadastro</div>
+        </div>
+        <div class="card metric-card">
+          <div class="metric-label">Administradores</div>
+          <div class="metric-value">${contarPlano('admin')}</div>
+          <div class="metric-foot">Acesso irrestrito</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <h4 style="font-size:13px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-soft)">
+          Limites por plano
+        </h4>
+
+        <div class="table-wrap table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Plano</th>
+                <th class="num">Clientes</th>
+                <th class="num">Movimentações</th>
+                <th class="num">Produtos</th>
+                <th class="num">Dias de teste</th>
+                <th class="num">Ativo</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ordem.map(tipo => {
+                const l = porTipo(tipo);
+                return `
+                  <tr>
+                    <td class="cell-strong" style="text-transform:capitalize">${esc(tipo)}</td>
+                    <td class="num">${inputLimite('plClientes_' + tipo, l.max_clientes)}</td>
+                    <td class="num">${inputLimite('plMov_' + tipo, l.max_movimentacoes)}</td>
+                    <td class="num">${inputLimite('plProdutos_' + tipo, l.max_produtos)}</td>
+                    <td class="num">${inputLimite('plTrial_' + tipo, l.trial_dias ?? 0)}</td>
+                    <td class="num">
+                      <input id="plAtivo_${tipo}" type="checkbox" ${l.active !== false ? 'checked' : ''}>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:14px;font-size:12px;color:var(--text-faint);line-height:1.6">
+          <b>Campo vazio = ilimitado.</b> "Movimentações" soma vendas e gastos.
+          "Dias de teste" só tem efeito no plano gratuito.<br>
+          Reduzir um limite <b>não apaga</b> nada de quem já passou dele — só impede
+          novos cadastros até o usuário voltar para dentro do limite.
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    contentEl.innerHTML = '<div class="card"><p style="color:var(--negative)">Erro ao carregar: '
+      + esc(e.message) + '</p><p style="font-size:12px;color:var(--text-faint);margin-top:8px">'
+      + 'Rode o script <code>sql/plano_limites.sql</code> no Supabase antes de usar esta tela.</p></div>';
+  }
+}
+
+window.savePlanoLimites = savePlanoLimites;
+
+/* ============================================================
+   Playground, diagnóstico e log de erros da IA
+   ============================================================ */
+
+// Cabeçalho compartilhado pelas sub-abas
+function cabecalhoIA(titulo, descricao, acoes) {
+  return `
+    <div class="page-head">
+      <div>
+        <div class="page-title">${esc(titulo)}</div>
+        <div class="page-desc">${esc(descricao)}</div>
+      </div>
+      ${acoes || ''}
+    </div>
+    ${barraSubAbas()}
+  `;
+}
+
+// Lê os provedores direto do banco (sem a chave — ela nunca sai do
+// servidor). Usado pelo playground e pelo seletor de modelos.
+async function carregarProvedoresSalvos() {
+  const data = await loadAIConfig();
+  return data?.providers || [];
+}
+
+async function chamarDiagnostico(body) {
+  // O diagnóstico vive dentro da própria ai-chat: publicando pelo painel
+  // do Supabase não dá para compartilhar código entre funções, e assim o
+  // teste roda exatamente o mesmo arquivo que atende os usuários.
+  const { data, error } = await supabase.functions.invoke('ai-chat', { body });
+  if (error) throw error;
+  if (data?.error && !data.linhas && !data.modelos) throw new Error(data.error);
+  return data;
+}
+
+// ---------------------------------------------------------------
+// Buscar modelos do provedor (botão no card)
+// ---------------------------------------------------------------
+async function buscarModelos(idx) {
+  const p = aiProvidersList[idx];
+  if (!p) return;
+
+  const msg = document.getElementById(`aiModelosMsg_${idx}`);
+  const lista = document.getElementById(`aiModelos_${idx}`);
+  if (msg) { msg.textContent = 'Buscando...'; msg.style.color = 'var(--text-faint)'; }
+
+  // Manda a config que está na TELA, não a salva: dá para buscar os
+  // modelos de um provedor recém-colado, antes de gravar.
+  const provider = {
+    provider_name: p.provider_name,
+    provider_type: document.getElementById(`aiType_${idx}`)?.value || p.provider_type,
+    api_url: document.getElementById(`aiUrl_${idx}`)?.value?.trim() || p.api_url,
+    api_key: document.getElementById(`aiKey_${idx}`)?.value?.trim() || '',
+    models_url: document.getElementById(`aiModelsUrl_${idx}`)?.value?.trim() || null,
+  };
+
+  try {
+    const r = await chamarDiagnostico({ action: 'list_models', provider });
+
+    if (r.error) {
+      if (msg) {
+        msg.textContent = r.error + (r.detalhe ? ` — ${String(r.detalhe).slice(0, 120)}` : '');
+        msg.style.color = 'var(--negative)';
+      }
+      return;
+    }
+
+    if (lista) {
+      lista.innerHTML = (r.modelos || []).map(m => `<option value="${esc(m)}"></option>`).join('');
+    }
+    if (msg) {
+      msg.textContent = `${r.total} modelo(s) — clique no campo para ver a lista. Você também pode digitar um nome que não esteja aí.`;
+      msg.style.color = 'var(--positive)';
+    }
+  } catch (e) {
+    if (msg) { msg.textContent = e.message; msg.style.color = 'var(--negative)'; }
+  }
+}
+window.buscarModelos = buscarModelos;
+
+// ---------------------------------------------------------------
+// Playground
+// ---------------------------------------------------------------
+let pgProvedores = [];
+
+async function renderAIPlayground() {
+  contentEl.innerHTML = '<div class="loading">Carregando provedores...</div>';
+
+  try {
+    pgProvedores = await carregarProvedoresSalvos();
+
+    contentEl.innerHTML = cabecalhoIA(
+      'Playground',
+      'Teste um provedor e um modelo sem passar pelo chat dos usuários.'
+    ) + `
+      ${pgProvedores.length ? '' : `
+        <div class="card"><p style="color:var(--text-faint)">
+          Nenhum provedor cadastrado ainda. Vá em <b>Provedores</b> e adicione um.
+        </p></div>`}
+
+      ${pgProvedores.length ? `
+      <div class="grid grid-2">
+        <div class="card">
+          <h4 style="font-size:13px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-soft)">
+            Requisição
+          </h4>
+
+          <div class="field">
+            <label>Provedor</label>
+            <select id="pgProvider">
+              ${pgProvedores.map((p, i) => `
+                <option value="${i}">${esc(p.provider_name)} — ${esc(p.provider_type)}${p.active ? '' : ' (inativo)'}</option>
+              `).join('')}
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Modelo (vazio = o do cadastro)</label>
+            <input id="pgModel" type="text" placeholder="${esc(pgProvedores[0]?.model || 'model-name')}">
+          </div>
+
+          <div class="field">
+            <label>Mensagem</label>
+            <textarea id="pgMensagem" class="form-input" style="min-height:90px">Quanto eu faturei esse mês?</textarea>
+          </div>
+
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+            ${[
+              'Responda apenas: ok',
+              'Quanto eu faturei esse mês?',
+              'Me dá um resumo do negócio',
+              'Cadastra um gasto de 80 reais em aluguel',
+            ].map(t => `
+              <button class="btn btn-secondary btn-sm" style="font-size:11.5px"
+                onclick="document.getElementById('pgMensagem').value=${JSON.stringify(t).replace(/"/g, '&quot;')}">${esc(t)}</button>
+            `).join('')}
+          </div>
+
+          <div class="field" style="flex-direction:row;align-items:flex-start;gap:10px">
+            <input id="pgContexto" type="checkbox" checked style="width:16px;height:16px;margin-top:2px;accent-color:var(--accent)">
+            <label for="pgContexto" style="text-transform:none;font-size:13px;color:var(--text);cursor:pointer;letter-spacing:0">
+              Usar contexto e tools reais
+              <div style="font-size:11.5px;color:var(--text-faint);font-weight:400;margin-top:2px">
+                Desmarcado, faz só um ping para validar chave, URL e modelo.
+                Marcado, roda com o mesmo system prompt e as mesmas tools do chat —
+                é o que de fato reproduz o comportamento real.
+              </div>
+            </label>
+          </div>
+
+          <button class="btn btn-primary" onclick="rodarPlayground()">Enviar</button>
+        </div>
+
+        <div class="card">
+          <h4 style="font-size:13px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-soft)">
+            Resposta
+          </h4>
+          <div id="pgResultado" class="console-box c-dim">Nenhum teste rodado ainda.</div>
+        </div>
+      </div>` : ''}
+    `;
+  } catch (e) {
+    contentEl.innerHTML = cabecalhoIA('Playground', 'Teste um provedor e um modelo.')
+      + `<div class="card"><p style="color:var(--negative)">Erro: ${esc(e.message)}</p></div>`;
+  }
+}
+
+async function rodarPlayground() {
+  const caixa = document.getElementById('pgResultado');
+  const idx = parseInt(document.getElementById('pgProvider')?.value ?? '0');
+  const p = pgProvedores[idx];
+  if (!p || !caixa) return;
+
+  const modelo = document.getElementById('pgModel')?.value?.trim() || '';
+  const mensagem = document.getElementById('pgMensagem')?.value?.trim() || '';
+  const comContexto = document.getElementById('pgContexto')?.checked ?? false;
+
+  caixa.className = 'console-box c-dim';
+  caixa.textContent = 'Enviando...';
+
+  try {
+    const r = await chamarDiagnostico({
+      action: 'test_provider',
+      provider: p,
+      model: modelo,
+      mensagem,
+      com_contexto: comContexto,
+    });
+
+    if (!r.ok) {
+      caixa.className = 'console-box err';
+      caixa.innerHTML = [
+        `<span class="c-err"><b>FALHOU</b></span> em ${r.ms}ms`,
+        `provedor : ${esc(r.provider || p.provider_name)}`,
+        `modelo   : ${esc(r.model || modelo || p.model)}`,
+        `http     : ${r.http_status ?? 'sem resposta (rede/DNS/URL)'}`,
+        '',
+        '<b>Erro devolvido pelo provedor</b>',
+        esc(String(r.erro || '').slice(0, 4000)),
+      ].join('\n');
+      return;
+    }
+
+    caixa.className = 'console-box ok';
+    caixa.innerHTML = [
+      `<span class="c-ok"><b>OK</b></span> em ${r.ms}ms · ${r.tokens || 0} tokens`,
+      `provedor : ${esc(r.provider || p.provider_name)}`,
+      `modelo   : ${esc(r.model || '')}`,
+      r.tools_chamadas?.length
+        ? `tools    : ${esc(r.tools_chamadas.join(', '))}`
+        : '<span class="c-dim">tools    : nenhuma chamada</span>',
+      '',
+      '<b>Resposta</b>',
+      esc(r.texto || '(vazio)'),
+      '',
+      r.tools_chamadas?.length
+        ? '<span class="c-dim">O modelo pediu as tools acima. No chat real elas seriam executadas e a resposta final viria depois — aqui paramos na primeira rodada.</span>'
+        : '',
+    ].filter(Boolean).join('\n');
+
+  } catch (e) {
+    caixa.className = 'console-box err';
+    caixa.innerHTML = `<span class="c-err"><b>ERRO</b></span>\n${esc(e.message)}`;
+  }
+}
+window.rodarPlayground = rodarPlayground;
+
+// ---------------------------------------------------------------
+// Diagnóstico das tools
+// ---------------------------------------------------------------
+async function renderAIDiagnostico() {
+  contentEl.innerHTML = cabecalhoIA(
+    'Diagnóstico',
+    'Executa cada tool da IA na sua conta de administrador e mostra o que aconteceu.'
+  ) + `
+    <div class="card" style="margin-bottom:16px">
+      <div class="field" style="flex-direction:row;align-items:flex-start;gap:10px;margin-bottom:16px">
+        <input id="dgEscrita" type="checkbox" style="width:16px;height:16px;margin-top:2px;accent-color:var(--accent)">
+        <label for="dgEscrita" style="text-transform:none;font-size:13px;color:var(--text);cursor:pointer;letter-spacing:0">
+          Incluir tools de escrita
+          <div style="font-size:11.5px;color:var(--text-faint);font-weight:400;margin-top:2px">
+            Cria um cliente, um gasto, uma venda e um produto marcados com
+            <code>[TESTE]</code> <b>na sua conta</b> e apaga logo em seguida.
+            É o que revela bloqueio por limite de plano ou por trigger —
+            justamente os erros que hoje não aparecem em lugar nenhum.
+          </div>
+        </label>
+      </div>
+
+      <button class="btn btn-primary" onclick="rodarDiagnostico()" style="width:auto">Rodar diagnóstico</button>
+    </div>
+
+    <div class="card">
+      <h4 style="font-size:13px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-soft)">
+        Resultado
+      </h4>
+      <div id="dgResultado" class="console-box c-dim">Nenhum diagnóstico rodado ainda.</div>
+    </div>
+  `;
+}
+
+async function rodarDiagnostico() {
+  const caixa = document.getElementById('dgResultado');
+  const escrita = document.getElementById('dgEscrita')?.checked ?? false;
+  if (!caixa) return;
+
+  caixa.className = 'console-box c-dim';
+  caixa.textContent = escrita ? 'Rodando leitura e escrita...' : 'Rodando tools de leitura...';
+
+  try {
+    const r = await chamarDiagnostico({ action: 'test_tools', incluir_escrita: escrita });
+
+    const linhas = (r.linhas || []).map(l => {
+      const marca = l.ok ? '<span class="c-ok">[ ok  ]</span>' : '<span class="c-err">[falha]</span>';
+      const nome = String(l.tool).padEnd(26, ' ');
+      const tempo = String(l.ms + 'ms').padStart(7, ' ');
+      return marca + ' ' + esc(nome) + ' ' + tempo + '  ' + esc(l.mensagem || '');
+    });
+
+    caixa.className = 'console-box ' + (r.falhas ? 'err' : 'ok');
+    caixa.innerHTML = linhas.concat([
+      '',
+      r.falhas
+        ? '<span class="c-err"><b>' + r.falhas + ' de ' + r.total + ' falharam.</b></span>'
+        : '<span class="c-ok"><b>Todas as ' + r.total + ' passaram.</b></span>',
+    ]).join('\n');
+
+  } catch (e) {
+    caixa.className = 'console-box err';
+    caixa.innerHTML = '<span class="c-err"><b>ERRO</b></span>\n' + esc(e.message);
+  }
+}
+window.rodarDiagnostico = rodarDiagnostico;
+
+// ---------------------------------------------------------------
+// Log de erros
+// ---------------------------------------------------------------
+let erroFiltroTipo = '';
+let errosCarregados = [];
+
+const ROTULO_TIPO = {
+  provider: 'Provedor',
+  tool: 'Tool',
+  args: 'Argumentos',
+  fallback: 'Fallback',
+  config: 'Configuração',
+};
+
+async function renderAIErros() {
+  contentEl.innerHTML = '<div class="loading">Carregando log...</div>';
+
+  try {
+    let query = supabase
+      .from('ai_error_logs')
+      .select('*')
+      .order('criado_em', { ascending: false })
+      .limit(200);
+
+    if (erroFiltroTipo) query = query.eq('tipo', erroFiltroTipo);
+
+    const [logRes, resumoRes] = await Promise.all([query, supabase.rpc('resumo_ai_erros')]);
+
+    if (logRes.error) throw logRes.error;
+    errosCarregados = logRes.data || [];
+    const resumo = resumoRes.data || {};
+
+    const linhasTabela = errosCarregados.map((l, i) => `
+      <tr class="row-click" onclick="verErro(${i})">
+        <td style="white-space:nowrap">${esc(new Date(l.criado_em).toLocaleString('pt-BR'))}</td>
+        <td>${statusPill(l.tipo === 'fallback' ? 'pending' : 'expired', ROTULO_TIPO[l.tipo] || l.tipo)}</td>
+        <td>${esc(l.provider || '—')}</td>
+        <td>${esc(l.tool_name || '—')}</td>
+        <td class="num">${l.http_status ?? '—'}</td>
+        <td>${esc(String(l.mensagem || '').slice(0, 90))}${String(l.mensagem || '').length > 90 ? '…' : ''}</td>
+      </tr>
+    `).join('');
+
+    const tabela = errosCarregados.length ? `
+      <div class="table-wrap table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Quando</th><th>Tipo</th><th>Provedor</th>
+              <th>Tool</th><th>HTTP</th><th>Mensagem</th>
+            </tr>
+          </thead>
+          <tbody>${linhasTabela}</tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;font-size:11.5px;color:var(--text-faint)">
+        Clique numa linha para ver o detalhe completo. Mostrando as ${errosCarregados.length} mais recentes.
+      </div>
+    ` : `
+      <p style="color:var(--text-faint);text-align:center;padding:30px 0">
+        Nenhuma falha registrada${erroFiltroTipo ? ' com esse filtro' : ''}.
+      </p>`;
+
+    contentEl.innerHTML = cabecalhoIA(
+      'Erros da IA',
+      'Falhas de provedor, de tool e de argumentos — com o motivo real.',
+      '<button class="btn btn-secondary btn-sm" onclick="limparLogsIA()" style="width:auto">Limpar antigos</button>'
+    ) + `
+      <div class="grid grid-3" style="margin-bottom:20px">
+        <div class="card metric-card m-${resumo.ultimas_24h ? 'neg' : 'pos'}">
+          <div class="metric-label">Falhas nas últimas 24h</div>
+          <div class="metric-value">${resumo.ultimas_24h ?? 0}</div>
+          <div class="metric-foot">${resumo.ultimos_7d ?? 0} nos últimos 7 dias</div>
+        </div>
+        <div class="card metric-card m-warn">
+          <div class="metric-label">Provedor que mais falha</div>
+          <div class="metric-value" style="font-size:16px">${esc(resumo.provedor_pior || '—')}</div>
+          <div class="metric-foot">Nos últimos 7 dias</div>
+        </div>
+        <div class="card metric-card m-warn">
+          <div class="metric-label">Tool que mais falha</div>
+          <div class="metric-value" style="font-size:16px">${esc(resumo.tool_pior || '—')}</div>
+          <div class="metric-foot">Nos últimos 7 dias</div>
+        </div>
+      </div>
+
+      <div class="toolbar" style="margin-bottom:14px">
+        <select class="select" onchange="filtrarErros(this.value)">
+          <option value="">Todos os tipos</option>
+          ${Object.entries(ROTULO_TIPO).map(([v, r]) =>
+            `<option value="${v}" ${erroFiltroTipo === v ? 'selected' : ''}>${r}</option>`
+          ).join('')}
+        </select>
+      </div>
+
+      <div class="card">${tabela}</div>
+    `;
+  } catch (e) {
+    contentEl.innerHTML = cabecalhoIA('Erros da IA', 'Falhas de provedor, de tool e de argumentos.')
+      + '<div class="card"><p style="color:var(--negative)">Erro ao carregar: ' + esc(e.message)
+      + '</p><p style="font-size:12px;color:var(--text-faint);margin-top:8px">'
+      + 'Rode o script <code>sql/ai_logs.sql</code> no Supabase antes de usar esta tela.</p></div>';
+  }
+}
+
+function filtrarErros(tipo) {
+  erroFiltroTipo = tipo;
+  renderAIErros();
+}
+window.filtrarErros = filtrarErros;
+
+function verErro(i) {
+  const l = errosCarregados[i];
+  if (!l) return;
+
+  const linhas = [
+    'quando   : ' + new Date(l.criado_em).toLocaleString('pt-BR'),
+    'tipo     : ' + (ROTULO_TIPO[l.tipo] || l.tipo),
+    'provedor : ' + (l.provider || '—'),
+    'modelo   : ' + (l.model || '—'),
+    'tool     : ' + (l.tool_name || '—'),
+    'http     : ' + (l.http_status ?? '—'),
+    'usuário  : ' + (l.user_id || '—'),
+    '',
+    'mensagem',
+    l.mensagem || '',
+  ];
+
+  if (l.detalhe) linhas.push('', 'detalhe', JSON.stringify(l.detalhe, null, 2));
+
+  document.getElementById('modalTitle').textContent = 'Detalhe da falha';
+  document.getElementById('modalBody').innerHTML =
+    '<div class="console-box" style="max-height:420px">' + esc(linhas.join('\n')) + '</div>';
+  openModal();
+}
+window.verErro = verErro;
+
+function limparLogsIA() {
+  confirmAction(
+    'Limpar logs antigos',
+    'Apaga as falhas com mais de <b>30 dias</b>. As recentes ficam.',
+    'Limpar',
+    async () => {
+      try {
+        const { data, error } = await supabase.rpc('limpar_ai_logs', { p_dias: 30 });
+        if (error) throw error;
+        toast((data ?? 0) + ' registro(s) removido(s).');
+        renderAIErros();
+      } catch (e) {
+        toast(e.message || 'Erro ao limpar.', 'err');
+      }
+    }
+  );
+}
+window.limparLogsIA = limparLogsIA;

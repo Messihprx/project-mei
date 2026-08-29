@@ -1,14 +1,17 @@
 import { supabase } from './auth.js';
+import { lerStreamIA } from './dom-utils.js';
 
-const IA_URL = 'https://grszaitpgnyrbxktxauc.supabase.co/functions/v1/ai-chat';
+const IA_URL = `${supabase.supabaseUrl}/functions/v1/ai-chat`;
 
 let chatSending = false;
 let currentSessionId = null;
 let sessions = [];
 let pendingDeleteSessionId = null;
 
+// Escapa ANTES de aplicar o markdown. Sem isso, qualquer HTML que
+// a IA repetisse do texto do usuário era renderizado de verdade.
 function simpleMarkdown(text) {
-  return text
+  return escHtml(text)
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/^### (.+)$/gm, '<strong style="font-size:15px;display:block;margin:12px 0 6px">$1</strong>')
@@ -68,6 +71,18 @@ function removeTyping() {
   if (el) el.remove();
 }
 
+// Durante as ações da IA os pontinhos dão lugar ao que está sendo
+// feito ("Consultando suas vendas..."), para o usuário não olhar
+// para um spinner mudo por 15-30s.
+function atualizarStatusDigitando(texto) {
+  const el = document.getElementById('typingIndicator');
+  if (!el) return;
+  const bolha = el.querySelector('.msg-bubble');
+  if (bolha) {
+    bolha.innerHTML = `<p style="opacity:.75;font-style:italic">${escHtml(texto)}</p>`;
+  }
+}
+
 function updateUsage(used, limit) {
   const el = document.getElementById('chatUsage');
   const countEl = document.getElementById('usageCount');
@@ -84,18 +99,14 @@ async function loadUsage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    const [{ data: profile }, { data: limits }] = await Promise.all([
-      supabase.from('perfis').select('plano, ai_daily_limit').eq('id', session.user.id).single(),
-      supabase.from('ai_limits').select('plan_type, daily_messages').in('plan_type', ['gratuito', 'premium', 'admin'])
-    ]);
-    const plan = profile?.plano || 'gratuito';
-    const planLimit = (limits || []).find(limit => limit.plan_type === plan)?.daily_messages || 10;
-    const limit = profile?.ai_daily_limit ?? planLimit;
-    const today = new Date().toISOString().split('T')[0];
-    const { data: usage } = await supabase.from('ai_usage')
-      .select('messages_used').eq('user_id', session.user.id).eq('usage_date', today).maybeSingle();
+    // O limite vem pronto do banco. Calculando aqui pelo perfis.plano,
+    // a tela ignorava que admin usa o plano 'admin' e que premium
+    // vencido volta ao gratuito — mostrava um número e o servidor
+    // aplicava outro.
+    const { data: uso, error } = await supabase.rpc('meu_uso_plano');
+    if (error) throw error;
 
-    updateUsage(usage?.messages_used || 0, limit);
+    updateUsage(uso?.ia?.usado ?? 0, uso?.ia?.max ?? 10);
   } catch (e) {
     console.error('Erro ao carregar uso da IA:', e);
   }
@@ -173,20 +184,43 @@ function renderSessions() {
     return;
   }
 
+  // Botões carregam só o id. O título sai do array em memória —
+  // antes ele era escapado para HTML e depois passado ao renomear,
+  // então uma conversa chamada Venda "grande" abria o campo com
+  // &quot; no lugar das aspas.
   list.innerHTML = sessions.map(s => {
-    const date = s.updated_at ? new Date(s.updated_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '';
     return `
-      <div class="chat-session-item ${s.id === currentSessionId ? 'active' : ''}" onclick="window._ia_switchSession('${s.id}')">
+      <div class="chat-session-item ${s.id === currentSessionId ? 'active' : ''}" data-sessao="${escHtml(s.id)}">
         <span class="chat-session-title">${escHtml(s.title)}</span>
-        <button class="chat-session-rename" onclick="event.stopPropagation();window._ia_renameSession('${s.id}','${escHtml(s.title).replace(/'/g, "\\'")}')" title="Renomear">
+        <button class="chat-session-rename" data-sessao-acao="renomear" title="Renomear">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg>
         </button>
-        <button class="chat-session-delete" onclick="event.stopPropagation();window._ia_deleteSession('${s.id}')" title="Excluir conversa">
+        <button class="chat-session-delete" data-sessao-acao="excluir" title="Excluir conversa">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
         </button>
       </div>
     `;
   }).join('');
+
+  if (!list._delegado) {
+    list._delegado = true;
+    list.addEventListener('click', (e) => {
+      const item = e.target.closest('.chat-session-item');
+      if (!item) return;
+      const sessao = sessions.find(x => x.id === item.dataset.sessao)
+        || { id: item.dataset.sessao, title: '' };
+
+      const botao = e.target.closest('[data-sessao-acao]');
+      if (!botao) { window._ia_switchSession(sessao.id); return; }
+
+      e.stopPropagation();
+      if (botao.dataset.sessaoAcao === 'renomear') {
+        window._ia_renameSession(sessao.id, sessao.title || '');
+      } else {
+        window._ia_deleteSession(sessao.id);
+      }
+    });
+  }
 }
 
 window._ia_createNewSession = async () => {
@@ -380,29 +414,78 @@ async function sendMessage() {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`,
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdyd3phaXRwZ255cmJ4a3R4YXVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyNDQwOTcsImV4cCI6MjA3MTgyMDA5N30.sEo1F8sOYnEhVlXPkTFnVnSa7eTNY4bNHczFPsEwVUE',
+        'apikey': supabase.supabaseKey,
       },
-      body: JSON.stringify({ message, session_id: currentSessionId }),
+      body: JSON.stringify({ message, session_id: currentSessionId, stream: true }),
     });
 
-    const data = await res.json();
-    removeTyping();
-
+    // Erro antes do stream começar (limite diário, plano expirado...)
     if (!res.ok) {
-      if (data.limitReached) {
-        showLimitMsg(data.error);
-      }
+      removeTyping();
+      const data = await res.json().catch(() => ({}));
+      if (data.limitReached || data.planExpired) showLimitMsg(data.error);
       appendMessage('assistant', data.error || 'Erro ao processar mensagem.');
-    } else {
-      appendMessage('assistant', data.content);
-      if (data.usage) {
-        updateUsage(data.usage.messages_used, data.usage.messages_limit);
-      }
+      return;
+    }
+
+    // O servidor pode responder em JSON (modo antigo) se o streaming
+    // estiver indisponível — tratamos os dois casos.
+    const tipo = res.headers.get('content-type') || '';
+    if (!tipo.includes('text/event-stream')) {
+      removeTyping();
+      const data = await res.json();
+      appendMessage('assistant', data.content || data.error || 'Sem resposta.');
+      if (data.usage) updateUsage(data.usage.messages_used, data.usage.messages_limit);
       if (data.session_id && data.session_id !== currentSessionId) {
         currentSessionId = data.session_id;
         await loadSessions();
       }
+      return;
     }
+
+    // Streaming: a bolha nasce vazia e vai sendo preenchida.
+    let bolha = null;
+    let texto = '';
+
+    const escrever = (novoTexto) => {
+      texto = novoTexto;
+      if (!bolha) {
+        removeTyping();
+        bolha = appendMessage('assistant', '');
+      }
+      const corpo = bolha.querySelector('.msg-bubble');
+      if (corpo) corpo.innerHTML = `<p>${simpleMarkdown(texto)}</p>`;
+      const container = document.getElementById('chatMessages');
+      if (container) container.scrollTop = container.scrollHeight;
+    };
+
+    let novaSessao = null;
+
+    await lerStreamIA(res, {
+      onSession: (id) => { novaSessao = id; },
+      onStatus: (t) => atualizarStatusDigitando(t),
+      onDelta: (t) => escrever(texto + t),
+      onReplace: (t) => escrever(t),
+      // Provedor caiu no meio: joga fora o pedaço já exibido para o
+      // próximo não escrever grudado no texto do anterior.
+      onReset: () => escrever(''),
+      onError: (erro) => {
+        removeTyping();
+        if (!bolha) appendMessage('assistant', erro || 'Erro ao processar mensagem.');
+        else escrever(erro || 'Erro ao processar mensagem.');
+      },
+      onDone: async (evento) => {
+        removeTyping();
+        escrever(evento.content || texto);
+        if (evento.usage) updateUsage(evento.usage.messages_used, evento.usage.messages_limit);
+        const id = evento.session_id || novaSessao;
+        if (id && id !== currentSessionId) {
+          currentSessionId = id;
+          await loadSessions();
+        }
+      },
+    });
+
   } catch (e) {
     removeTyping();
     appendMessage('assistant', 'Erro de conexão. Verifique sua internet e tente novamente.');

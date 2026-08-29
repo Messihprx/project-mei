@@ -1,4 +1,5 @@
 import { supabase } from './auth.js';
+import { lerStreamIA } from './dom-utils.js';
 
 const FAB_HTML = `
 <style>
@@ -400,22 +401,46 @@ function renderSessions() {
     return;
   }
 
+  // Chips com data-* em vez de onclick inline: o título ia escapado
+  // para HTML e voltava com &quot; no campo de renomear.
   bar.innerHTML =
-    `<button class="ai-session-chip ai-session-new" onclick="aiNewChat()">
+    `<button class="ai-session-chip ai-session-new" data-chip-acao="nova">
       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       Nova
     </button>` +
     sessions.map(s => `
-      <button class="ai-session-chip ${s.id === currentSessionId ? 'active' : ''}" onclick="aiSwitchSession('${s.id}')" title="${escHtml(s.title)}">
+      <button class="ai-session-chip ${s.id === currentSessionId ? 'active' : ''}" data-chip="${escHtml(s.id)}" title="${escHtml(s.title)}">
         <span class="chip-label">${escHtml(s.title)}</span>
-        <span class="chip-rename" onclick="event.stopPropagation();aiRenameSession('${s.id}','${escHtml(s.title).replace(/'/g, "\\'")}')" title="Renomear">
+        <span class="chip-rename" data-chip-acao="renomear" title="Renomear">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg>
         </span>
-        <span class="chip-close" onclick="event.stopPropagation();aiDeleteSession('${s.id}')" title="Excluir">
+        <span class="chip-close" data-chip-acao="excluir" title="Excluir">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </span>
       </button>
     `).join('');
+
+  if (!bar._delegado) {
+    bar._delegado = true;
+    bar.addEventListener('click', (e) => {
+      const acao = e.target.closest('[data-chip-acao]');
+      if (acao && acao.dataset.chipAcao === 'nova') { window.aiNewChat(); return; }
+
+      const chip = e.target.closest('[data-chip]');
+      if (!chip) return;
+      const sessao = sessions.find(x => x.id === chip.dataset.chip)
+        || { id: chip.dataset.chip, title: '' };
+
+      if (!acao) { window.aiSwitchSession(sessao.id); return; }
+
+      e.stopPropagation();
+      if (acao.dataset.chipAcao === 'renomear') {
+        window.aiRenameSession(sessao.id, sessao.title || '');
+      } else if (acao.dataset.chipAcao === 'excluir') {
+        window.aiDeleteSession(sessao.id);
+      }
+    });
+  }
 
   // Auto-scroll to active
   const active = bar.querySelector('.active');
@@ -608,16 +633,11 @@ async function loadLimits() {
       return;
     }
 
-    const { data: profile } = await supabase.from('perfis').select('plano, ai_daily_limit').eq('id', session.user.id).single();
-    const plan = profile?.plano || 'gratuito';
-
-    const { data: limits } = await supabase.from('ai_limits').select('daily_messages').eq('plan_type', plan).single();
-
-    const today = new Date().toISOString().split('T')[0];
-    const { data: usage } = await supabase.from('ai_usage').select('messages_used').eq('user_id', session.user.id).eq('usage_date', today).single();
-
-    const msgUsed = usage?.messages_used || 0;
-    const msgMax = profile?.ai_daily_limit ?? limits?.daily_messages ?? 10;
+    // Mesma fonte que o servidor usa para decidir o limite.
+    const { data: uso } = await supabase.rpc('meu_uso_plano');
+    const plan = uso?.plano || 'gratuito';
+    const msgUsed = uso?.ia?.usado ?? 0;
+    const msgMax = uso?.ia?.max ?? 10;
     const pct = msgMax > 0 ? (msgUsed / msgMax) : 0;
 
     let dotClass = '';
@@ -648,11 +668,32 @@ async function sendMessage() {
   const sendBtn = document.getElementById('aiSendBtn');
   sendBtn.disabled = true;
 
+  const caixa = document.getElementById('aiChatMessages');
   const typingDiv = document.createElement('div');
   typingDiv.className = 'ai-msg assistant';
   typingDiv.innerHTML = '<div class="ai-typing"><span></span><span></span><span></span></div>';
-  document.getElementById('aiChatMessages').appendChild(typingDiv);
-  document.getElementById('aiChatMessages').scrollTop = document.getElementById('aiChatMessages').scrollHeight;
+  caixa.appendChild(typingDiv);
+  caixa.scrollTop = caixa.scrollHeight;
+
+  // Mostra o que a IA está fazendo em vez de um spinner mudo
+  const mostrarStatus = (t) => {
+    typingDiv.textContent = t;
+    typingDiv.style.opacity = '0.75';
+    typingDiv.style.fontStyle = 'italic';
+    caixa.scrollTop = caixa.scrollHeight;
+  };
+
+  let bolha = null;
+  let texto = '';
+  const escrever = (novo) => {
+    texto = novo;
+    if (!bolha) {
+      typingDiv.remove();
+      bolha = addMsg('assistant', '');
+    }
+    bolha.textContent = texto;
+    caixa.scrollTop = caixa.scrollHeight;
+  };
 
   try {
     const { data: { session } } = await supabase.auth.getSession();
@@ -667,26 +708,57 @@ async function sendMessage() {
           'Authorization': `Bearer ${session.access_token}`,
           'apikey': supabase.supabaseKey,
         },
-        body: JSON.stringify({ message: text, session_id: currentSessionId }),
+        body: JSON.stringify({ message: text, session_id: currentSessionId, stream: true }),
       }
     );
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error || `Erro ${res.status}`);
-    if (data?.error) throw new Error(data.error);
-
-    typingDiv.remove();
-    const reply = data?.content || data?.reply || data?.choices?.[0]?.message?.content || 'Sem resposta.';
-    addMsg('assistant', reply);
-
-    if (data.session_id && data.session_id !== currentSessionId) {
-      currentSessionId = data.session_id;
-      await loadSessions();
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.error || `Erro ${res.status}`);
     }
 
+    const tipo = res.headers.get('content-type') || '';
+
+    // Servidor sem streaming: cai no modo JSON de antes
+    if (!tipo.includes('text/event-stream')) {
+      const data = await res.json();
+      if (data?.error) throw new Error(data.error);
+      typingDiv.remove();
+      addMsg('assistant', data?.content || 'Sem resposta.');
+      if (data.session_id && data.session_id !== currentSessionId) {
+        currentSessionId = data.session_id;
+        await loadSessions();
+      }
+      loadLimits();
+      return;
+    }
+
+    let novaSessao = null;
+    let houveErro = null;
+
+    await lerStreamIA(res, {
+      onSession: (id) => { novaSessao = id; },
+      onStatus: mostrarStatus,
+      onDelta: (t) => escrever(texto + t),
+      onReplace: (t) => escrever(t),
+      onReset: () => escrever(''),
+      onError: (erro) => { houveErro = erro; },
+      onDone: async (evento) => {
+        escrever(evento.content || texto);
+        const id = evento.session_id || novaSessao;
+        if (id && id !== currentSessionId) {
+          currentSessionId = id;
+          await loadSessions();
+        }
+      },
+    });
+
+    if (houveErro) throw new Error(houveErro);
     loadLimits();
+
   } catch (e) {
     typingDiv.remove();
+    if (bolha) bolha.remove();
     addMsg('error', e.message || 'Erro ao conectar com a IA.');
   } finally {
     isLoading = false;

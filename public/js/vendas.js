@@ -1,4 +1,10 @@
 import { supabase } from './auth.js';
+import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais } from './dom-utils.js';
+
+// Vendas da última renderização. Antes a descrição era injetada
+// dentro de onclick="...('${venda.descricao}')", então uma venda
+// como "Pao d'alho" quebrava o botão de editar.
+let vendasRenderizadas = [];
 
 // --- 1. CARREGAR CLIENTES NO SELECT ---
 async function popularSelectClientes() {
@@ -14,7 +20,7 @@ async function popularSelectClientes() {
         if (error) throw error;
 
         select.innerHTML = '<option value="">Selecione um cliente</option>' + 
-            clientes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+            clientes.map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
 
     } catch (err) {
         console.error("Erro ao carregar clientes:", err.message);
@@ -22,7 +28,7 @@ async function popularSelectClientes() {
 }
 
 // --- 2. SALVAR NOVA VENDA ---
-import { protegerAcao, verificarStatusPlano } from './planos.js';
+import { protegerAcao, verificarStatusPlano, invalidarCachePlano } from './planos.js';
 const formNovaVenda = document.getElementById("formNovaVenda");
 if (formNovaVenda) {
     protegerAcao("formNovaVenda", "movimentacao");
@@ -55,6 +61,9 @@ if (formNovaVenda) {
             ]);
 
             if (error) throw error;
+            // A contagem mudou: o aviso de limite não pode continuar
+            // mostrando o número anterior a esta operação.
+            invalidarCachePlano();
 
             mostrarModal('Venda registrada!', 'Sua venda foi registrada com sucesso.', 'sucesso');
             setTimeout(() => { window.location.href = "vendas.html"; }, 1500);
@@ -69,7 +78,10 @@ if (formNovaVenda) {
 }
 
 // --- 3. FUNÇÃO MESTRE PARA LISTAR VENDAS (COM FILTRO REAL) ---
-async function carregarVendas() {
+let limiteVendas = TAMANHO_PAGINA;
+
+async function carregarVendas(limite = limiteVendas) {
+    limiteVendas = limite;
     const container = document.getElementById("listaVendas");
     const filtroMesInput = document.getElementById("filtroMesVendas"); 
     
@@ -78,14 +90,18 @@ async function carregarVendas() {
     try {
         let query = supabase
             .from('vendas')
-            .select(`*, clientes ( nome )`)
-            .order('created_at', { ascending: false });
+            .select('id, descricao, valor, status, data_venda, cliente_id, clientes(nome)')
+            // data_venda é a data de negócio (o dashboard usa a mesma).
+            // Antes esta lista ordenava e filtrava por created_at, então
+            // uma venda retroativa aparecia num mês aqui e noutro lá.
+            .order('data_venda', { ascending: false })
+            .limit(limite);
 
         if (filtroMesInput && filtroMesInput.value) {
             const [ano, mes] = filtroMesInput.value.split('-');
             const primeiroDia = `${ano}-${mes}-01T00:00:00Z`;
             const ultimoDia = new Date(ano, mes, 0).toISOString().replace(/T.*$/, 'T23:59:59Z');
-            query = query.gte('created_at', primeiroDia).lte('created_at', ultimoDia);
+            query = query.gte('data_venda', primeiroDia).lte('data_venda', ultimoDia);
         }
 
         const { data: vendas, error } = await query;
@@ -96,33 +112,37 @@ async function carregarVendas() {
             return;
         }
 
+        vendasRenderizadas = vendas;
+
         container.innerHTML = vendas.map(venda => `
-            <div class="card-venda-premium ${venda.status}">
+            <div class="card-venda-premium ${esc(venda.status)}">
                 <div class="venda-frente">
                     <div class="venda-icone">
                         <i data-lucide="${venda.status === 'pago' ? 'check-circle' : 'clock'}"></i>
                     </div>
                     <div class="venda-detalhes">
-                        <h4>${venda.clientes?.nome || 'Cliente avulso'}</h4>
-                        <p>${venda.descricao || 'Serviço Geral'}</p>
-                        <span class="venda-data">${new Date(venda.created_at).toLocaleDateString('pt-BR')}</span>
+                        <h4>${esc(venda.clientes?.nome || 'Cliente avulso')}</h4>
+                        <p>${esc(venda.descricao || 'Serviço Geral')}</p>
+                        <span class="venda-data">${new Date(venda.data_venda || venda.created_at).toLocaleDateString('pt-BR')}</span>
                     </div>
                 </div>
                 <div class="venda-financeiro">
                     <span class="venda-valor">R$ ${parseFloat(venda.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                    <span class="venda-badge">${venda.status.toUpperCase()}</span>
+                    <span class="venda-badge">${esc((venda.status || "").toUpperCase())}</span>
                     
                     <div style="display:flex; gap:8px; justify-content: flex-end; margin-top:10px;">
-                        <button onclick="abrirModalEditarVenda('${venda.id}', '${venda.descricao}', ${venda.valor}, '${venda.status}')" class="btn-acao" style="color: var(--cor-primaria);" title="Editar">
+                        <button data-acao="editar" data-id="${esc(venda.id)}" class="btn-acao" style="color: var(--cor-primaria);" title="Editar">
                             <i data-lucide="edit-3"></i>
                         </button>
-                        <button onclick="deletarVenda('${venda.id}')" class="btn-acao btn-delete" title="Excluir">
+                        <button data-acao="excluir" data-id="${esc(venda.id)}" class="btn-acao btn-delete" title="Excluir">
                             <i data-lucide="trash-2"></i>
                         </button>
                     </div>
                 </div>
             </div>
         `).join('');
+
+        botaoCarregarMais(container, vendas.length, limite, carregarVendas);
 
         if (window.lucide) lucide.createIcons();
 
@@ -152,6 +172,9 @@ window.deletarVenda = async (id) => {
     try {
         const { error } = await supabase.from('vendas').delete().eq('id', id);
         if (error) throw error;
+        // A contagem mudou: o aviso de limite não pode continuar
+        // mostrando o número anterior a esta operação.
+        invalidarCachePlano();
         carregarVendas();
     } catch (err) {
         mostrarModal('Erro ao excluir', traduzirErro(err.message));
@@ -186,6 +209,9 @@ if (formEditarVenda) {
                 .eq('id', id);
 
             if (error) throw error;
+            // A contagem mudou: o aviso de limite não pode continuar
+            // mostrando o número anterior a esta operação.
+            invalidarCachePlano();
 
             fecharModalEditarVenda();
             carregarVendas();
@@ -201,6 +227,17 @@ if (formEditarVenda) {
 
 // --- 6. INICIALIZAÇÃO ---
 document.addEventListener("DOMContentLoaded", () => {
+    // Delegação no lugar dos onclick inline
+    delegate(document.getElementById('listaVendas'), 'button[data-acao]', 'click', (e, botao) => {
+        const venda = vendasRenderizadas.find(v => v.id === botao.dataset.id);
+        if (!venda) return;
+        if (botao.dataset.acao === 'editar') {
+            window.abrirModalEditarVenda(venda.id, venda.descricao, venda.valor, venda.status);
+        } else if (botao.dataset.acao === 'excluir') {
+            window.deletarVenda(venda.id);
+        }
+    });
+
     const filtroMesVendas = document.getElementById("filtroMesVendas");
 
     if (filtroMesVendas) {
@@ -208,7 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const agora = new Date();
             filtroMesVendas.value = agora.toISOString().substring(0, 7);
         }
-        filtroMesVendas.addEventListener("change", carregarVendas);
+        filtroMesVendas.addEventListener("change", () => carregarVendas(TAMANHO_PAGINA));
     }
 
     const inputBusca = document.getElementById("buscarVenda");
@@ -250,9 +287,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const { data: vendas, error } = await supabase
                     .from('vendas')
                     .select('*, clientes(nome)')
-                    .gte('created_at', dataInicio)
-                    .lte('created_at', dataFim)
-                    .order('created_at', { ascending: false });
+                    .gte('data_venda', dataInicio)
+                    .lte('data_venda', dataFim)
+                    .order('data_venda', { ascending: false });
 
                 if (error) throw error;
 
@@ -261,14 +298,21 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
-                // Gerar CSV
-                let csv = "Data;Cliente;Servico;Valor;Status\n";
-                vendas.forEach(v => {
-                    const dataFmt = new Date(v.created_at).toLocaleDateString('pt-BR');
-                    const cliente = v.clientes ? v.clientes.nome : 'N/A';
-                    const valor = v.valor.toFixed(2).replace('.', ',');
-                    csv += `${dataFmt};${cliente};${v.servico};${valor};${v.status}\n`;
-                });
+                // Gerar CSV. Duas correções aqui:
+                //  - a coluna era v.servico, que não existe na tabela
+                //    (o campo é descricao) e saía "undefined" no arquivo;
+                //  - montarCsv neutraliza células que o Excel leria como
+                //    fórmula (= + - @).
+                const csv = montarCsv(
+                    ["Data", "Cliente", "Servico", "Valor", "Status"],
+                    vendas.map(v => [
+                        new Date(v.data_venda || v.created_at).toLocaleDateString('pt-BR'),
+                        v.clientes ? v.clientes.nome : 'N/A',
+                        v.descricao || '',
+                        Number(v.valor || 0).toFixed(2).replace('.', ','),
+                        v.status || ''
+                    ])
+                );
 
                 const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");

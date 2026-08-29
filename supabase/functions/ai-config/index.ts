@@ -43,14 +43,24 @@ serve(async (req) => {
     // GET: Retorna toda a config
     if (req.method === 'GET') {
       const [providersResult, limitsResult, usageResult] = await Promise.all([
-        supabase.from('ai_providers').select('*').order('priority', { ascending: true }),
+        // A api_key é lida aqui só para virar um indicador logo abaixo:
+        // o que sai daqui é "••••••••" ou vazio, nunca o valor real. Para
+        // ver a chave de verdade existe a ação reveal_key, que exige um
+        // pedido explícito do admin.
+        supabase.from('ai_providers')
+          .select('id, provider_name, provider_type, api_url, model, max_tokens, temperature, priority, active, auth_header, auth_prefix, extra_headers, models_url, api_key')
+          .order('priority', { ascending: true }),
         supabase.from('ai_limits').select('*').order('plan_type'),
         supabase.from('ai_usage').select('user_id, usage_date, messages_used, tokens_used, perfis:user_id(nome_completo, email)')
           .gte('usage_date', new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0])
           .order('usage_date', { ascending: false })
       ]);
 
-      const providers = providersResult.data || [];
+      // A chave vira só um indicador de "tem chave salva".
+      const providers = (providersResult.data || []).map((p: any) => ({
+        ...p,
+        api_key: p.api_key ? '••••••••' : '',
+      }));
 
       return new Response(JSON.stringify({
         providers,
@@ -66,6 +76,35 @@ serve(async (req) => {
     if (req.method === 'POST') {
       const body = await req.json();
 
+      // Revelar a chave de um provedor.
+      //
+      // A chave nunca acompanha o GET da configuração — ela sai daqui
+      // apenas quando o admin pede explicitamente, clicando no olho.
+      // Assim ela não fica trafegando e parando no DOM toda vez que a
+      // tela de provedores é aberta.
+      if (body.action === 'reveal_key') {
+        const nome = String(body.provider_name || "").trim();
+        if (!nome) {
+          return new Response(JSON.stringify({ error: 'Provedor não informado.' }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          });
+        }
+
+        const { data } = await supabase
+          .from('ai_providers')
+          .select('api_key')
+          .eq('provider_name', nome)
+          .maybeSingle();
+
+        console.log(`[reveal_key] admin ${admin.user?.email} revelou a chave de ${nome}`);
+
+        return new Response(JSON.stringify({ api_key: data?.api_key || "" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
       if (body.providers) {
         for (const p of body.providers) {
           const updateData: Record<string, unknown> = {
@@ -77,6 +116,12 @@ serve(async (req) => {
             temperature: p.temperature ?? 0.7,
             priority: p.priority ?? 0,
             active: p.active ?? true,
+            // Campos de autenticação livre: é o que permite cadastrar
+            // Azure, Ollama, LiteLLM e gateways sem mexer no código.
+            auth_header: p.auth_header || 'Authorization',
+            auth_prefix: p.auth_prefix ?? 'Bearer ',
+            extra_headers: p.extra_headers ?? {},
+            models_url: p.models_url || null,
           };
           if (p.api_key && !p.api_key.includes('••••')) {
             updateData.api_key = p.api_key;

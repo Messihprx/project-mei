@@ -1,5 +1,6 @@
 import { supabase } from './auth.js';
 import { formatarTelefone } from './novo-cliente.js';
+import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais } from './dom-utils.js';
 
 // --- FUNÇÕES DE ERRO INLINE ---
 function mostrarErro(campoId, mensagem) {
@@ -66,13 +67,23 @@ async function verificarDuplicata(nome, telefone, userId, excluirId = null) {
     return null;
 }
 
+// Guarda os clientes da última renderização. Os botões carregam só
+// o id em data-*, e os dados saem daqui — assim nome, telefone e
+// observação nunca entram dentro de um atributo HTML.
+let clientesRenderizados = [];
+
 // --- 1. LISTAR CLIENTES ---
-async function carregarClientes(filtro = "") {
+let limiteClientes = TAMANHO_PAGINA;
+
+async function carregarClientes(filtro = "", limite = limiteClientes) {
+    limiteClientes = limite;
     const container = document.getElementById("listaClientes");
     if (!container) return;
 
     try {
-        let query = supabase.from('clientes').select('*').eq('ativo', true).order('nome');
+        let query = supabase.from('clientes')
+            .select('id, nome, telefone, observacao')
+            .eq('ativo', true).order('nome').limit(limite);
         if (filtro) query = query.ilike('nome', `%${filtro}%`);
 
         const { data: clientes, error } = await query;
@@ -85,31 +96,36 @@ async function carregarClientes(filtro = "") {
             return;
         }
 
+        clientesRenderizados = clientes;
+
         container.innerHTML = clientes.map(cliente => `
             <div class="card-item-flex">
                 <div class="info-principal">
                     <div class="avatar-cliente">
-                        ${cliente.nome.charAt(0).toUpperCase()}
+                        ${esc((cliente.nome || '?').charAt(0).toUpperCase())}
                     </div>
                     <div>
-                        <h4>${cliente.nome}</h4>
-                        <p><i data-lucide="phone" style="width:12px"></i> ${cliente.telefone || 'Sem contato'}</p>
-                        ${cliente.observacao ? `<small class="obs-tag">${cliente.observacao}</small>` : ''}
+                        <h4>${esc(cliente.nome)}</h4>
+                        <p><i data-lucide="phone" style="width:12px"></i> ${esc(cliente.telefone || 'Sem contato')}</p>
+                        ${cliente.observacao ? `<small class="obs-tag">${esc(cliente.observacao)}</small>` : ''}
                     </div>
                 </div>
                 <div class="acoes">
-                    <button onclick="window.open('https://wa.me/55${cliente.telefone?.replace(/\D/g, "")}', '_blank')" class="btn-acao btn-whatsapp" title="Conversar">
+                    <button data-acao="whatsapp" data-id="${esc(cliente.id)}" class="btn-acao btn-whatsapp" title="Conversar">
                         <i data-lucide="message-circle"></i>
                     </button>
-                    <button onclick="editarCliente('${cliente.id}', '${cliente.nome.replace(/'/g, "\\'")}', '${cliente.telefone}', '${(cliente.observacao || '').replace(/'/g, "\\'")}')" class="btn-acao" style="color: var(--cor-primaria);" title="Editar">
+                    <button data-acao="editar" data-id="${esc(cliente.id)}" class="btn-acao" style="color: var(--cor-primaria);" title="Editar">
                         <i data-lucide="edit-3"></i>
                     </button>
-                    <button onclick="deletarCliente('${cliente.id}')" class="btn-acao btn-delete" title="Excluir">
+                    <button data-acao="excluir" data-id="${esc(cliente.id)}" class="btn-acao btn-delete" title="Excluir">
                         <i data-lucide="trash-2"></i>
                     </button>
                 </div>
             </div>
         `).join('');
+
+        botaoCarregarMais(container, clientes.length, limite,
+            (novoLimite) => carregarClientes(filtro, novoLimite));
 
         if (window.lucide) lucide.createIcons();
 
@@ -147,7 +163,7 @@ window.fecharModal = () => {
 };
 
 // Salvar edição com validações
-import { protegerAcao } from './planos.js';
+import { protegerAcao, invalidarCachePlano } from './planos.js';
 const formEditar = document.getElementById("formEditarCliente");
 if (formEditar) {
     protegerAcao("formEditarCliente", "cliente");
@@ -191,6 +207,9 @@ if (formEditar) {
                 .eq('id', id);
 
             if (error) throw error;
+            // A contagem mudou: o aviso de limite não pode continuar
+            // mostrando o número anterior a esta operação.
+            invalidarCachePlano();
 
             fecharModal();
             carregarClientes();
@@ -223,6 +242,9 @@ window.deletarCliente = async (id) => {
             .eq('id', id);
 
         if (error) throw error;
+        // A contagem mudou: o aviso de limite não pode continuar
+        // mostrando o número anterior a esta operação.
+        invalidarCachePlano();
         carregarClientes(document.getElementById("buscarCliente")?.value || "");
     } catch (err) {
         mostrarModal('Erro ao excluir', traduzirErro(err.message));
@@ -245,9 +267,36 @@ import { verificarStatusPlano } from './planos.js';
 // --- INICIALIZAÇÃO ---
 document.addEventListener("DOMContentLoaded", async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (session && document.getElementById("listaClientes")) {
+    const lista = document.getElementById("listaClientes");
+
+    if (session && lista) {
         carregarClientes();
     }
+
+    // Um listener só para a lista inteira. Substituiu os onclick
+    // inline, que quebravam quando o nome do cliente tinha apóstrofo.
+    delegate(lista, 'button[data-acao]', 'click', (e, botao) => {
+        const cliente = clientesRenderizados.find(c => c.id === botao.dataset.id);
+        if (!cliente) return;
+
+        switch (botao.dataset.acao) {
+            case 'whatsapp': {
+                const numero = (cliente.telefone || '').replace(/\D/g, '');
+                if (!numero) {
+                    window.mostrarModal('Sem telefone', 'Este cliente não tem telefone cadastrado.', 'alerta');
+                    return;
+                }
+                window.open(`https://wa.me/55${numero}`, '_blank');
+                break;
+            }
+            case 'editar':
+                window.editarCliente(cliente.id, cliente.nome, cliente.telefone, cliente.observacao || '');
+                break;
+            case 'excluir':
+                window.deletarCliente(cliente.id);
+                break;
+        }
+    });
 
     // --- 5. EXPORTAÇÃO PARA CSV (PREMIUM) ---
     const btnExport = document.getElementById("btnExportarClientes");
@@ -279,13 +328,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                     return;
                 }
 
-                // Gerar CSV
-                let csv = "Nome;Telefone;Observacao\n";
-                clientes.forEach(c => {
-                    const tel = c.telefone || '';
-                    const obs = (c.observacao || '').replace(/\n/g, ' ');
-                    csv += `${c.nome};${tel};${obs}\n`;
-                });
+                // Gerar CSV (montarCsv neutraliza células que o Excel
+                // interpretaria como fórmula: = + - @)
+                const csv = montarCsv(
+                    ["Nome", "Telefone", "Observacao"],
+                    clientes.map(c => [c.nome, c.telefone || '', c.observacao || ''])
+                );
 
                 const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");

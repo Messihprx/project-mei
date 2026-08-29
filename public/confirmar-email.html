@@ -6,7 +6,20 @@
     <title>Confirme seu e-mail - FinMEI fluxo inteligente</title>
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+    <meta name="theme-color" content="#0b1120">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <script>
+        // PWA: deixa o app instalável na tela inicial do celular e
+        // guarda CSS/JS em cache para abrir rápido na segunda visita.
+        // Dado financeiro nunca é cacheado (ver public/sw.js).
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+    </script>
 </head>
 <body class="login-page">
     <!-- Branding Panel -->
@@ -84,7 +97,30 @@
             }
         });
 
-        setInterval(() => { verificarConfirmacao(); }, 3000);
+        // Polling com intervalo crescente.
+        //
+        // Era fixo em 3s, o que dá 1200 consultas por hora só de uma
+        // aba aberta — desperdício puro no plano gratuito do Supabase,
+        // e o suficiente para estourar o limite de taxa da própria
+        // função. Quem acabou de pedir o e-mail confirma nos primeiros
+        // segundos; depois disso, checar de 20 em 20s basta.
+        let tentativas = 0;
+
+        function proximoIntervalo() {
+            if (tentativas < 10) return 3000;    // primeiros 30s
+            if (tentativas < 20) return 10000;   // até ~2min
+            return 20000;                        // daí em diante
+        }
+
+        function agendarVerificacao() {
+            setTimeout(async () => {
+                tentativas++;
+                await verificarConfirmacao();
+                agendarVerificacao();
+            }, proximoIntervalo());
+        }
+
+        agendarVerificacao();
     </script>
     <script>lucide.createIcons();</script>
 </body>

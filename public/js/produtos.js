@@ -1,4 +1,9 @@
 import { supabase } from './auth.js';
+import { esc, delegate, TAMANHO_PAGINA, botaoCarregarMais } from './dom-utils.js';
+import { protegerAcao, invalidarCachePlano } from './planos.js';
+
+// Produtos da última renderização: os botões guardam só o id.
+let produtosRenderizados = [];
 
 let fotoFile = null;
 let editFotoFile = null;
@@ -124,12 +129,17 @@ window.removerFotoEdicao = function () {
 };
 
 // --- CARREGAR PRODUTOS ---
-async function carregarProdutos(filtro = '') {
+let limiteProdutos = TAMANHO_PAGINA;
+
+async function carregarProdutos(filtro = '', limite = limiteProdutos) {
+    limiteProdutos = limite;
     const container = document.getElementById('listaProdutos');
     if (!container) return;
 
     try {
-        let query = supabase.from('produtos').select('*').order('created_at', { ascending: false });
+        let query = supabase.from('produtos')
+            .select('id, nome, descricao, valor, foto_url')
+            .order('created_at', { ascending: false }).limit(limite);
         if (filtro) query = query.ilike('nome', `%${filtro}%`);
 
         const { data: produtos, error } = await query;
@@ -142,27 +152,29 @@ async function carregarProdutos(filtro = '') {
             return;
         }
 
+        produtosRenderizados = produtos;
+
         container.innerHTML = produtos.map(p => `
             <div class="produto-card">
                 <div class="produto-info">
                     ${p.foto_url
-                        ? `<img src="${p.foto_url}" class="produto-thumb" alt="${p.nome}">`
+                        ? `<img src="${esc(p.foto_url)}" class="produto-thumb" alt="${esc(p.nome)}">`
                         : `<div class="produto-thumb-placeholder">
                              <i data-lucide="package" style="width: 20px; color: white;"></i>
                            </div>`
                     }
                     <div class="produto-texto">
-                        <h4>${p.nome}</h4>
-                        <p>${p.descricao ? p.descricao.substring(0, 50) + (p.descricao.length > 50 ? '...' : '') : 'Sem descrição'}</p>
+                        <h4>${esc(p.nome)}</h4>
+                        <p>${esc(p.descricao ? p.descricao.substring(0, 50) + (p.descricao.length > 50 ? '...' : '') : 'Sem descrição')}</p>
                     </div>
                 </div>
                 <div class="produto-preco-acoes">
                     <span class="produto-preco">R$ ${parseFloat(p.valor).toFixed(2)}</span>
                     <div class="produto-acoes">
-                        <button onclick="editarProduto('${p.id}')" class="btn-acao btn-edit" title="Editar">
+                        <button data-acao="editar" data-id="${esc(p.id)}" class="btn-acao btn-edit" title="Editar">
                             <i data-lucide="edit-3"></i>
                         </button>
-                        <button onclick="deletarProduto('${p.id}', '${p.foto_url || ''}')" class="btn-acao btn-delete" title="Excluir">
+                        <button data-acao="excluir" data-id="${esc(p.id)}" class="btn-acao btn-delete" title="Excluir">
                             <i data-lucide="trash-2"></i>
                         </button>
                     </div>
@@ -170,6 +182,9 @@ async function carregarProdutos(filtro = '') {
             </div>
         `).join('');
 
+
+        botaoCarregarMais(container, produtos.length, limite,
+            (novoLimite) => carregarProdutos(filtro, novoLimite));
 
         if (window.lucide) lucide.createIcons();
     } catch (err) {
@@ -180,7 +195,7 @@ async function carregarProdutos(filtro = '') {
 // --- EDITAR ---
 window.editarProduto = async function (id) {
     try {
-        const { data, error } = await supabase.from('produtos').select('*').eq('id', id).single();
+        const { data, error } = await supabase.from('produtos').select('id, nome, descricao, valor, foto_url').eq('id', id).single();
         if (error) throw error;
 
         document.getElementById('editProdutoId').value = data.id;
@@ -215,6 +230,9 @@ window.deletarProduto = async function (id, fotoUrl) {
     try {
         const { error } = await supabase.from('produtos').delete().eq('id', id);
         if (error) throw error;
+        // A contagem mudou: o aviso de limite não pode continuar
+        // mostrando o número anterior a esta operação.
+        invalidarCachePlano();
         await removerFotoStorage(fotoUrl);
         carregarProdutos(document.getElementById('buscarProduto')?.value || '');
     } catch (err) {
@@ -225,8 +243,16 @@ window.deletarProduto = async function (id, fotoUrl) {
 // --- SUBMIT NOVO ---
 const formNovo = document.getElementById('formNovoProduto');
 if (formNovo) {
+    // Produtos também têm limite de plano (max_produtos), aplicado por
+    // trigger no banco. Sem esta chamada o usuário só descobria ao
+    // salvar, com erro cru — enquanto em Clientes e Vendas ele é
+    // avisado antes de digitar.
+    protegerAcao('formNovoProduto', 'produto');
+
     formNovo.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (await protegerAcao('formNovoProduto', 'produto')) return;
+
         const btn = formNovo.querySelector('button[type="submit"]');
 
         try {
@@ -252,6 +278,9 @@ if (formNovo) {
 
             const { error } = await supabase.from('produtos').insert([dados]);
             if (error) throw error;
+            // A contagem mudou: o aviso de limite não pode continuar
+            // mostrando o número anterior a esta operação.
+            invalidarCachePlano();
 
             fecharModalProduto();
             carregarProdutos();
@@ -296,6 +325,9 @@ if (formEditar) {
 
             const { error } = await supabase.from('produtos').update(dados).eq('id', id);
             if (error) throw error;
+            // A contagem mudou: o aviso de limite não pode continuar
+            // mostrando o número anterior a esta operação.
+            invalidarCachePlano();
 
             fecharModalEditarProduto();
             carregarProdutos();
@@ -328,6 +360,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     carregarProdutos();
+
+    // Delegação: um listener na grade inteira, no lugar dos onclick
+    // inline que interpolavam foto_url e nome direto no HTML.
+    delegate(document.getElementById('listaProdutos'), 'button[data-acao]', 'click', (e, botao) => {
+        const produto = produtosRenderizados.find(x => x.id === botao.dataset.id);
+        if (!produto) return;
+        if (botao.dataset.acao === 'editar') {
+            window.editarProduto(produto.id);
+        } else if (botao.dataset.acao === 'excluir') {
+            window.deletarProduto(produto.id, produto.foto_url || '');
+        }
+    });
 
     setupDropZone('dropZoneProduto', 'fotoProduto', async (file) => {
         if (!file.type.startsWith('image/')) {

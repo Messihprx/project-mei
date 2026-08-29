@@ -5,7 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pagamento Aprovado | FinMEI</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+    <meta name="theme-color" content="#0b1120">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <script>
+        // PWA: deixa o app instalável na tela inicial do celular e
+        // guarda CSS/JS em cache para abrir rápido na segunda visita.
+        // Dado financeiro nunca é cacheado (ver public/sw.js).
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+    </script>
 </head>
 <body class="login-page status-page">
     <div class="status-card">
@@ -16,6 +29,14 @@
         <p>Parabéns! Sua assinatura <b>Premium FinMEI</b> foi ativada com sucesso. Agora você tem acesso a relatórios avançados de BI, exportação ilimitada e muito mais.</p>
         <a href="index.html" class="btn-status">Ir para o Dashboard</a>
     </div>
+    <script type="module">
+        // O pagamento acabou de mudar o plano no banco, mas o cache do
+        // navegador ainda guarda o estado anterior (TTL de 60s). Sem
+        // limpar aqui, o usuário voltaria para o dashboard e continuaria
+        // vendo o aviso de teste por até um minuto depois de pagar.
+        import { invalidarCachePlano } from './js/planos.js';
+        invalidarCachePlano();
+    </script>
     <script>lucide.createIcons();</script>
 </body>
 </html>

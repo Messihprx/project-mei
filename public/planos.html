@@ -8,7 +8,20 @@
 
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+    <meta name="theme-color" content="#0b1120">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <script>
+        // PWA: deixa o app instalável na tela inicial do celular e
+        // guarda CSS/JS em cache para abrir rápido na segunda visita.
+        // Dado financeiro nunca é cacheado (ver public/sw.js).
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+    </script>
 </head>
 
 <body class="dashboard-layout">
@@ -90,8 +103,8 @@
                     <div class="plano-header">
                         <div class="plano-badge gratuito">TESTE GRÁTIS</div>
                         <h3 class="plano-title">Gratuito</h3>
-                        <div class="plano-price">R$ 0 <span>/14 dias</span></div>
-                        <p class="plano-desc">Acesso completo para testar todas as funcionalidades por 14 dias.</p>
+                        <div class="plano-price">R$ 0 <span>/<span data-limite="trial_dias">14</span> dias</span></div>
+                        <p class="plano-desc">Acesso completo para testar todas as funcionalidades por <span data-limite="trial_dias">14</span> dias.</p>
                     </div>
 
                     <div class="plano-secao">
@@ -110,7 +123,7 @@
                         <ul class="plano-features">
                             <li><i data-lucide="check-circle"></i> Registrar vendas (Pago / Pendente)</li>
                             <li><i data-lucide="check-circle"></i> Registrar gastos por categoria</li>
-                            <li class="disabled"><i data-lucide="x-circle"></i> Máx. 50 movimentações no total</li>
+                            <li class="disabled"><i data-lucide="x-circle"></i> Máx. <span data-limite="movimentacoes">50</span> movimentações no total</li>
                         </ul>
                     </div>
 
@@ -119,7 +132,7 @@
                         <ul class="plano-features">
                             <li><i data-lucide="check-circle"></i> Cadastro de clientes</li>
                             <li><i data-lucide="check-circle"></i> Link direto para WhatsApp</li>
-                            <li class="disabled"><i data-lucide="x-circle"></i> Máx. 10 clientes</li>
+                            <li class="disabled"><i data-lucide="x-circle"></i> Máx. <span data-limite="clientes">10</span> clientes</li>
                         </ul>
                     </div>
 
@@ -148,7 +161,7 @@
                             <li class="disabled"><i data-lucide="x-circle"></i> Relatórios BI avançados</li>
                             <li class="disabled"><i data-lucide="x-circle"></i> Histórico financeiro completo</li>
                             <li class="disabled"><i data-lucide="x-circle"></i> Suporte prioritário</li>
-                            <li class="disabled"><i data-lucide="x-circle"></i> Acesso contínuo (expira em 14 dias)</li>
+                            <li class="disabled"><i data-lucide="x-circle"></i> Acesso contínuo (expira em <span data-limite="trial_dias">14</span> dias)</li>
                         </ul>
                     </div>
 
@@ -226,6 +239,8 @@
                     </div>
 
                     <button id="btnAbrirCheckout" class="btn-assinar primary">Assinar Premium Agora</button>
+                    <!-- Estado da assinatura: renovação automática, cancelamento ou avulso -->
+                    <div id="blocoAssinatura" style="margin-top: 14px; text-align: center;"></div>
                 </div>
             </div>
 
@@ -234,7 +249,11 @@
                 <h3><i data-lucide="help-circle"></i> Perguntas Frequentes</h3>
                 <div class="faq-item">
                     <h4>O plano gratuito expira?</h4>
-                    <p>Sim. O plano gratuito dura 14 dias. Após esse período, você precisará assinar o Premium para continuar usando o sistema.</p>
+                    <p>Sim. O plano gratuito dura <span data-limite="trial_dias">14</span> dias. Após esse período, você precisará assinar o Premium para continuar usando o sistema.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>Qual a diferença entre pagar no cartão e no PIX?</h4>
+                    <p>No cartão de crédito a assinatura é recorrente: cobra sozinha todo mês e você pode cancelar quando quiser — ao cancelar, o acesso continua até o fim do período já pago. No PIX o pagamento é avulso e libera 30 dias; depois disso você precisa pagar de novo manualmente.</p>
                 </div>
                 <div class="faq-item">
                     <h4>Como funciona a importação de dados?</h4>
@@ -262,62 +281,39 @@
             </div>
             
             <div id="etapaSelecao">
-                <p style="color: var(--texto-secundario); margin-bottom: 20px;">Escolha como deseja pagar os <b>R$ 15,90/mês</b>:</p>
+                <p style="color: var(--texto-secundario); margin-bottom: 20px;">Escolha como deseja pagar o Premium:</p>
                 <div class="metodos-pagamento">
-                    <div class="metodo-item" onclick="selecionarMetodo('pix')">
+                    <div class="metodo-item" id="optCartao" role="button" tabindex="0">
+                        <i data-lucide="repeat"></i>
+                        <span>
+                            <b>Cartão de crédito — renova sozinho</b><br>
+                            <small style="color: var(--texto-secundario);">Cobrado todo mês automaticamente. Cancele quando quiser.</small>
+                        </span>
+                    </div>
+                    <div class="metodo-item" id="optPix" role="button" tabindex="0">
                         <i data-lucide="qr-code"></i>
-                        <span>PIX (Liberação Imediata)</span>
+                        <span>
+                            <b>PIX ou boleto — 30 dias</b><br>
+                            <small style="color: var(--texto-secundario);">Pagamento único. Você renova manualmente ao fim do período.</small>
+                        </span>
                     </div>
-                    <div class="metodo-item" onclick="selecionarMetodo('cartao')">
-                        <i data-lucide="credit-card"></i>
-                        <span>Cartão de Crédito</span>
-                    </div>
                 </div>
-            </div>
-
-            <div id="etapaPix" style="display: none; text-align: center;">
-                <p>Escaneie o código ou copie a chave abaixo:</p>
-                <div style="background: white; padding: 15px; border-radius: 8px; display: inline-block; margin: 15px 0;">
-                    <img id="imgQrCode" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=SimulacaoFinMEI" alt="QR Code Pix">
-                </div>
-                
-                <div class="pix-copia-e-cola" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; border: 1px dashed var(--borda-cor);">
-                    <code id="chavePix" style="font-size: 0.8rem; color: var(--cor-primaria);">SUA-CHAVE-PIX-AQUI</code>
-                    <button onclick="copiarPix()" class="btn-acao" style="padding: 5px 10px; font-size: 0.7rem; border-radius: 5px;">Copiar</button>
-                </div>
-
-                <p style="font-size: 0.8rem; color: var(--texto-secundario);">Pagamento 100% seguro. Liberado em segundos.</p>
-                <button onclick="confirmarPagamento('pix')" class="btn-assinar primary" style="margin-top: 15px;">Já realizei o pagamento</button>
-            </div>
-
-            <div id="etapaCartao" style="display: none;">
-                <div class="form-cartao">
-                    <input type="text" placeholder="Número do Cartão" class="input-checkout">
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" placeholder="MM/AA" class="input-checkout">
-                        <input type="text" placeholder="CVV" class="input-checkout">
-                    </div>
-                    <input type="text" placeholder="Nome no Cartão" class="input-checkout">
-                </div>
-                <button onclick="confirmarPagamento('cartao')" class="btn-assinar primary" style="margin-top: 15px;">Confirmar Pagamento</button>
+                <p style="font-size: 0.75rem; color: var(--texto-faint); margin-top: 16px;">
+                    Você será levado ao ambiente seguro do Mercado Pago para concluir.
+                </p>
             </div>
 
             <div id="etapaProcessando" style="display: none; text-align: center; padding: 30px 0;">
                 <div class="loader"></div>
-                <p style="margin-top: 20px;">Processando seu pagamento com segurança...</p>
-            </div>
-
-            <div id="etapaSucesso" style="display: none; text-align: center; padding: 20px 0;">
-                <i data-lucide="check-circle" style="color: var(--cor-sucesso); width: 60px; height: 60px; margin-bottom: 15px;"></i>
-                <h3 style="color: var(--cor-sucesso);">Pagamento Confirmado!</h3>
-                <p>Parabéns! Você agora é um usuário <b>Premium</b>.</p>
-                <button onclick="window.location.href='index.html'" class="btn-assinar primary" style="margin-top: 20px;">Começar a Usar</button>
+                <p style="margin-top: 20px;">Abrindo o pagamento seguro...</p>
             </div>
         </div>
     </div>
 
     <script type="module">
-        import { assinarPlanoPremium, verificarStatusPlano } from './js/planos.js';
+        import { assinarPlanoPremium, assinarRecorrente, cancelarAssinatura,
+                 statusAssinatura, verificarStatusPlano } from './js/planos.js';
+        import { supabase } from './js/auth.js';
         
         async function destacarPlanoAtual() {
             const status = await verificarStatusPlano();
@@ -364,33 +360,130 @@
             }
         }
 
+        // Abre o modal com as duas formas de pagamento. Antes ele pulava
+        // direto para o Checkout Pro e as etapas de PIX/cartão eram uma
+        // simulação com botões que chamavam funções inexistentes.
         window.abrirCheckout = async () => {
             document.getElementById('modalCheckout').style.display = 'flex';
-            document.getElementById('etapaSelecao').style.display = 'none';
-            document.getElementById('etapaPix').style.display = 'none';
-            document.getElementById('etapaCartao').style.display = 'none';
-            document.getElementById('etapaSucesso').style.display = 'none';
-            
-            document.getElementById('etapaProcessando').style.display = 'block';
+            document.getElementById('etapaSelecao').style.display = 'block';
+            document.getElementById('etapaProcessando').style.display = 'none';
 
-            const res = await assinarPlanoPremium();
-                
+            // Recorrência só aparece se estiver ligada na config do gateway
+            const info = await statusAssinatura();
+            const optCartao = document.getElementById('optCartao');
+            if (optCartao && info && info.recorrencia_disponivel === false) {
+                optCartao.style.display = 'none';
+            }
+        };
+
+        function processando(ligado) {
+            document.getElementById('etapaSelecao').style.display = ligado ? 'none' : 'block';
+            document.getElementById('etapaProcessando').style.display = ligado ? 'block' : 'none';
+        }
+
+        async function iniciarPagamento(tipo) {
+            processando(true);
+            const res = tipo === 'recorrente'
+                ? await assinarRecorrente()
+                : await assinarPlanoPremium();
+
             if (res.success && res.init_point) {
                 window.location.href = res.init_point;
             } else {
-                document.getElementById('etapaProcessando').style.display = 'none';
+                processando(false);
                 mostrarModal('Erro no pagamento', 'Erro ao conectar com Mercado Pago: ' + (res.message || 'tente novamente.'));
-                window.fecharCheckout();
             }
-        };
+        }
 
         window.fecharCheckout = () => {
             document.getElementById('modalCheckout').style.display = 'none';
         };
 
+        // Cancelamento: não tira o acesso na hora. O usuário pagou o
+        // período corrente e segue Premium até a data de expiração.
+        window.cancelarMinhaAssinatura = async () => {
+            const confirmar = window.confirm(
+                'Cancelar a renovação automática?\n\nVocê continua Premium até o fim do período já pago.'
+            );
+            if (!confirmar) return;
+
+            const res = await cancelarAssinatura();
+            if (res.success) {
+                const ate = res.acessoAte ? new Date(res.acessoAte).toLocaleDateString('pt-BR') : null;
+                mostrarModal(
+                    'Assinatura cancelada',
+                    ate
+                        ? `Sua renovação foi cancelada. Você continua Premium até ${ate}.`
+                        : (res.mensagem || 'Sua renovação foi cancelada.'),
+                    'sucesso'
+                );
+                setTimeout(() => window.location.reload(), 2500);
+            } else {
+                mostrarModal('Erro', res.message || 'Não foi possível cancelar agora.', 'erro');
+            }
+        };
+
+        async function montarBlocoAssinatura() {
+            const status = await verificarStatusPlano();
+            const alvo = document.getElementById('blocoAssinatura');
+            if (!alvo) return;
+
+            if (!status.premium) { alvo.innerHTML = ''; return; }
+
+            const ate = status.validadePremium
+                ? new Date(status.validadePremium).toLocaleDateString('pt-BR')
+                : null;
+
+            if (status.assinaturaCancelada) {
+                alvo.innerHTML = `<p style="color: var(--cor-alerta); font-size: 0.85rem;">
+                    Renovação cancelada. Seu acesso Premium vai até ${ate || 'o fim do período'}.
+                </p>`;
+            } else if (status.metodoAssinatura === 'recorrente') {
+                alvo.innerHTML = `
+                    <p style="color: var(--texto-secundario); font-size: 0.85rem; margin-bottom: 8px;">
+                        Assinatura ativa com renovação automática${ate ? ' — próxima cobrança por volta de ' + ate : ''}.
+                    </p>
+                    <button onclick="cancelarMinhaAssinatura()" class="btn-acao"
+                        style="color: var(--cor-erro); font-size: 0.8rem; text-decoration: underline; background: none; border: none; cursor: pointer; padding: 0;">
+                        Cancelar renovação automática
+                    </button>`;
+            } else {
+                alvo.innerHTML = `<p style="color: var(--texto-secundario); font-size: 0.85rem;">
+                    Pagamento avulso ativo até ${ate || '—'}. Renove antes dessa data para não perder o acesso.
+                </p>`;
+            }
+        }
+
+        // Os limites são configuráveis no painel admin. Sem isto, a
+        // página continuaria anunciando os números antigos enquanto o
+        // banco já aplicava outros.
+        async function preencherLimites() {
+            const alvos = document.querySelectorAll('[data-limite]');
+            if (!alvos.length) return;
+            try {
+                const { data, error } = await supabase.rpc('limites_publicos');
+                if (error) throw error;
+                const g = data?.gratuito;
+                if (!g) return;
+                alvos.forEach(el => {
+                    const v = g[el.dataset.limite];
+                    if (v !== null && v !== undefined) el.textContent = v;
+                });
+            } catch (e) {
+                // Falhou: ficam os valores do HTML, que são os padrões.
+                console.warn('Não foi possível carregar os limites:', e.message);
+            }
+        }
+
+        preencherLimites();
         destacarPlanoAtual();
+        montarBlocoAssinatura();
+
         const btnCheckout = document.getElementById('btnAbrirCheckout');
         if (btnCheckout) btnCheckout.addEventListener('click', abrirCheckout);
+
+        document.getElementById('optCartao')?.addEventListener('click', () => iniciarPagamento('recorrente'));
+        document.getElementById('optPix')?.addEventListener('click', () => iniciarPagamento('avulso'));
     </script>
     <script>
         lucide.createIcons();

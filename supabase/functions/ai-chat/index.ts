@@ -1,11 +1,41 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// ============================================================
+// ai-chat — assistente de IA e diagnóstico
+//
+// Arquivo único de propósito. As Edge Functions são publicadas pelo
+// painel do Supabase, colando o código: um import do tipo
+// "../_shared/algo.ts" apontaria para fora da pasta da função e o
+// painel não teria como incluir o arquivo no pacote.
+//
+// Manter as tools e o diagnóstico aqui dentro também dá de graça a
+// garantia que interessa: o teste de tools do painel admin roda
+// exatamente o mesmo código que atende os usuários, porque é
+// literalmente o mesmo arquivo — não há duas cópias para sair de
+// sincronia.
+//
+// Rotas (todas POST, autenticadas):
+//   { message, session_id, stream }  -> chat (qualquer usuário)
+//   { action: 'test_provider' }      -> playground        (admin)
+//   { action: 'list_models' }        -> listar modelos    (admin)
+//   { action: 'test_tools' }         -> testar as tools   (admin)
+// ============================================================
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+  status,
+  headers: { ...corsHeaders, "Content-Type": "application/json" },
+});
+
+
+// ============================================================
+// Tools da IA — definições e execução
+// ============================================================
 const SYSTEM_PROMPT = `Você é o FinMei, assistente financeiro inteligente do FinMEI — plataforma de gestão financeira para MEI (Microempreendedor Individual).
 
 ## Personalidade
@@ -94,7 +124,7 @@ const SYSTEM_PROMPT = `Você é o FinMei, assistente financeiro inteligente do F
 - Busca em tempo real por nome
 - Botão de WhatsApp integrado (abre wa.me com mensagem pré-definida)
 - Edição e exclusão (exclusão é soft delete — só fica inativo)
-- Limite: 10 clientes no plano gratuito
+- Há limite de clientes no plano gratuito (o número exato vem no contexto desta conversa)
 
 ### Produtos
 - Catálogo de produtos/serviços com nome, descrição, valor e foto (opcional)
@@ -112,13 +142,18 @@ const SYSTEM_PROMPT = `Você é o FinMei, assistente financeiro inteligente do F
 ### IA (este chat)
 - Assistente financeiro que pode cadastrar, buscar, editar e excluir dados
 - Acessível pela sidebar ("FinMEI IA") ou pelo botão flutuante (FAB) em todas as páginas
-- Limite diário de mensagens: 10 (gratuito) ou 50 (premium)
+- Há limite diário de mensagens, diferente por plano (o valor atual vem no contexto)
 - Sessões de conversa persistentes
 
 ### Planos
-- Gratuito: 14 dias de trial, 10 clientes, 50 movimentações, 10 msgs IA/dia
-- Premium (R$ 15,90/mês): ilimitado, exportação, relatórios BI, 50 msgs IA/dia
-- Pagamento via Mercado Pago
+- Gratuito: período de teste, com limites de clientes, movimentações,
+  produtos e mensagens por dia
+- Premium: sem limite de cadastro, exportação, relatórios BI e mais
+  mensagens por dia
+- Pagamento via Mercado Pago (cartão com renovação automática ou PIX avulso)
+- NUNCA invente os números dos limites nem o preço: os valores válidos
+  chegam na seção "Plano do usuário" do contexto. Se algum não estiver
+  lá, diga para conferir na página de Planos em vez de chutar.
 
 ### Relatórios BI (Premium)
 - Dashboard analítico com gráficos avançados (Plotly)
@@ -542,11 +577,63 @@ function numeroValido(value: unknown): boolean {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+// Tools que gravam no banco. Usado em dois lugares:
+//  - para checar o limite do plano ANTES de inserir
+//  - para não repetir a ação se um provedor de IA falhar no meio
+const TOOLS_ESCRITA = new Set([
+  "criar_produto", "criar_venda", "criar_devedor", "criar_gasto", "criar_cliente",
+  "editar_produto", "editar_cliente", "editar_venda", "editar_gasto",
+  "excluir_produto", "excluir_cliente", "excluir_venda", "excluir_gasto",
+]);
+
+// Qual limite do plano cada cadastro consome
+const ENTIDADE_POR_TOOL: Record<string, string> = {
+  criar_cliente: 'cliente',
+  criar_produto: 'produto',
+  criar_venda: 'movimentacao',
+  criar_devedor: 'movimentacao',
+  criar_gasto: 'movimentacao',
+};
+
+const ROTULO_ENTIDADE: Record<string, string> = {
+  cliente: 'clientes',
+  produto: 'produtos',
+  movimentacao: 'vendas e gastos',
+};
+
+// As triggers do banco (plano_limites.sql) já barram tudo isso — a
+// service role ignora RLS mas não ignora trigger. A checagem aqui é
+// para a IA responder com uma frase natural em vez de repassar o
+// erro cru do Postgres.
+async function checarPlanoParaTool(name: string, supabaseAdmin: any, userId: string) {
+  if (!TOOLS_ESCRITA.has(name)) return null;
+
+  const { data: ativo } = await supabaseAdmin.rpc('plano_ativo', { uid: userId });
+  if (ativo === false) {
+    return { error: 'O período de acesso do usuário terminou. Ele precisa assinar o Premium para cadastrar ou alterar registros.' };
+  }
+
+  const entidade = ENTIDADE_POR_TOOL[name];
+  if (!entidade) return null;
+
+  const { data: disponivel } = await supabaseAdmin.rpc('limite_disponivel', {
+    uid: userId, entidade,
+  });
+  if (disponivel === false) {
+    return { error: `O plano atual do usuário atingiu o limite de ${ROTULO_ENTIDADE[entidade]}. Para cadastrar mais, ele precisa assinar o Premium.` };
+  }
+
+  return null;
+}
+
 async function executeTool(name: string, args: Record<string, unknown>, supabaseAdmin: any, userId: string) {
   const hoje = new Date();
   const thirtyDaysAgo = new Date(hoje.getTime() - 30 * 86400000);
   const defaultStart = thirtyDaysAgo.toISOString().split('T')[0];
   const defaultEnd = hoje.toISOString().split('T')[0];
+
+  const bloqueio = await checarPlanoParaTool(name, supabaseAdmin, userId);
+  if (bloqueio) return bloqueio;
 
   switch (name) {
     case "buscar_vendas": {
@@ -1071,14 +1158,407 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
   }
 }
 
+// ============================================================
+// Montagem de headers
+//
+// Antes era fixo em "Authorization: Bearer <chave>", o que deixava
+// de fora o Azure OpenAI (header api-key, sem prefixo), gateways
+// que exigem X-Api-Key e o Ollama local (sem chave nenhuma).
+// Agora sai da configuração do provedor.
+// ============================================================
+// ============================================================
+// Robustez das chamadas a provedor
+//
+// O objetivo aqui é simples: nenhum provedor com problema pode
+// impedir que o próximo seja tentado. Isso exige quatro coisas que
+// faltavam — timeout, mensagem de erro utilizável, leitura segura
+// do corpo, e uma nova tentativa quando a falha é claramente
+// passageira.
+// ============================================================
+
+// Um provedor pendurado travava a requisição inteira até a plataforma
+// matar a função — e o fallback nunca chegava a acontecer.
+//
+// 30s por chamada, e não mais: o loop de tools faz várias chamadas por
+// provedor, e ainda há os provedores seguintes na fila. Passar disso
+// arrisca estourar o tempo total da Edge Function antes de tentar todo
+// mundo — o oposto do que o fallback existe para fazer.
+const TEMPO_LIMITE_MS = 30000;
+
+// Falhas que costumam passar sozinhas: vale uma segunda tentativa
+// antes de desistir do provedor.
+const STATUS_TRANSITORIO = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+// Orçamento de tempo da requisição inteira.
+//
+// O timeout por chamada não basta: o loop de tools faz até 10 chamadas
+// por provedor, então um provedor lento sozinho poderia consumir 300s e
+// a função seria morta pela plataforma antes de tentar os outros — o
+// fallback nunca aconteceria justamente quando é mais necessário.
+//
+// O prazo fica no objeto do provedor (e não numa variável de módulo)
+// porque o mesmo isolate atende várias requisições ao mesmo tempo: uma
+// variável compartilhada faria uma conversa encurtar o prazo da outra.
+const ORCAMENTO_TOTAL_MS = 100000;
+const MINIMO_PARA_TENTAR_MS = 5000;
+// Tempo guardado para cada provedor ainda não tentado.
+const RESERVA_POR_PROVEDOR_MS = 25000;
+
+function restanteMs(provider: any) {
+  return provider?._prazo ? Math.max(0, provider._prazo - Date.now()) : TEMPO_LIMITE_MS;
+}
+
+// Qualquer coisa pode ser lançada em JS. Sem isto, um throw de string
+// fazia `e.message` virar undefined e o `.includes()` seguinte
+// derrubava a requisição inteira de dentro do próprio catch.
+function msgErro(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === 'string') return e;
+  try { return JSON.stringify(e); } catch { return String(e); }
+}
+
+function erroProvedor(nome: string, status: number | null, corpo: string) {
+  const erro: any = new Error(
+    status ? `${nome} error ${status}: ${corpo}` : `${nome}: ${corpo}`
+  );
+  erro.status = status;
+  erro.corpo = corpo;
+  erro.transitorio = status === null || STATUS_TRANSITORIO.has(status);
+  return erro;
+}
+
+// Antes de gastar uma chamada: configuração incompleta dá TypeError
+// críptico no fetch (ex.: fetch('') com api_url vazia).
+function validarProvedor(provider: any) {
+  if (!provider?.model) {
+    throw erroProvedor(provider?.provider_name || 'provedor', null, 'modelo não configurado');
+  }
+  if (provider.provider_type !== 'gemini' && !provider.api_url) {
+    throw erroProvedor(provider.provider_name, null, 'URL da API não configurada');
+  }
+}
+
+async function fetchProvedor(provider: any, url: string, init: RequestInit) {
+  // Nunca esperar mais do que sobra do orçamento: o tempo que resta
+  // pertence também aos provedores seguintes.
+  const limite = Math.min(TEMPO_LIMITE_MS, restanteMs(provider));
+  if (limite < MINIMO_PARA_TENTAR_MS) {
+    const esgotado = erroProvedor(provider.provider_name, null, 'tempo total da requisição esgotado');
+    esgotado.transitorio = false;
+    esgotado.semTempo = true;
+    throw esgotado;
+  }
+
+  const controle = new AbortController();
+  const alarme = setTimeout(() => controle.abort(), limite);
+
+  try {
+    return await fetch(url, { ...init, signal: controle.signal });
+  } catch (e) {
+    const msg = msgErro(e);
+    const ehTimeout = msg.includes('abort') || (e as any)?.name === 'AbortError';
+    const erro = erroProvedor(
+      provider.provider_name,
+      null,
+      ehTimeout ? `não respondeu em ${Math.round(limite / 1000)}s` : `falha de conexão — ${msg}`,
+    );
+    // Timeout não se repete: já esperamos o tempo inteiro uma vez, e
+    // insistir só atrasaria o próximo provedor. Queda de conexão, sim.
+    if (ehTimeout) erro.transitorio = false;
+    throw erro;
+  } finally {
+    clearTimeout(alarme);
+  }
+}
+
+// Um proxy mal configurado devolve HTML de erro com status 200. Ler
+// como texto primeiro deixa a mensagem legível em vez de um
+// "Unexpected token < in JSON".
+async function lerJson(provider: any, res: Response) {
+  const texto = await res.text();
+
+  if (!res.ok) {
+    throw erroProvedor(provider.provider_name, res.status, texto.slice(0, 2000));
+  }
+
+  try {
+    return JSON.parse(texto);
+  } catch {
+    throw erroProvedor(
+      provider.provider_name,
+      res.status,
+      `resposta não é JSON — ${texto.slice(0, 400)}`,
+    );
+  }
+}
+
+// Uma segunda tentativa só quando a falha aparenta ser passageira.
+// Não há risco de efeito colateral duplicado: se a chamada falhou,
+// nenhuma tool chegou a rodar nessa rodada.
+async function comRetry<T>(provider: any, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    if (!(e as any)?.transitorio) throw e;
+    console.warn(`[${provider.provider_name}] falha passageira, tentando de novo: ${msgErro(e)}`);
+    await new Promise(r => setTimeout(r, 800));
+    return await fn();
+  }
+}
+
+function montarHeaders(provider: any): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+
+  if (provider.api_key) {
+    const nome = (provider.auth_header || 'Authorization').trim();
+    const prefixo = provider.auth_prefix ?? 'Bearer ';
+    headers[nome] = `${prefixo}${provider.api_key}`;
+  }
+
+  // extra_headers é jsonb; pode chegar como objeto ou como texto
+  let extras = provider.extra_headers;
+  if (typeof extras === 'string') {
+    try { extras = JSON.parse(extras); } catch { extras = null; }
+  }
+  if (extras && typeof extras === 'object' && !Array.isArray(extras)) {
+    for (const [k, v] of Object.entries(extras)) {
+      if (typeof v === 'string' && k.trim()) headers[k.trim()] = v;
+    }
+  }
+
+  return headers;
+}
+
+// URL de listagem de modelos. Se o provedor não tiver uma explícita,
+// deriva do endpoint de chat — quase todo mundo compatível com OpenAI
+// troca /chat/completions por /models.
+function urlDeModelos(provider: any): string | null {
+  if (provider.models_url) return provider.models_url;
+
+  if (provider.provider_type === 'gemini') {
+    const chave = provider.api_key ? `?key=${provider.api_key}` : '';
+    return `https://generativelanguage.googleapis.com/v1beta/models${chave}`;
+  }
+
+  if (provider.provider_type === 'anthropic') {
+    return 'https://api.anthropic.com/v1/models';
+  }
+
+  if (!provider.api_url) return null;
+  if (provider.api_url.includes('/chat/completions')) {
+    return provider.api_url.replace('/chat/completions', '/models');
+  }
+  try {
+    return new URL('./models', provider.api_url).href;
+  } catch {
+    return null;
+  }
+}
+
+// Normaliza a resposta de cada formato numa lista simples de ids
+function extrairModelos(provider: any, dados: any): string[] {
+  if (!dados) return [];
+
+  if (provider.provider_type === 'gemini') {
+    return (dados.models || [])
+      .filter((m: any) => !m.supportedGenerationMethods
+        || m.supportedGenerationMethods.includes('generateContent'))
+      .map((m: any) => String(m.name || '').replace(/^models\//, ''))
+      .filter(Boolean);
+  }
+
+  // OpenAI, Anthropic, Groq, OpenRouter, LiteLLM, Ollama: { data: [{ id }] }
+  if (Array.isArray(dados.data)) {
+    return dados.data.map((m: any) => m.id || m.name).filter(Boolean);
+  }
+  if (Array.isArray(dados.models)) {
+    return dados.models.map((m: any) => m.id || m.name).filter(Boolean);
+  }
+  return [];
+}
+// ============================================================
+// Adapter Anthropic (Claude)
+//
+// A API da Anthropic não é compatível com a da OpenAI: o system vai
+// num campo separado, as tools usam input_schema, e a resposta vem
+// em blocos de conteúdo com type 'tool_use' no lugar de tool_calls.
+//
+// Assim como o adapter do Gemini, este traduz nos dois sentidos e
+// devolve no formato OpenAI — o loop de tools da ai-chat não muda.
+// ============================================================
+async function callAnthropic(provider: any, messages: any[], tools?: any[]) {
+  const sistema = messages.find((m: any) => m.role === 'system')?.content;
+
+  // Anthropic exige alternância e não aceita role 'tool': os
+  // resultados viram blocos tool_result dentro de uma mensagem user.
+  const conversa: any[] = [];
+  for (const m of messages) {
+    if (m.role === 'system') continue;
+
+    if (m.role === 'tool') {
+      const bloco = {
+        type: 'tool_result',
+        tool_use_id: m.tool_call_id,
+        content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+      };
+      const ultima = conversa[conversa.length - 1];
+      if (ultima?.role === 'user' && Array.isArray(ultima.content)) {
+        ultima.content.push(bloco);
+      } else {
+        conversa.push({ role: 'user', content: [bloco] });
+      }
+      continue;
+    }
+
+    if (m.role === 'assistant' && m.tool_calls?.length) {
+      const blocos: any[] = [];
+      if (m.content) blocos.push({ type: 'text', text: m.content });
+      for (const tc of m.tool_calls) {
+        let entrada = {};
+        try { entrada = JSON.parse(tc.function.arguments || '{}'); } catch { entrada = {}; }
+        blocos.push({
+          type: 'tool_use',
+          id: tc.id,
+          name: tc.function.name,
+          input: entrada,
+        });
+      }
+      conversa.push({ role: 'assistant', content: blocos });
+      continue;
+    }
+
+    conversa.push({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+    });
+  }
+
+  const body: Record<string, unknown> = {
+    model: provider.model,
+    max_tokens: provider.max_tokens || 2000,
+    temperature: provider.temperature ?? 0.7,
+    messages: conversa,
+  };
+  if (sistema) body.system = sistema;
+
+  if (tools?.length) {
+    body.tools = tools.map((t: any) => ({
+      name: t.function.name,
+      description: t.function.description,
+      input_schema: t.function.parameters,
+    }));
+  }
+
+  const headers = montarHeaders(provider);
+  // A Anthropic usa x-api-key e exige a versão da API. O admin pode
+  // sobrescrever pelos campos avançados; estes são só o padrão.
+  if (!provider.auth_header || provider.auth_header === 'Authorization') {
+    delete headers['Authorization'];
+    if (provider.api_key) headers['x-api-key'] = provider.api_key;
+  }
+  if (!headers['anthropic-version']) headers['anthropic-version'] = '2023-06-01';
+
+  const url = provider.api_url || 'https://api.anthropic.com/v1/messages';
+  const res = await fetchProvedor(provider, url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  const data = await lerJson(provider, res);
+  const blocos = data.content || [];
+  const texto = blocos.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
+  const usos = blocos.filter((b: any) => b.type === 'tool_use');
+
+  const totalTokens = (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0);
+
+  if (usos.length) {
+    return {
+      choices: [{
+        message: {
+          role: 'assistant',
+          content: texto || null,
+          tool_calls: usos.map((b: any) => ({
+            id: b.id,
+            type: 'function',
+            function: { name: b.name, arguments: JSON.stringify(b.input || {}) },
+          })),
+        },
+        finish_reason: 'tool_calls',
+      }],
+      usage: { total_tokens: totalTokens },
+    };
+  }
+
+  return {
+    choices: [{
+      message: { role: 'assistant', content: texto },
+      finish_reason: data.stop_reason || 'stop',
+    }],
+    usage: { total_tokens: totalTokens },
+  };
+}
+
+// ============================================================
+// Registro de falhas (ai_error_logs)
+//
+// Nunca lança: um problema ao gravar o log não pode derrubar a
+// resposta ao usuário. Se falhar, sobra o console.
+//
+// O detalhe é truncado porque os argumentos de tool carregam nome
+// de cliente e valores — guardar o payload inteiro de toda falha
+// transformaria a tabela de log num espelho da base.
+// ============================================================
+const LIMITE_DETALHE = 4000;
+
+function truncar(valor: unknown): unknown {
+  if (valor === null || valor === undefined) return valor;
+  const texto = typeof valor === 'string' ? valor : JSON.stringify(valor);
+  if (texto === undefined) return null;
+  if (texto.length <= LIMITE_DETALHE) {
+    return typeof valor === 'string' ? valor : valor;
+  }
+  return texto.slice(0, LIMITE_DETALHE) + `… (+${texto.length - LIMITE_DETALHE} caracteres)`;
+}
+
+interface FalhaIA {
+  tipo: 'provider' | 'tool' | 'args' | 'fallback' | 'config';
+  mensagem: string;
+  user_id?: string | null;
+  session_id?: string | null;
+  provider?: string | null;
+  model?: string | null;
+  tool_name?: string | null;
+  http_status?: number | null;
+  detalhe?: Record<string, unknown> | null;
+}
+
+async function registrarErro(supabaseAdmin: any, falha: FalhaIA) {
+  try {
+    const detalhe = falha.detalhe
+      ? Object.fromEntries(Object.entries(falha.detalhe).map(([k, v]) => [k, truncar(v)]))
+      : null;
+
+    await supabaseAdmin.from('ai_error_logs').insert({
+      user_id: falha.user_id ?? null,
+      session_id: falha.session_id ?? null,
+      tipo: falha.tipo,
+      provider: falha.provider ?? null,
+      model: falha.model ?? null,
+      tool_name: falha.tool_name ?? null,
+      http_status: falha.http_status ?? null,
+      mensagem: String(falha.mensagem).slice(0, 2000),
+      detalhe,
+    });
+  } catch (e) {
+    console.error('Falha ao registrar erro de IA:', (e as Error).message);
+  }
+}
+
+
 // Adapter genérico: qualquer API compatível com OpenAI
 async function callOpenAICompatible(provider: any, messages: any[], tools?: any[]) {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  if (provider.api_key) {
-    headers["Authorization"] = `Bearer ${provider.api_key}`;
-  }
+  const headers = montarHeaders(provider);
 
   const body: Record<string, unknown> = {
     model: provider.model,
@@ -1088,18 +1568,13 @@ async function callOpenAICompatible(provider: any, messages: any[], tools?: any[
   };
   if (tools) body.tools = tools;
 
-  const res = await fetch(provider.api_url, {
+  const res = await fetchProvedor(provider, provider.api_url, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`${provider.provider_name} error ${res.status}: ${err}`);
-  }
-
-  return await res.json();
+  return await lerJson(provider, res);
 }
 
 // Adapter Gemini nativo
@@ -1130,18 +1605,15 @@ async function callGemini(provider: any, messages: any[], tools?: any[]) {
   }
 
   const url = provider.api_url || `https://generativelanguage.googleapis.com/v1beta/models/${provider.model}:generateContent?key=${provider.api_key}`;
-  const res = await fetch(url, {
+  // O Gemini leva a chave na URL, então aqui só entram os headers
+  // extras que o admin tenha configurado.
+  const res = await fetchProvedor(provider, url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: montarHeaders({ ...provider, api_key: null }),
     body: JSON.stringify(body),
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Gemini error ${res.status}: ${err}`);
-  }
-
-  const data = await res.json();
+  const data = await lerJson(provider, res);
   const candidate = data.candidates?.[0];
   const parts = candidate?.content?.parts || [];
 
@@ -1177,12 +1649,202 @@ async function callGemini(provider: any, messages: any[], tools?: any[]) {
   };
 }
 
-async function callAI(provider: any, messages: any[], tools?: any[]) {
-  if (provider.provider_type === 'gemini') {
-    return await callGemini(provider, messages, tools);
+// ------------------------------------------------------------------
+// Streaming
+//
+// Sem isto o usuário via três pontinhos por 15-30s (o loop de tools
+// chega a 10 rodadas) e a resposta caía de uma vez. Agora o texto
+// aparece conforme a IA escreve, e durante as ações o chat mostra o
+// que está acontecendo ("consultando suas vendas...").
+//
+// Cada chamada ao provedor é transmitida: se vierem tool_calls, os
+// pedaços são acumulados e nada é exibido; se vier texto, ele sai na
+// hora. Assim a rodada que de fato produz a resposta é a que faz o
+// streaming, sem precisar adivinhar antes qual será.
+// ------------------------------------------------------------------
+async function callOpenAICompatibleStream(
+  provider: any,
+  messages: any[],
+  tools: any[] | undefined,
+  onDelta: (texto: string) => void,
+) {
+  const headers = montarHeaders(provider);
+
+  const body: Record<string, unknown> = {
+    model: provider.model,
+    messages,
+    max_tokens: provider.max_tokens || 2000,
+    temperature: provider.temperature || 0.7,
+    stream: true,
+    stream_options: { include_usage: true },
+  };
+  if (tools) body.tools = tools;
+
+  const res = await fetchProvedor(provider, provider.api_url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok || !res.body) {
+    const err = await res.text().catch(() => '');
+    throw erroProvedor(provider.provider_name, res.status, err || 'resposta sem corpo');
   }
-  // Default: OpenAI-compatible (openai, groq, openrouter, together, nvidia, cerebras, etc.)
-  return await callOpenAICompatible(provider, messages, tools);
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  let conteudo = '';
+  const toolCalls: any[] = [];
+  let finishReason: string | null = null;
+  let usage: any = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const linhas = buffer.split('\n');
+    buffer = linhas.pop() || '';
+
+    for (const linha of linhas) {
+      const t = linha.trim();
+      if (!t.startsWith('data:')) continue;
+
+      const dado = t.slice(5).trim();
+      if (dado === '[DONE]') continue;
+
+      let pacote: any;
+      try { pacote = JSON.parse(dado); } catch { continue; }
+
+      if (pacote.usage) usage = pacote.usage;
+
+      const escolha = pacote.choices?.[0];
+      if (!escolha) continue;
+      if (escolha.finish_reason) finishReason = escolha.finish_reason;
+
+      const delta = escolha.delta || {};
+
+      if (delta.content) {
+        conteudo += delta.content;
+        onDelta(delta.content);
+      }
+
+      // tool_calls chegam fatiados e precisam ser remontados por índice
+      if (delta.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          const i = tc.index ?? 0;
+          if (!toolCalls[i]) {
+            toolCalls[i] = { id: '', type: 'function', function: { name: '', arguments: '' } };
+          }
+          if (tc.id) toolCalls[i].id = tc.id;
+          if (tc.type) toolCalls[i].type = tc.type;
+          if (tc.function?.name) toolCalls[i].function.name += tc.function.name;
+          if (tc.function?.arguments) toolCalls[i].function.arguments += tc.function.arguments;
+        }
+      }
+    }
+  }
+
+  const message: any = { role: 'assistant', content: conteudo || null };
+  const chamadas = toolCalls.filter(Boolean);
+  if (chamadas.length) message.tool_calls = chamadas;
+
+  return {
+    choices: [{ message, finish_reason: finishReason }],
+    usage: usage || { total_tokens: 0 },
+  };
+}
+
+// O adapter do Gemini continua sem streaming: entregamos o texto
+// completo num único delta, e o fallback segue funcionando igual.
+// Valida a configuração e concede uma segunda tentativa em falha
+// passageira antes de deixar o provedor cair para o próximo.
+async function callAIStream(
+  provider: any,
+  messages: any[],
+  tools: any[] | undefined,
+  onDelta: (texto: string) => void,
+) {
+  validarProvedor(provider);
+
+  // Anthropic e Gemini não fazem streaming aqui: entregam o texto num
+  // delta só. O importante é que o retorno tenha sempre o mesmo
+  // formato, para o loop de tools não precisar saber quem respondeu.
+  if (provider.provider_type === 'anthropic' || provider.provider_type === 'gemini') {
+    const chamar = provider.provider_type === 'anthropic' ? callAnthropic : callGemini;
+    const resposta = await comRetry(provider, () => chamar(provider, messages, tools));
+    exigirRespostaUtil(provider, resposta);
+    const texto = resposta?.choices?.[0]?.message?.content;
+    if (texto) onDelta(texto);
+    return resposta;
+  }
+
+  // No streaming o retry só vale enquanto nada foi transmitido: o
+  // cliente já teria recebido a primeira metade do texto.
+  let jaEmitiu = false;
+  const onDeltaMarcado = (t: string) => { jaEmitiu = true; onDelta(t); };
+
+  const resposta = await comRetry(provider, async () => {
+    if (jaEmitiu) throw erroProvedor(provider.provider_name, null, 'falhou no meio da transmissão');
+    return await callOpenAICompatibleStream(provider, messages, tools, onDeltaMarcado);
+  });
+
+  exigirRespostaUtil(provider, resposta);
+  return resposta;
+}
+
+// Um 200 OK sem texto e sem tool_call é uma falha silenciosa: o
+// usuário recebia "não consegui processar" e o próximo provedor nunca
+// era tentado. Agora vira erro, e o fallback acontece.
+function exigirRespostaUtil(provider: any, resposta: any) {
+  const msg = resposta?.choices?.[0]?.message;
+  const temTexto = typeof msg?.content === 'string' && msg.content.trim().length > 0;
+  const temTool = Array.isArray(msg?.tool_calls) && msg.tool_calls.length > 0;
+  if (!temTexto && !temTool) {
+    throw erroProvedor(provider.provider_name, null, 'respondeu vazio (sem texto e sem tool)');
+  }
+}
+
+// Frase curta mostrada enquanto a ação roda
+function rotuloTool(nome: string) {
+  const mapa: Record<string, string> = {
+    buscar_vendas: 'Consultando suas vendas...',
+    buscar_gastos: 'Consultando seus gastos...',
+    buscar_clientes: 'Consultando seus clientes...',
+    buscar_produtos: 'Consultando seus produtos...',
+    resumo_financeiro: 'Calculando o resumo financeiro...',
+    top_gastos: 'Levantando os maiores gastos...',
+    top_clientes: 'Levantando os melhores clientes...',
+    criar_venda: 'Registrando a venda...',
+    criar_gasto: 'Registrando o gasto...',
+    criar_cliente: 'Cadastrando o cliente...',
+    criar_produto: 'Cadastrando o produto...',
+    criar_devedor: 'Registrando o devedor...',
+    editar_venda: 'Atualizando a venda...',
+    editar_gasto: 'Atualizando o gasto...',
+    editar_cliente: 'Atualizando o cliente...',
+    editar_produto: 'Atualizando o produto...',
+    excluir_venda: 'Excluindo a venda...',
+    excluir_gasto: 'Excluindo o gasto...',
+    excluir_cliente: 'Excluindo o cliente...',
+    excluir_produto: 'Excluindo o produto...',
+  };
+  return mapa[nome] || 'Processando...';
+}
+
+async function callAI(provider: any, messages: any[], tools?: any[]) {
+  validarProvedor(provider);
+
+  const chamar = provider.provider_type === 'anthropic' ? callAnthropic
+    : provider.provider_type === 'gemini' ? callGemini
+    // Default: OpenAI-compatible (groq, openrouter, together, litellm, ollama...)
+    : callOpenAICompatible;
+
+  const resposta = await comRetry(provider, () => chamar(provider, messages, tools));
+  exigirRespostaUtil(provider, resposta);
+  return resposta;
 }
 
 function gerarRespostaTools(toolResults: any[]): string {
@@ -1245,6 +1907,381 @@ function gerarRespostaTools(toolResults: any[]): string {
   return responses.length ? responses.join('\n') : 'Ferramenta executada sem retorno visível.';
 }
 
+
+// ============================================================
+// Diagnóstico (painel admin)
+// ============================================================
+
+async function verifyAdmin(req: Request) {
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) return { error: 'Não autenticado', status: 401 };
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) return { error: 'Token inválido', status: 401 };
+
+  const { data: profile } = await supabase
+    .from('perfis').select('role').eq('id', user.id).single();
+  if (profile?.role !== 'admin') return { error: 'Sem permissão', status: 403 };
+
+  return { supabase, user };
+}
+
+// A tela manda a config do provedor para dar para testar ANTES de
+// salvar. A chave, porém, nunca volta do servidor mascarada nem em
+// claro — então quando vier vazia ou mascarada, buscamos a salva.
+async function resolverProvedor(supabase: any, enviado: any) {
+  const provider = { ...enviado };
+
+  const semChave = !provider.api_key || String(provider.api_key).includes('••••');
+
+  if (semChave && provider.provider_name) {
+    const { data } = await supabase
+      .from('ai_providers')
+      .select('api_key')
+      .eq('provider_name', provider.provider_name)
+      .maybeSingle();
+    provider.api_key = data?.api_key || null;
+  }
+
+  return provider;
+}
+
+// ------------------------------------------------------------------
+// Uma chamada ao provedor, medindo tempo e devolvendo o erro cru
+// ------------------------------------------------------------------
+async function chamarProvedor(provider: any, messages: any[], tools?: any[]) {
+  const inicio = Date.now();
+
+  try {
+    if (provider.provider_type === 'anthropic') {
+      const r = await callAnthropic(provider, messages, tools);
+      return { ok: true, ms: Date.now() - inicio, resposta: r };
+    }
+
+    if (provider.provider_type === 'gemini') {
+      const contents = messages
+        .filter((m: any) => m.role !== 'system')
+        .map((m: any) => ({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: String(m.content ?? '') }],
+        }));
+
+      const sistema = messages.find((m: any) => m.role === 'system');
+      const body: Record<string, unknown> = {
+        contents,
+        generationConfig: {
+          temperature: provider.temperature ?? 0.7,
+          maxOutputTokens: provider.max_tokens || 2000,
+        },
+      };
+      if (sistema) body.systemInstruction = { parts: [{ text: sistema.content }] };
+      if (tools?.length) {
+        body.tools = [{
+          functionDeclarations: tools.map((t: any) => ({
+            name: t.function.name,
+            description: t.function.description,
+            parameters: t.function.parameters,
+          })),
+        }];
+      }
+
+      const url = provider.api_url
+        || `https://generativelanguage.googleapis.com/v1beta/models/${provider.model}:generateContent?key=${provider.api_key}`;
+
+      // Mesmo timeout do chat: sem isso o painel do admin ficaria
+      // pendurado num provedor que não responde.
+      const res = await fetchProvedor(provider, url, {
+        method: 'POST',
+        headers: montarHeaders({ ...provider, api_key: null }),
+        body: JSON.stringify(body),
+      });
+      const texto = await res.text();
+      if (!res.ok) {
+        return { ok: false, ms: Date.now() - inicio, status: res.status, corpo: texto };
+      }
+      return { ok: true, ms: Date.now() - inicio, resposta: JSON.parse(texto) };
+    }
+
+    // OpenAI-compatible (Groq, OpenRouter, LiteLLM, Ollama, Azure...)
+    const body: Record<string, unknown> = {
+      model: provider.model,
+      messages,
+      max_tokens: provider.max_tokens || 2000,
+      temperature: provider.temperature ?? 0.7,
+    };
+    if (tools?.length) body.tools = tools;
+
+    const res = await fetchProvedor(provider, provider.api_url, {
+      method: 'POST',
+      headers: montarHeaders(provider),
+      body: JSON.stringify(body),
+    });
+    const texto = await res.text();
+
+    if (!res.ok) {
+      return { ok: false, ms: Date.now() - inicio, status: res.status, corpo: texto };
+    }
+    return { ok: true, ms: Date.now() - inicio, resposta: JSON.parse(texto) };
+
+  } catch (e) {
+    // Erro de rede, DNS, timeout ou URL inválida
+    return { ok: false, ms: Date.now() - inicio, status: null, corpo: (e as Error).message };
+  }
+}
+
+// Extrai texto e tool calls de qualquer um dos formatos
+function resumirResposta(provider: any, resposta: any) {
+  if (provider.provider_type === 'gemini') {
+    const partes = resposta?.candidates?.[0]?.content?.parts || [];
+    return {
+      texto: partes.filter((p: any) => p.text).map((p: any) => p.text).join(''),
+      tools: partes.filter((p: any) => p.functionCall).map((p: any) => p.functionCall.name),
+      tokens: resposta?.usageMetadata?.totalTokenCount || 0,
+    };
+  }
+
+  const msg = resposta?.choices?.[0]?.message;
+  return {
+    texto: msg?.content || '',
+    tools: (msg?.tool_calls || []).map((t: any) => t.function?.name).filter(Boolean),
+    tokens: resposta?.usage?.total_tokens || 0,
+  };
+}
+
+// ------------------------------------------------------------------
+// Diagnóstico das tools
+// ------------------------------------------------------------------
+const HOJE = () => new Date().toISOString().split('T')[0];
+
+// Leitura: rodam sempre, não deixam rastro
+const TESTES_LEITURA: Array<{ nome: string; args: Record<string, unknown> }> = [
+  { nome: 'buscar_vendas',     args: { limite: 3 } },
+  { nome: 'buscar_gastos',     args: { limite: 3 } },
+  { nome: 'buscar_clientes',   args: {} },
+  { nome: 'buscar_produtos',   args: {} },
+  { nome: 'resumo_financeiro', args: {} },
+  { nome: 'top_gastos',        args: { limite: 3 } },
+  { nome: 'vendas_por_cliente', args: {} },
+  { nome: 'resumo_por_categoria', args: {} },
+];
+
+const MARCA = '[TESTE] diagnostico';
+
+async function testarTools(supabase: any, userId: string, incluirEscrita: boolean) {
+  const linhas: any[] = [];
+
+  const rodar = async (nome: string, args: Record<string, unknown>, rotulo?: string) => {
+    const inicio = Date.now();
+    try {
+      const r: any = await executeTool(nome, args, supabase, userId);
+      const ms = Date.now() - inicio;
+      if (r && r.error) {
+        linhas.push({ tool: rotulo || nome, ok: false, ms, mensagem: String(r.error) });
+        return null;
+      }
+      const qtd = Array.isArray(r) ? r.length : null;
+      linhas.push({
+        tool: rotulo || nome,
+        ok: true,
+        ms,
+        mensagem: qtd !== null ? `${qtd} registro(s)` : 'ok',
+      });
+      return r;
+    } catch (e) {
+      linhas.push({
+        tool: rotulo || nome,
+        ok: false,
+        ms: Date.now() - inicio,
+        mensagem: (e as Error).message,
+      });
+      return null;
+    }
+  };
+
+  for (const t of TESTES_LEITURA) {
+    await rodar(t.nome, t.args);
+  }
+
+  if (!incluirEscrita) return linhas;
+
+  // Faxina antes de começar. As tools de criação recusam duplicata
+  // (mesmo telefone, mesma descrição+valor+data), então uma sobra de
+  // execução anterior faria o teste reportar falha que não existe.
+  const sobras = { clientes: 0, despesas: 0, vendas: 0, produtos: 0 };
+  for (const [tabela, campo] of [
+    ['clientes', 'nome'], ['despesas', 'descricao'],
+    ['vendas', 'descricao'], ['produtos', 'nome'],
+  ] as Array<[string, string]>) {
+    const { data } = await supabase.from(tabela).select(`id, ${campo}`)
+      .eq('user_id', userId).like(campo, `${MARCA}%`);
+    if (data?.length) {
+      await supabase.from(tabela).delete().eq('user_id', userId).like(campo, `${MARCA}%`);
+      (sobras as any)[tabela] = data.length;
+    }
+  }
+  const totalSobras = Object.values(sobras).reduce((a, b) => a + b, 0);
+  if (totalSobras) {
+    linhas.push({
+      tool: 'limpeza prévia', ok: true, ms: 0,
+      mensagem: `${totalSobras} registro(s) de teste de uma execução anterior foram removidos`,
+    });
+  }
+
+  // Escrita: cria com marca visível e apaga em seguida. Se a limpeza
+  // falhar, a linha diz qual id ficou para trás — nunca some calado.
+  const limpar = async (tabela: string, id: string, rotulo: string) => {
+    const { error } = await supabase.from(tabela).delete().eq('id', id).eq('user_id', userId);
+    linhas.push(error
+      ? { tool: rotulo, ok: false, ms: 0, mensagem: `NÃO REMOVIDO (id ${id}): ${error.message}` }
+      : { tool: rotulo, ok: true, ms: 0, mensagem: 'registro de teste removido' });
+  };
+
+  const cliente: any = await rodar('criar_cliente', {
+    nome: `${MARCA} cliente`,
+    // Número improvável de existir de verdade: a tool recusa cadastro
+    // com telefone repetido, e 11999999999 é comum demais em teste.
+    telefone: '11900000001',
+  });
+  if (cliente?.id) await limpar('clientes', cliente.id, 'criar_cliente · limpeza');
+
+  const gasto: any = await rodar('criar_gasto', {
+    descricao: `${MARCA} gasto`,
+    valor: 1,
+    data: HOJE(),
+    categoria: 'Outros',
+  });
+  if (gasto?.id) await limpar('despesas', gasto.id, 'criar_gasto · limpeza');
+
+  const venda: any = await rodar('criar_venda', {
+    descricao: `${MARCA} venda`,
+    valor: 1,
+    data_venda: HOJE(),
+    status: 'pago',
+  });
+  if (venda?.id) await limpar('vendas', venda.id, 'criar_venda · limpeza');
+
+  const produto: any = await rodar('criar_produto', {
+    nome: `${MARCA} produto`,
+    descricao: 'Registro temporário de diagnóstico',
+    valor: 1,
+  });
+  if (produto?.id) await limpar('produtos', produto.id, 'criar_produto · limpeza');
+
+  return linhas;
+}
+
+// ------------------------------------------------------------------
+
+
+// As três ações de diagnóstico. Só admin chega aqui.
+async function tratarDiagnostico(req: Request, body: any) {
+  const admin = await verifyAdmin(req);
+  if (admin.error) return json({ error: admin.error }, admin.status);
+
+  const supabase = admin.supabase!;
+  const acao = body.action;
+
+  // --------------------------------------------------------------
+  // Playground: uma chamada de teste ao provedor
+  // --------------------------------------------------------------
+  if (acao === 'test_provider') {
+    const provider = await resolverProvedor(supabase, body.provider || {});
+    if (body.model) provider.model = body.model;
+
+    if (!provider.model) return json({ error: 'Informe o modelo.' }, 400);
+    if (provider.provider_type !== 'gemini' && !provider.api_url) {
+      return json({ error: 'Informe a URL da API.' }, 400);
+    }
+
+    const mensagem = String(body.mensagem || 'Responda apenas: ok').trim();
+    const comContexto = Boolean(body.com_contexto);
+
+    const messages = comContexto
+      ? [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: mensagem }]
+      : [{ role: 'user', content: mensagem }];
+
+    const r = await chamarProvedor(provider, messages, comContexto ? TOOLS : undefined);
+
+    if (!r.ok) {
+      return json({
+        ok: false,
+        ms: r.ms,
+        http_status: r.status,
+        erro: r.corpo,
+        provider: provider.provider_name,
+        model: provider.model,
+      });
+    }
+
+    const resumo = resumirResposta(provider, r.resposta);
+    return json({
+      ok: true,
+      ms: r.ms,
+      provider: provider.provider_name,
+      model: provider.model,
+      texto: resumo.texto,
+      tools_chamadas: resumo.tools,
+      tokens: resumo.tokens,
+    });
+  }
+
+  // --------------------------------------------------------------
+  // Lista de modelos do provedor
+  // --------------------------------------------------------------
+  if (acao === 'list_models') {
+    const provider = await resolverProvedor(supabase, body.provider || {});
+    const url = urlDeModelos(provider);
+    if (!url) {
+      return json({ error: 'Não deu para descobrir a URL de modelos. Preencha "URL de modelos" nos campos avançados.' }, 400);
+    }
+
+    try {
+      const headers = provider.provider_type === 'gemini'
+        ? montarHeaders({ ...provider, api_key: null })
+        : montarHeaders(provider);
+
+      if (provider.provider_type === 'anthropic' && provider.api_key) {
+        delete headers['Authorization'];
+        headers['x-api-key'] = provider.api_key;
+        headers['anthropic-version'] = headers['anthropic-version'] || '2023-06-01';
+      }
+
+      const res = await fetchProvedor(provider, url, { headers });
+      const texto = await res.text();
+
+      if (!res.ok) {
+        return json({ error: `O provedor respondeu ${res.status}`, detalhe: texto.slice(0, 1500) });
+      }
+
+      const modelos = extrairModelos(provider, JSON.parse(texto));
+      return json({ modelos: modelos.sort(), total: modelos.length, url });
+    } catch (e) {
+      return json({ error: 'Falha ao consultar os modelos', detalhe: (e as Error).message });
+    }
+  }
+
+  // --------------------------------------------------------------
+  // Diagnóstico das tools
+  // --------------------------------------------------------------
+  if (acao === 'test_tools') {
+    const linhas = await testarTools(supabase, admin.user!.id, Boolean(body.incluir_escrita));
+    return json({
+      linhas,
+      total: linhas.length,
+      falhas: linhas.filter((l: any) => !l.ok).length,
+    });
+  }
+
+
+  return json({ error: 'Ação inválida.' }, 400);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -1258,6 +2295,15 @@ serve(async (req) => {
   }
 
   try {
+    // O corpo é lido uma vez e serve às duas rotas.
+    const corpo = await req.json().catch(() => ({} as any));
+
+    // Diagnóstico do painel admin. Vem antes do fluxo de chat porque
+    // tem outra regra de acesso (exige admin) e não consome cota.
+    if (corpo.action === 'test_provider' || corpo.action === 'list_models' || corpo.action === 'test_tools') {
+      return await tratarDiagnostico(req, corpo);
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
@@ -1279,7 +2325,7 @@ serve(async (req) => {
       });
     }
 
-    const { message, session_id } = await req.json();
+    const { message, session_id, stream: querStream } = corpo;
     if (!message || !message.trim()) {
       return new Response(JSON.stringify({ error: 'Mensagem vazia' }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -1317,6 +2363,20 @@ serve(async (req) => {
 
     if (!limits) {
       return new Response(JSON.stringify({ error: 'AI não disponível para este plano' }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403,
+      });
+    }
+
+    // Trial vencido continuava com 10 mensagens/dia, porque a busca em
+    // ai_limits usa só perfis.plano — que segue 'gratuito' mesmo depois
+    // de o período acabar. Agora o acesso ao chat segue o plano_ativo().
+    const { data: acessoAtivo } = await supabaseAdmin.rpc('plano_ativo', { uid: user.id });
+    if (acessoAtivo === false) {
+      return new Response(JSON.stringify({
+        error: 'Seu período de acesso terminou. Assine o Premium para voltar a usar o assistente.',
+        planExpired: true,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 403,
       });
@@ -1380,10 +2440,34 @@ serve(async (req) => {
     const pendentes = (vendasMes.data || []).filter((v: any) => v.status === 'pendente');
     const totalPendentes = pendentes.reduce((s: number, v: any) => s + Number(v.valor), 0);
 
+    // Limites reais do plano deste usuário. Vão para o contexto porque
+    // são configuráveis no painel: com os números cravados no prompt, a
+    // IA passaria a informar valores errados assim que o admin mudasse
+    // qualquer limite.
+    const { data: limitesPlano } = await supabaseAdmin
+      .from('plano_limites')
+      .select('*')
+      .eq('plan_type', planType)
+      .maybeSingle();
+
+    const ouIlimitado = (v: number | null | undefined) =>
+      (v === null || v === undefined) ? 'ilimitado' : String(v);
+
+    const blocoLimites = [
+      `- Plano do usuário: ${planType}`,
+      `- Limite de clientes: ${ouIlimitado(limitesPlano?.max_clientes)}`,
+      `- Limite de vendas + gastos somados: ${ouIlimitado(limitesPlano?.max_movimentacoes)}`,
+      `- Limite de produtos: ${ouIlimitado(limitesPlano?.max_produtos)}`,
+      `- Mensagens de IA por dia: ${effectiveDailyLimit} (usadas hoje: ${currentUsage.messages_used})`,
+      limitesPlano?.trial_dias
+        ? `- Dias de teste do plano gratuito: ${limitesPlano.trial_dias}`
+        : null,
+    ].filter(Boolean).join('\n');
+
     const contexto = `
 CONTEXTO DO USUÁRIO (resumo automático):
 - Nome: ${perfilRes?.data?.nome_completo || 'Não informado'} | Empresa: ${perfilRes?.data?.empresa || 'Não informado'}
-- Plano: ${planType}
+${blocoLimites}
 - Clientes cadastrados: ${clientesRes.data?.length || 0}
 - Mês atual (${inicioMes} a ${fimMes}): vendas R$${totalVendasMes.toFixed(2)}, gastos R$${totalGastosMes.toFixed(2)}, lucro R$${lucroMes.toFixed(2)}
 - Mês anterior: vendas R$${totalVendasMesAnt.toFixed(2)}, gastos R$${totalGastosMesAnt.toFixed(2)}, lucro R$${(totalVendasMesAnt - totalGastosMesAnt).toFixed(2)}
@@ -1405,116 +2489,329 @@ Use esses dados pra dar respostas inteligentes e contextualizadas. Não repita o
       .from('ai_providers').select('*').eq('active', true).order('priority', { ascending: true });
 
     if (!providers || !providers.length) {
+      await registrarErro(supabaseAdmin, {
+        tipo: 'config',
+        user_id: user.id,
+        mensagem: 'Nenhum provedor de IA ativo cadastrado.',
+      });
       return new Response(JSON.stringify({ error: 'Nenhum provedor de IA configurado. Configure na aba IA Config do admin.' }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 503,
       });
     }
 
-    let lastError = null;
-    let finalContent = '';
-    let totalTokens = 0;
-    let usedProvider = '';
-    let toolResults: any[] = [];
+    // ----------------------------------------------------------------
+    // A conversa roda dentro desta função para servir aos dois modos:
+    // JSON (compatibilidade) e SSE (streaming). O `emitir` é no-op no
+    // primeiro caso e escreve no fluxo no segundo.
+    // ----------------------------------------------------------------
+    async function conduzirConversa(emitir: (evento: any) => void) {
+      let lastError = null;
+      let finalContent = '';
+      let totalTokens = 0;
+      let usedProvider = '';
+      let toolResults: any[] = [];
 
-    for (const provider of providers) {
-      try {
-        let currentMessages = [...messages];
-        let response = await callAI(provider, currentMessages, TOOLS);
-        let choice = response.choices?.[0];
-        totalTokens = response.usage?.total_tokens || 0;
+      // Se um provedor já gravou algo no banco, não podemos tentar o
+      // próximo: ele receberia as mesmas mensagens e executaria o mesmo
+      // cadastro de novo, duplicando o registro.
+      let efeitoColateralExecutado = false;
 
-        let iterations = 0;
-        while (choice?.message?.tool_calls?.length && iterations < 10) {
-          currentMessages.push(choice.message);
+      // Se o provedor anterior chegou a transmitir texto antes de
+      // falhar, o cliente já mostrou aquele pedaço. Sem avisar para
+      // limpar, o texto do próximo provedor era concatenado no do
+      // anterior e o usuário via duas meias respostas grudadas.
+      let algumTextoTransmitido = false;
 
-          for (const toolCall of choice.message.tool_calls) {
-            const fnName = toolCall.function.name;
-            let fnArgs = {};
-            try { fnArgs = JSON.parse(toolCall.function.arguments); } catch {}
+      // Prazo global da requisição, e uma fatia por provedor dentro
+      // dele. Sem a fatia, um modelo que fica pedindo tools sem parar
+      // consome o orçamento inteiro no primeiro provedor e os demais
+      // nem chegam a ser tentados — que é o cenário em que o fallback
+      // mais faz falta.
+      const prazoGlobal = Date.now() + ORCAMENTO_TOTAL_MS;
 
-            const result = await executeTool(fnName, fnArgs, supabaseAdmin, user.id);
-            toolResults.push({ name: fnName, args: fnArgs, result });
+      for (let i = 0; i < providers.length; i++) {
+        const provider = providers[i];
+        const restantesNaFila = providers.length - i;
+        const sobra = prazoGlobal - Date.now();
 
-            currentMessages.push({
-              role: 'tool',
-              tool_call_id: toolCall.id,
-              content: JSON.stringify(result),
-            });
+        // Este provedor pode usar quase tudo, menos um slot reservado
+        // para cada um que ainda vem depois. Assim um modelo que fica
+        // pedindo tools sem parar não deixa a fila sem tempo.
+        const reservado = RESERVA_POR_PROVEDOR_MS * (restantesNaFila - 1);
+        const fatia = Math.max(TEMPO_LIMITE_MS, sobra - reservado);
+        provider._prazo = Math.min(prazoGlobal, Date.now() + fatia);
+
+        try {
+          if (restanteMs(provider) < MINIMO_PARA_TENTAR_MS) {
+            console.warn(`Sem tempo para tentar ${provider.provider_name}; encerrando o fallback.`);
+            break;
           }
 
-          try {
-            response = await callAI(provider, currentMessages, TOOLS);
-            choice = response.choices?.[0];
-            totalTokens += response.usage?.total_tokens || 0;
-          } catch (innerError) {
-            if (innerError.message.includes('429') || innerError.message.includes('rate_limit')) {
-              choice = null;
-              break;
+          if (algumTextoTransmitido) {
+            emitir({ type: 'reset' });
+            algumTextoTransmitido = false;
+          }
+
+          // Cada tentativa começa limpa — sem isso os resultados de um
+          // provedor que falhou vazavam para a resposta do próximo.
+          toolResults = [];
+          let textoStreamado = '';
+          const onDelta = (t: string) => {
+            textoStreamado += t;
+            algumTextoTransmitido = true;
+            emitir({ type: 'delta', text: t });
+          };
+
+          let currentMessages = [...messages];
+          let response = await callAIStream(provider, currentMessages, TOOLS, onDelta);
+          let choice = response.choices?.[0];
+          totalTokens = response.usage?.total_tokens || 0;
+
+          let iterations = 0;
+          // Além do teto de rodadas, o loop para quando o orçamento
+          // acaba — senão um modelo que fica pedindo tools sem parar
+          // consumiria o tempo de todos os provedores seguintes.
+          while (choice?.message?.tool_calls?.length && iterations < 10
+                 && restanteMs(provider) > MINIMO_PARA_TENTAR_MS) {
+            currentMessages.push(choice.message);
+
+            for (const toolCall of choice.message.tool_calls) {
+              const fnName = toolCall.function.name;
+              let fnArgs = {};
+              // Era um catch vazio: quando o modelo devolvia JSON quebrado,
+              // a tool rodava com {} e cadastrava errado sem deixar rastro.
+              try {
+                fnArgs = JSON.parse(toolCall.function.arguments);
+              } catch (erroArgs) {
+                await registrarErro(supabaseAdmin, {
+                  tipo: 'args',
+                  user_id: user.id,
+                  session_id: sessionId,
+                  provider: provider.provider_name,
+                  model: provider.model,
+                  tool_name: fnName,
+                  mensagem: `Argumentos inválidos para ${fnName}: ${(erroArgs as Error).message}`,
+                  detalhe: { argumentos_crus: toolCall.function.arguments },
+                });
+              }
+
+              emitir({ type: 'status', text: rotuloTool(fnName) });
+
+              const result = await executeTool(fnName, fnArgs, supabaseAdmin, user.id);
+              if (TOOLS_ESCRITA.has(fnName) && !result?.error) {
+                efeitoColateralExecutado = true;
+              }
+              if (result?.error) {
+                await registrarErro(supabaseAdmin, {
+                  tipo: 'tool',
+                  user_id: user.id,
+                  session_id: sessionId,
+                  provider: provider.provider_name,
+                  model: provider.model,
+                  tool_name: fnName,
+                  mensagem: String(result.error),
+                  detalhe: { argumentos: fnArgs },
+                });
+              }
+              toolResults.push({ name: fnName, args: fnArgs, result });
+
+              currentMessages.push({
+                role: 'tool',
+                tool_call_id: toolCall.id,
+                content: JSON.stringify(result),
+              });
             }
-            throw innerError;
+
+            try {
+              response = await callAIStream(provider, currentMessages, TOOLS, onDelta);
+              choice = response.choices?.[0];
+              totalTokens += response.usage?.total_tokens || 0;
+            } catch (innerError) {
+              const msgInterna = msgErro(innerError);
+              if (msgInterna.includes('429') || msgInterna.includes('rate_limit')) {
+                choice = null;
+                break;
+              }
+              throw innerError;
+            }
+            iterations++;
           }
-          iterations++;
-        }
 
-        if (choice?.message?.content) {
-          finalContent = choice.message.content;
-        } else if (toolResults.length > 0) {
-          finalContent = gerarRespostaTools(toolResults);
-        } else {
-          finalContent = 'Desculpe, não consegui processar a ação. (Falha de comunicação interna)';
-        }
-
-        if (toolResults.some((toolResult: any) => toolResult.result?.error)) {
-          finalContent = gerarRespostaTools(toolResults);
-        }
-        usedProvider = provider.provider_name;
-        lastError = null;
-        break;
-      } catch (e) {
-        lastError = e.message;
-        console.error(`Erro no provedor ${provider.provider_name}:`, e.message);
-        if (e.message.includes('429') || e.message.includes('rate_limit')) {
-          if (toolResults.length > 0) {
+          if (choice?.message?.content) {
+            finalContent = choice.message.content;
+          } else if (toolResults.length > 0) {
             finalContent = gerarRespostaTools(toolResults);
+          } else {
+            finalContent = 'Desculpe, não consegui processar a ação. (Falha de comunicação interna)';
+          }
+
+          if (toolResults.some((toolResult: any) => toolResult.result?.error)) {
+            finalContent = gerarRespostaTools(toolResults);
+          }
+
+          // O texto pode ter sido montado por gerarRespostaTools em vez
+          // de vir do modelo. Nesse caso o que já foi transmitido não
+          // corresponde ao final: o cliente troca pelo conteúdo do
+          // evento 'replace'.
+          if (finalContent !== textoStreamado) {
+            emitir({ type: 'replace', text: finalContent });
+          }
+
+          usedProvider = provider.provider_name;
+          lastError = null;
+          break;
+        } catch (e) {
+          // msgErro porque nem todo throw em JS é um Error — um throw
+          // de string fazia e.message virar undefined e o .includes()
+          // logo abaixo derrubava a requisição de dentro do catch.
+          const msg = msgErro(e);
+          lastError = msg;
+          console.error('Erro no provedor ' + provider.provider_name + ':', msg);
+
+          await registrarErro(supabaseAdmin, {
+            tipo: 'provider',
+            user_id: user.id,
+            session_id: sessionId,
+            provider: provider.provider_name,
+            model: provider.model,
+            http_status: (e as any)?.status ?? null,
+            mensagem: msg,
+            detalhe: { corpo: (e as any).corpo ?? null, tools_executadas: toolResults.map((t: any) => t.name) },
+          });
+
+          // Já cadastrou/alterou algo antes de falhar: não tenta outro
+          // provedor, senão a ação seria executada duas vezes.
+          if (efeitoColateralExecutado) {
+            console.warn('Provedor falhou após gravar no banco — fallback cancelado para não duplicar.');
+            finalContent = toolResults.length
+              ? gerarRespostaTools(toolResults)
+              : 'A ação foi registrada, mas não consegui montar o resumo. Confira na tela correspondente.';
+            emitir({ type: 'replace', text: finalContent });
             lastError = null;
             usedProvider = provider.provider_name;
             break;
           }
+
+          if (msg.includes('429') || msg.includes('rate_limit')) {
+            if (toolResults.length > 0) {
+              finalContent = gerarRespostaTools(toolResults);
+              emitir({ type: 'replace', text: finalContent });
+              lastError = null;
+              usedProvider = provider.provider_name;
+              break;
+            }
+            continue;
+          }
+
+          // Vai tentar o próximo provedor: registra a troca para o
+          // admin conseguir ver que houve fallback e por quê.
+          const proximo = providers[providers.indexOf(provider) + 1];
+          if (proximo) {
+            await registrarErro(supabaseAdmin, {
+              tipo: 'fallback',
+              user_id: user.id,
+              session_id: sessionId,
+              provider: provider.provider_name,
+              model: provider.model,
+              mensagem: `Fallback: ${provider.provider_name} falhou, tentando ${proximo.provider_name}.`,
+              detalhe: { motivo: msg, proximo: proximo.provider_name },
+            });
+          }
           continue;
         }
-        continue;
       }
+
+      if (lastError) {
+        // Todos os provedores falharam. O detalhe de cada um já está no
+        // log de erros do painel; aqui o usuário recebe algo curto.
+        console.error(`Todos os ${providers.length} provedores falharam. Último: ${lastError}`);
+        return { erro: 'Não consegui responder agora. Tente novamente em alguns segundos.' };
+      }
+
+      await supabaseAdmin.from('ai_conversations').insert([
+        { user_id: user.id, session_id: sessionId, role: 'user', content: message.trim(), tokens_used: 0 },
+        { user_id: user.id, session_id: sessionId, role: 'assistant', content: finalContent, tokens_used: totalTokens, provider: usedProvider },
+      ]);
+
+      await supabaseAdmin.from('ai_usage').upsert({
+        user_id: user.id, usage_date: today,
+        messages_used: currentUsage.messages_used + 1,
+        tokens_used: currentUsage.tokens_used + totalTokens,
+      }, { onConflict: 'user_id,usage_date' });
+
+      return {
+        content: finalContent,
+        session_id: sessionId,
+        usage: {
+          messages_used: currentUsage.messages_used + 1,
+          messages_limit: effectiveDailyLimit,
+          tokens_used: totalTokens,
+        },
+        provider: usedProvider,
+      };
     }
 
-    if (lastError) {
-      return new Response(JSON.stringify({ error: 'Não consegui responder agora. Tente novamente em alguns segundos.' }), {
+    // ----------------------------------------------------------------
+    // Modo SSE
+    // ----------------------------------------------------------------
+    if (querStream) {
+      const encoder = new TextEncoder();
+      const fluxo = new ReadableStream({
+        async start(controller) {
+          const emitir = (evento: any) => {
+            try {
+              controller.enqueue(encoder.encode('data: ' + JSON.stringify(evento) + '\n\n'));
+            } catch { /* cliente desconectou */ }
+          };
+
+          try {
+            emitir({ type: 'session', session_id: sessionId });
+            const resultado = await conduzirConversa(emitir);
+
+            if (resultado.erro) {
+              emitir({ type: 'error', error: resultado.erro });
+            } else {
+              emitir({
+                type: 'done',
+                content: resultado.content,
+                session_id: resultado.session_id,
+                usage: resultado.usage,
+                provider: resultado.provider,
+              });
+            }
+          } catch (e) {
+            emitir({ type: 'error', error: (e as Error).message });
+          } finally {
+            try { controller.close(); } catch { /* já fechado */ }
+          }
+        },
+      });
+
+      return new Response(fluxo, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+        status: 200,
+      });
+    }
+
+    // ----------------------------------------------------------------
+    // Modo JSON (comportamento anterior, mantido por compatibilidade)
+    // ----------------------------------------------------------------
+    const resultado = await conduzirConversa(() => {});
+
+    if (resultado.erro) {
+      return new Response(JSON.stringify({ error: resultado.erro }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 503,
       });
     }
 
-    await supabaseAdmin.from('ai_conversations').insert([
-      { user_id: user.id, session_id: sessionId, role: 'user', content: message.trim(), tokens_used: 0 },
-      { user_id: user.id, session_id: sessionId, role: 'assistant', content: finalContent, tokens_used: totalTokens, provider: usedProvider },
-    ]);
-
-    await supabaseAdmin.from('ai_usage').upsert({
-      user_id: user.id, usage_date: today,
-      messages_used: currentUsage.messages_used + 1,
-      tokens_used: currentUsage.tokens_used + totalTokens,
-    }, { onConflict: 'user_id,usage_date' });
-
-    return new Response(JSON.stringify({
-      content: finalContent,
-      session_id: sessionId,
-      usage: {
-        messages_used: currentUsage.messages_used + 1,
-        messages_limit: effectiveDailyLimit,
-        tokens_used: totalTokens,
-      },
-      provider: usedProvider,
-    }), {
+    return new Response(JSON.stringify(resultado), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
