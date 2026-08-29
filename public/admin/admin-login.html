@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinMei · Administração · Login</title>
+  <link rel="icon" href="../icon_mei.ico" type="image/x-icon">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <div class="login-wrap" id="loginView">
+    <div class="login-card">
+      <!-- Logo -->
+      <div class="login-logo">
+        <div class="box">ADM</div>
+        <div>
+          <b>fin<span>Mei</span></b>
+          <div style="font-size: 11px; color: var(--text-faint);">
+            Área administrativa
+          </div>
+        </div>
+      </div>
+      <!--E-mail: admin@finmei.com.br
+          Senha: admin123-->
+      <!-- Título -->
+      <div class="login-title">Acessar o painel</div>
+      <div class="login-sub">Entre com sua conta para gerenciar o sistema.</div>
+
+      <!-- Mensagem de login -->
+      <div class="form-msg" id="loginMsg"></div>
+
+      <!-- E-mail -->
+      <div class="field">
+        <label for="loginEmail">E-mail</label>
+        <input
+          id="loginEmail"
+          type="email"
+          placeholder="admin@finmei.com.br"
+        >
+      </div>
+
+      <!-- Senha -->
+      <div class="field">
+        <label for="loginPass">Senha</label>
+        <input
+          id="loginPass"
+          type="password"
+          placeholder="••••••••"
+          onkeydown="if (event.key === 'Enter') doLogin()"
+        >
+      </div>
+
+      <!-- Botão -->
+      <button class="btn btn-primary" onclick="doLogin()">
+        Entrar
+      </button>
+
+    </div>
+  </div>
+  <script type="module" src="js/supabase-client.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - FinMEI fluxo inteligente</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="login-page">
+    <!-- Branding Panel -->
+    <div class="login-branding">
+        <div class="brand-content">
+            <div class="brand-logo">MEI</div>
+            <h2 class="brand-title">Comece agora</h2>
+            <p class="brand-subtitle">Crie sua conta gratuita e comece a organizar suas finanças hoje mesmo.</p>
+            <div class="brand-features">
+                <div class="brand-feature">
+                    <i data-lucide="check-circle"></i>
+                    <span>14 dias grátis para testar</span>
+                </div>
+                <div class="brand-feature">
+                    <i data-lucide="check-circle"></i>
+                    <span>Sem necessidade de cartão de crédito</span>
+                </div>
+                <div class="brand-feature">
+                    <i data-lucide="check-circle"></i>
+                    <span>Cancele quando quiser</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cadastro Form -->
+    <div class="login-form-panel">
+        <div class="login-wrapper">
+            <div class="login-header">
+                <div class="brand-icon-small">MEI</div>
+                <h1>Crie sua conta</h1>
+                <p>Preencha os dados abaixo para começar.</p>
+            </div>
+
+            <form id="formCadastro">
+                <div class="input-group">
+                    <label>Nome Completo</label>
+                    <input type="text" id="nomeCadastro" placeholder="Seu nome e sobrenome" required>
+                    <div id="erro-nomeCadastro" class="erro-campo"></div>
+                </div>
+
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="email" id="emailCadastro" placeholder="seu@email.com" required>
+                    <div id="erro-emailCadastro" class="erro-campo"></div>
+                </div>
+
+                <div class="input-group">
+                    <label>Senha</label>
+                    <div class="input-senha-container">
+                        <input type="password" id="senhaCadastro" placeholder="Mín. 8 caracteres" required>
+                        <button type="button" class="btn-ver-senha" onclick="togglePassword('senhaCadastro')" tabindex="-1">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="erro-senhaCadastro" class="erro-campo"></div>
+                </div>
+
+                <div class="input-group">
+                    <label>Confirmar Senha</label>
+                    <div class="input-senha-container">
+                        <input type="password" id="senhaConfirmar" placeholder="Repita a senha" required>
+                        <button type="button" class="btn-ver-senha" onclick="togglePassword('senhaConfirmar')" tabindex="-1">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="erro-senhaConfirmar" class="erro-campo"></div>
+                </div>
+
+                <div id="erro-formCadastro" class="erro-campo erro-formulario"></div>
+
+                <button type="submit" class="btn-login">Finalizar Cadastro</button>
+
+                <p class="cadastro-link">
+                    Já tem uma conta? <a href="login.html">Faça login</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
+    <script>
+        function togglePassword(id) {
+            const input = document.getElementById(id);
+            const btn = input.parentElement.querySelector('.btn-ver-senha');
+            input.type = input.type === "password" ? "text" : "password";
+            btn.classList.toggle('slash');
+        }
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

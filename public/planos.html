@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planos e Assinaturas | FinMEI</title>
+
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">MEI</div>
+                <span>finMEI</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="index.html" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
+            </a>
+            <a href="vendas.html" class="nav-item">
+                <i data-lucide="shopping-cart"></i> <span>Vendas</span>
+            </a>
+            <a href="gastos.html" class="nav-item">
+                <i data-lucide="trending-down"></i> <span>Gastos</span>
+            </a>
+            <a href="clientes.html" class="nav-item">
+                <i data-lucide="users"></i> <span>Clientes</span>
+            </a>
+            <a href="devendo.html" class="nav-item">
+                <i data-lucide="alert-circle"></i> <span>Devedores</span>
+            </a>
+            <a href="produtos.html" class="nav-item">
+                <i data-lucide="package"></i> <span>Produtos</span>
+            </a>
+            <div class="sidebar-divider">ASSISTENTE</div>
+            <a href="ia.html" class="nav-item">
+                <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
+            </a>
+            <div class="sidebar-divider">ATALHOS</div>
+            <a href="novo-cliente.html" class="nav-item">
+                <i data-lucide="user-plus"></i> <span>Novo Cliente</span>
+            </a>
+            <a href="nova-venda.html" class="nav-item">
+                <i data-lucide="plus-circle"></i> <span>Nova Venda</span>
+            </a>
+            <a href="planos.html" class="nav-item active">
+                <i data-lucide="star"></i> <span>Assinatura</span>
+            </a>
+            <button onclick="logout()" class="btn-logout">
+                <i data-lucide="log-out"></i> <span>Sair</span>
+            </button>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+
+        <header class="top-bar">
+            <div class="page-header">
+                <h3>Planos e Assinatura</h3>
+                <p>Escolha o plano ideal pro seu negócio</p>
+            </div>
+        </header>
+
+        <section class="content-wrapper planos-page">
+
+            <!-- HERO -->
+            <div class="planos-hero">
+                <h1>
+                    <i data-lucide="rocket"></i>
+                    Evolua seu Negócio
+                </h1>
+                <p>Gerencie suas finanças com inteligência. Comece grátis e evolua quando quiser.</p>
+            </div>
+
+            <!-- COMPARATIVO -->
+            <div class="planos-container">
+
+                <!-- PLANO GRATUITO -->
+                <div class="plano-card">
+                    <div class="plano-header">
+                        <div class="plano-badge gratuito">TESTE GRÁTIS</div>
+                        <h3 class="plano-title">Gratuito</h3>
+                        <div class="plano-price">R$ 0 <span>/14 dias</span></div>
+                        <p class="plano-desc">Acesso completo para testar todas as funcionalidades por 14 dias.</p>
+                    </div>
+
+                    <div class="plano-secao">
+                        <h4><i data-lucide="layout-dashboard"></i> Dashboard e Visão Geral</h4>
+                        <ul class="plano-features">
+                            <li><i data-lucide="check-circle"></i> Dashboard financeiro completo</li>
+                            <li><i data-lucide="check-circle"></i> Cards de resumo (Recebido, A Receber, Despesas, Lucro)</li>
+                            <li><i data-lucide="check-circle"></i> Saldo geral disponível</li>
+                            <li><i data-lucide="check-circle"></i> Gráficos de faturamento e lucro</li>
+                            <li><i data-lucide="check-circle"></i> Comparativo mês a mês</li>
+                        </ul>
+                    </div>
+
+                    <div class="plano-secao">
+                        <h4><i data-lucide="shopping-cart"></i> Vendas e Gastos</h4>
+                        <ul class="plano-features">
+                            <li><i data-lucide="check-circle"></i> Registrar vendas (Pago / Pendente)</li>
+                            <li><i data-lucide="check-circle"></i> Registrar gastos por categoria</li>
+                            <li class="disabled"><i data-lucide="x-circle"></i> Máx. 50 movimentações no total</li>
+                        </ul>
+                    </div>
+
+                    <div class="plano-secao">
+                        <h4><i data-lucide="users"></i> Clientes</h4>
+                        <ul class="plano-features">
+                            <li><i data-lucide="check-circle"></i> Cadastro de clientes</li>
+                            <li><i data-lucide="check-circle"></i> Link direto para WhatsApp</li>
+                            <li class="disabled"><i data-lucide="x-circle"></i> Máx. 10 clientes</li>
+                        </ul>
+                    </div>
+
+                    <div class="plano-secao">
+                        <h4><i data-lucide="package"></i> Produtos</h4>
+                        <ul class="plano-features">
+                            <li><i data-lucide="check-circle"></i> Catálogo de produtos com foto</li>
+                            <li><i data-lucide="check-circle"></i> Preenchimento automático ao criar venda</li>
+                        </ul>
+                    </div>
+
+                    <div class="plano-secao">
+                        <h4><i data-lucide="sparkles"></i> Assistente IA</h4>
+                        <ul class="plano-features">
+                            <li><i data-lucide="check-circle"></i> Chat com IA financeira</li>
+                            <li><i data-lucide="check-circle"></i> Consultas rápidas (faturamento, gastos, resumo)</li>
+                            <li class="disabled"><i data-lucide="x-circle"></i> Limite diário de mensagens</li>
+                        </ul>
+                    </div>
+
+                    <div class="plano-secao plano-secao-bloqueado">
+                        <h4><i data-lucide="lock"></i> Não incluso no gratuito</h4>
+                        <ul class="plano-features">
+                            <li class="disabled"><i data-lucide="x-circle"></i> Exportar dados (CSV)</li>
+                            <li class="disabled"><i data-lucide="x-circle"></i> Importar dados em lote</li>
+                            <li class="disabled"><i data-lucide="x-circle"></i> Relatórios BI avançados</li>
+                            <li class="disabled"><i data-lucide="x-circle"></i> Histórico financeiro completo</li>
+                            <li class="disabled"><i data-lucide="x-circle"></i> Suporte prioritário</li>
+                            <li class="disabled"><i data-lucide="x-circle"></i> Acesso contínuo (expira em 14 dias)</li>
+                        </ul>
+                    </div>
+
+                    <a href="index.html" class="btn-assinar secondary">Voltar ao Dashboard</a>
+                </div>
+
+                <!-- PLANO PREMIUM -->
+                <div class="plano-card premium">
+                    <div class="plano-header">
+                        <div class="plano-badge premium-badge">RECOMENDADO</div>
+                        <h3 class="plano-title">Premium</h3>
+                        <div class="plano-price">R$ 15,90<span>/mês</span></div>
+                        <p class="plano-desc">Tudo ilimitado + ferramentas avançadas para crescer seu negócio.</p>
+                    </div>
+
+                    <div class="plano-secao">
+                        <h4><i data-lucide="layout-dashboard"></i> Dashboard e Visão Geral</h4>
+                        <ul class="plano-features">
+                            <li><i data-lucide="check-circle"></i> Dashboard financeiro completo</li>
+                            <li><i data-lucide="check-circle"></i> Cards de resumo (Recebido, A Receber, Despesas, Lucro)</li>
+                            <li><i data-lucide="check-circle"></i> Saldo geral disponível</li>
+                            <li><i data-lucide="check-circle"></i> Gráficos de faturamento e lucro</li>
+                            <li><i data-lucide="check-circle"></i> Comparativo mês a mês</li>
+                            <li><i data-lucide="check-circle"></i> <b>Histórico financeiro completo (todos os meses)</b></li>
+                        </ul>
+                    </div>
+
+                    <div class="plano-secao">
+                        <h4><i data-lucide="shopping-cart"></i> Vendas e Gastos</h4>
+                        <ul class="plano-features">
+                            <li><i data-lucide="check-circle"></i> Registrar vendas (Pago / Pendente)</li>
+                            <li><i data-lucide="check-circle"></i> Registrar gastos por categoria</li>
+                            <li><i data-lucide="check-circle"></i> <b>Movimentações ilimitadas</b></li>
+                            <li><i data-lucide="check-circle"></i> Controle de devedores com cobrança via WhatsApp</li>
+                        </ul>
+                    </div>
+
+                    <div class="plano-secao">
+                        <h4><i data-lucide="users"></i> Clientes</h4>
+                        <ul class="plano-features">
+                            <li><i data-lucide="check-circle"></i> Cadastro ilimitado de clientes</li>
+                            <li><i data-lucide="check-circle"></i> Link direto para WhatsApp</li>
+                            <li><i data-lucide="check-circle"></i> Detecção de duplicatas</li>
+                        </ul>
+                    </div>
+
+                    <div class="plano-secao">
+                        <h4><i data-lucide="package"></i> Produtos</h4>
+                        <ul class="plano-features">
+                            <li><i data-lucide="check-circle"></i> Catálogo de produtos com foto</li>
+                            <li><i data-lucide="check-circle"></i> Preenchimento automático ao criar venda</li>
+                        </ul>
+                    </div>
+
+                    <div class="plano-secao">
+                        <h4><i data-lucide="sparkles"></i> Assistente IA</h4>
+                        <ul class="plano-features">
+                            <li><i data-lucide="check-circle"></i> Chat com IA financeira</li>
+                            <li><i data-lucide="check-circle"></i> Consultas rápidas (faturamento, gastos, resumo)</li>
+                            <li><i data-lucide="check-circle"></i> <b>Limite diário maior de mensagens</b></li>
+                            <li><i data-lucide="check-circle"></i> Registrar gastos por comando de voz/texto</li>
+                            <li><i data-lucide="check-circle"></i> Análise de top gastos e tendências</li>
+                        </ul>
+                    </div>
+
+                    <div class="plano-secao plano-secao-premium">
+                        <h4><i data-lucide="crown"></i> Exclusivo Premium</h4>
+                        <ul class="plano-features">
+                            <li><i data-lucide="check-circle"></i> <b>Exportar dados para CSV</b> (Vendas, Gastos, Clientes)</li>
+                            <li><i data-lucide="check-circle"></i> <b>Importar dados em lote via CSV</b></li>
+                            <li><i data-lucide="check-circle"></i> <b>Relatórios BI avançados</b> (dashboard externo)</li>
+                            <li><i data-lucide="check-circle"></i> <b>Suporte prioritário</b></li>
+                            <li><i data-lucide="check-circle"></i> Acesso contínuo sem expiração</li>
+                        </ul>
+                    </div>
+
+                    <button id="btnAbrirCheckout" class="btn-assinar primary">Assinar Premium Agora</button>
+                </div>
+            </div>
+
+            <!-- FAQ -->
+            <div class="planos-faq">
+                <h3><i data-lucide="help-circle"></i> Perguntas Frequentes</h3>
+                <div class="faq-item">
+                    <h4>O plano gratuito expira?</h4>
+                    <p>Sim. O plano gratuito dura 14 dias. Após esse período, você precisará assinar o Premium para continuar usando o sistema.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>Como funciona a importação de dados?</h4>
+                    <p>Com o Premium, você pode importar clientes, vendas e gastos em lote via planilhas CSV. O sistema detecta automaticamente as colunas e formatação.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>O que são os Relatórios BI?</h4>
+                    <p>Um dashboard externo com gráficos e análises avançadas do seu negócio, incluindo tendências, comparativos e projeções.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>Como funciona a IA?</h4>
+                    <p>O assistente IA responde suas perguntas sobre o negócio (faturamento, gastos, resumo), registra dados por comando de texto e analisa tendências. No gratuito, há limite diário de mensagens. No Premium, o limite é maior.</p>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- MODAL DE CHECKOUT -->
+    <div id="modalCheckout" class="modal-overlay" style="display: none;">
+        <div class="modal-content checkout-modal">
+            <div class="modal-header">
+                <h3>Finalizar Assinatura</h3>
+                <button onclick="fecharCheckout()" class="btn-close">&times;</button>
+            </div>
+            
+            <div id="etapaSelecao">
+                <p style="color: var(--texto-secundario); margin-bottom: 20px;">Escolha como deseja pagar os <b>R$ 15,90/mês</b>:</p>
+                <div class="metodos-pagamento">
+                    <div class="metodo-item" onclick="selecionarMetodo('pix')">
+                        <i data-lucide="qr-code"></i>
+                        <span>PIX (Liberação Imediata)</span>
+                    </div>
+                    <div class="metodo-item" onclick="selecionarMetodo('cartao')">
+                        <i data-lucide="credit-card"></i>
+                        <span>Cartão de Crédito</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="etapaPix" style="display: none; text-align: center;">
+                <p>Escaneie o código ou copie a chave abaixo:</p>
+                <div style="background: white; padding: 15px; border-radius: 8px; display: inline-block; margin: 15px 0;">
+                    <img id="imgQrCode" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=SimulacaoFinMEI" alt="QR Code Pix">
+                </div>
+                
+                <div class="pix-copia-e-cola" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; border: 1px dashed var(--borda-cor);">
+                    <code id="chavePix" style="font-size: 0.8rem; color: var(--cor-primaria);">SUA-CHAVE-PIX-AQUI</code>
+                    <button onclick="copiarPix()" class="btn-acao" style="padding: 5px 10px; font-size: 0.7rem; border-radius: 5px;">Copiar</button>
+                </div>
+
+                <p style="font-size: 0.8rem; color: var(--texto-secundario);">Pagamento 100% seguro. Liberado em segundos.</p>
+                <button onclick="confirmarPagamento('pix')" class="btn-assinar primary" style="margin-top: 15px;">Já realizei o pagamento</button>
+            </div>
+
+            <div id="etapaCartao" style="display: none;">
+                <div class="form-cartao">
+                    <input type="text" placeholder="Número do Cartão" class="input-checkout">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" placeholder="MM/AA" class="input-checkout">
+                        <input type="text" placeholder="CVV" class="input-checkout">
+                    </div>
+                    <input type="text" placeholder="Nome no Cartão" class="input-checkout">
+                </div>
+                <button onclick="confirmarPagamento('cartao')" class="btn-assinar primary" style="margin-top: 15px;">Confirmar Pagamento</button>
+            </div>
+
+            <div id="etapaProcessando" style="display: none; text-align: center; padding: 30px 0;">
+                <div class="loader"></div>
+                <p style="margin-top: 20px;">Processando seu pagamento com segurança...</p>
+            </div>
+
+            <div id="etapaSucesso" style="display: none; text-align: center; padding: 20px 0;">
+                <i data-lucide="check-circle" style="color: var(--cor-sucesso); width: 60px; height: 60px; margin-bottom: 15px;"></i>
+                <h3 style="color: var(--cor-sucesso);">Pagamento Confirmado!</h3>
+                <p>Parabéns! Você agora é um usuário <b>Premium</b>.</p>
+                <button onclick="window.location.href='index.html'" class="btn-assinar primary" style="margin-top: 20px;">Começar a Usar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { assinarPlanoPremium, verificarStatusPlano } from './js/planos.js';
+        
+        async function destacarPlanoAtual() {
+            const status = await verificarStatusPlano();
+            const cards = document.querySelectorAll('.plano-card');
+            
+            if (status.premium) {
+                const premiumCard = cards[1];
+                marcarComoAtual(premiumCard, "Premium");
+            } else {
+                const gratuitoCard = cards[0];
+                marcarComoAtual(gratuitoCard, "Gratuito");
+            }
+        }
+
+        function marcarComoAtual(card, tipo) {
+            const header = card.querySelector('.plano-header');
+            const badge = document.createElement('div');
+            badge.innerHTML = "PLANO ATUAL";
+            badge.style.backgroundColor = tipo === "Premium" ? "#38bdf8" : "#94a3b8";
+            badge.style.color = "white";
+            badge.style.fontSize = "0.7rem";
+            badge.style.fontWeight = "800";
+            badge.style.padding = "4px 12px";
+            badge.style.borderRadius = "20px";
+            badge.style.marginTop = "10px";
+            badge.style.display = "inline-block";
+            header.appendChild(badge);
+
+            const btn = card.querySelector('.btn-assinar');
+            if (btn) {
+                if (tipo === "Premium") {
+                    btn.innerText = "Renovar Assinatura";
+                    btn.classList.add("primary");
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                    btn.style.cursor = "pointer";
+                } else {
+                    btn.innerText = "Plano Ativo";
+                    btn.disabled = true;
+                    btn.style.opacity = "0.7";
+                    btn.style.cursor = "default";
+                    btn.removeAttribute('id'); 
+                }
+            }
+        }
+
+        window.abrirCheckout = async () => {
+            document.getElementById('modalCheckout').style.display = 'flex';
+            document.getElementById('etapaSelecao').style.display = 'none';
+            document.getElementById('etapaPix').style.display = 'none';
+            document.getElementById('etapaCartao').style.display = 'none';
+            document.getElementById('etapaSucesso').style.display = 'none';
+            
+            document.getElementById('etapaProcessando').style.display = 'block';
+
+            const res = await assinarPlanoPremium();
+                
+            if (res.success && res.init_point) {
+                window.location.href = res.init_point;
+            } else {
+                document.getElementById('etapaProcessando').style.display = 'none';
+                mostrarModal('Erro no pagamento', 'Erro ao conectar com Mercado Pago: ' + (res.message || 'tente novamente.'));
+                window.fecharCheckout();
+            }
+        };
+
+        window.fecharCheckout = () => {
+            document.getElementById('modalCheckout').style.display = 'none';
+        };
+
+        destacarPlanoAtual();
+        const btnCheckout = document.getElementById('btnAbrirCheckout');
+        if (btnCheckout) btnCheckout.addEventListener('click', abrirCheckout);
+    </script>
+    <script>
+        lucide.createIcons();
+        
+        (function() {
+            const btn = document.getElementById("btnMenuMobile");
+            const sidebar = document.querySelector(".sidebar");
+            if (!btn || !sidebar) return;
+            
+            let overlay = document.querySelector(".sidebar-overlay");
+            if (!overlay) {
+                overlay = document.createElement("div");
+                overlay.className = "sidebar-overlay";
+                document.body.appendChild(overlay);
+            }
+            
+            const alternarMenu = () => {
+                const estaAtivo = sidebar.classList.toggle("active");
+                overlay.classList.toggle("active");
+                const icon = btn.querySelector("i");
+                if (icon) {
+                    icon.setAttribute("data-lucide", estaAtivo ? "x" : "menu");
+                    if (window.lucide) lucide.createIcons();
+                }
+                document.body.style.overflow = estaAtivo ? "hidden" : "";
+            };
+            
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                alternarMenu();
+            });
+            
+            overlay.addEventListener("click", alternarMenu);
+            
+            const navLinks = sidebar.querySelectorAll(".nav-item");
+            navLinks.forEach(link => {
+                link.addEventListener("click", () => {
+                    if (sidebar.classList.contains("active")) alternarMenu();
+                });
+            });
+        })();
+    </script>
+</body>
+
+</html>

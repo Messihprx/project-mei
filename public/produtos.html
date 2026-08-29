@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Produtos | FinMEI fluxo inteligente</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">MEI</div>
+                <span>finMEI</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
+            </a>
+            <a href="vendas.html" class="nav-item">
+                <i data-lucide="shopping-cart"></i> <span>Vendas</span>
+            </a>
+            <a href="gastos.html" class="nav-item">
+                <i data-lucide="trending-down"></i> <span>Gastos</span>
+            </a>
+            <a href="clientes.html" class="nav-item">
+                <i data-lucide="users"></i> <span>Clientes</span>
+            </a>
+            <a href="devendo.html" class="nav-item">
+                <i data-lucide="alert-circle"></i> <span>Devedores</span>
+            </a>
+            <a href="produtos.html" class="nav-item active">
+                <i data-lucide="package"></i> <span>Produtos</span>
+            </a>
+
+            <div class="sidebar-divider">ASSISTENTE</div>
+            <a href="ia.html" class="nav-item">
+                <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
+            </a>
+
+            <div class="sidebar-divider">ATALHOS</div>
+            <a href="novo-cliente.html" class="nav-item">
+                <i data-lucide="user-plus"></i> <span>Novo Cliente</span>
+            </a>
+            <a href="nova-venda.html" class="nav-item">
+                <i data-lucide="plus-circle"></i> <span>Nova Venda</span>
+            </a>
+
+            <button onclick="logout()" class="btn-logout" style="margin-top: auto;">
+                <i data-lucide="log-out"></i> <span>Sair</span>
+            </button>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+        <header class="top-bar">
+            <div class="page-header">
+                <h3>Meus Produtos</h3>
+                <p>Gerencie seu catálogo de produtos</p>
+            </div>
+            <div class="user-info">
+                <button onclick="abrirModalProduto()" class="btn-primary produto-btn-novo">
+                    <i data-lucide="plus-circle" style="width: 15px;"></i> <span>Novo Produto</span>
+                </button>
+            </div>
+        </header>
+
+        <section class="content-wrapper">
+            <div class="card-buscar">
+                <label for="buscarProduto">Pesquisar por nome</label>
+                <input type="text" id="buscarProduto" placeholder="Digite o nome do produto...">
+            </div>
+
+            <div id="listaProdutos"></div>
+        </section>
+    </main>
+
+    <!-- Modal Novo Produto -->
+    <div id="modalProduto" class="modal">
+        <div class="modal-content card">
+            <div class="modal-header-flex">
+                <h3>Novo Produto</h3>
+                <button onclick="fecharModalProduto()" class="btn-close-modal">&times;</button>
+            </div>
+
+            <form id="formNovoProduto">
+                <div class="input-group">
+                    <label>Nome do Produto</label>
+                    <input type="text" id="nomeProduto" placeholder="Ex: Camiseta Básica" required>
+                </div>
+                <div class="input-group">
+                    <label>Descrição</label>
+                    <textarea id="descProduto" rows="3" placeholder="Detalhes sobre o produto..." class="produto-textarea"></textarea>
+                </div>
+                <div class="produto-form-grid">
+                    <div class="input-group">
+                        <label>Valor (R$)</label>
+                        <input type="number" id="valorProduto" placeholder="0,00" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Foto (opcional)</label>
+                        <div id="dropZoneProduto" class="drop-zone produto-drop-zone">
+                            <i data-lucide="image" style="width: 24px; color: var(--texto-faint);"></i>
+                            <small style="color: var(--texto-faint); font-size: 0.75rem;">Clique ou arraste</small>
+                            <input type="file" id="fotoProduto" accept="image/*" style="display: none;">
+                        </div>
+                        <div id="fotoPreview" class="produto-foto-preview">
+                            <img id="imgPreview" class="produto-foto-img">
+                            <button type="button" onclick="removerFoto()" class="produto-foto-remove">&times;</button>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" style="margin-top: 1.2rem;">Salvar Produto</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Editar Produto -->
+    <div id="modalEditarProduto" class="modal">
+        <div class="modal-content card">
+            <div class="modal-header-flex">
+                <h3>Editar Produto</h3>
+                <button onclick="fecharModalEditarProduto()" class="btn-close-modal">&times;</button>
+            </div>
+
+            <form id="formEditarProduto">
+                <input type="hidden" id="editProdutoId">
+                <div class="input-group">
+                    <label>Nome do Produto</label>
+                    <input type="text" id="editNomeProduto" required>
+                </div>
+                <div class="input-group">
+                    <label>Descrição</label>
+                    <textarea id="editDescProduto" rows="3" class="produto-textarea"></textarea>
+                </div>
+                <div class="produto-form-grid">
+                    <div class="input-group">
+                        <label>Valor (R$)</label>
+                        <input type="number" id="editValorProduto" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Foto</label>
+                        <div id="dropZoneEditarProduto" class="drop-zone">
+                            <i data-lucide="image" style="width: 24px; color: var(--texto-faint);"></i>
+                            <small style="color: var(--texto-faint); font-size: 0.75rem;">Clique ou arraste</small>
+                            <input type="file" id="editFotoProduto" accept="image/*" style="display: none;">
+                        </div>
+                        <div id="editFotoPreview" class="produto-foto-preview">
+                            <img id="editImgPreview" class="produto-foto-img">
+                            <button type="button" onclick="removerFotoEdicao()" class="produto-foto-remove">&times;</button>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" style="margin-top: 1.2rem;">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/ai-fab.js"></script>
+    <script src="js/confirm-modal.js"></script>
+    <script type="module" src="js/produtos.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "New-Item": true,
+        "Out-Null": true,
+        "Copy-Item": true,
+        "git check-ignore": true,
+        "/^node --check \"public\\\\admin\\\\js\\\\admin\\.js\"; node --check \"public\\\\admin\\\\js\\\\supabase-client\\.js\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "npx supabase": true
+    }
+}

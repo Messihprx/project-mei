@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinMEI | Gestão Financeira e Fluxo de Caixa para MEI</title>
+
+    <meta name="description"
+        content="Organize as finanças do seu MEI de forma inteligente. Controle vendas, gastos, clientes e gere relatórios de BI automaticamente com o FinMEI.">
+
+    <meta name="keywords"
+        content="MEI, gestão financeira, fluxo de caixa, microempreendedor, controle de vendas, BI para MEI">
+
+    <meta property="og:title" content="FinMEI - Fluxo Inteligente para Microempreendedores">
+    <meta property="og:description" content="Gerencie suas finanças em tempo real com relatórios avançados.">
+    <meta property="og:type" content="website">
+
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body class="dashboard-layout">
+
+
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">MEI</div>
+                <span>finMEI</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="index.html" class="nav-item active">
+                <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
+            </a>
+            <a href="vendas.html" class="nav-item">
+                <i data-lucide="shopping-cart"></i> <span>Vendas</span>
+            </a>
+            <a href="gastos.html" class="nav-item">
+                <i data-lucide="trending-down"></i> <span>Gastos</span>
+            </a>
+            <a href="clientes.html" class="nav-item">
+                <i data-lucide="users"></i> <span>Clientes</span>
+            </a>
+            <a href="devendo.html" class="nav-item">
+                <i data-lucide="alert-circle"></i> <span>Devedores</span>
+            </a>
+            <a href="produtos.html" class="nav-item">
+                <i data-lucide="package"></i> <span>Produtos</span>
+            </a>
+
+            <div class="sidebar-divider">ASSISTENTE</div>
+            <a href="ia.html" class="nav-item">
+                <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
+            </a>
+
+            <div class="sidebar-divider">ATALHOS</div>
+            <a href="nova-venda.html" class="nav-item">
+                <i data-lucide="plus-circle"></i> <span>Nova Venda</span>
+            </a>
+            <a href="novo-cliente.html" class="nav-item">
+                <i data-lucide="user-plus"></i> <span>Novo Cliente</span>
+            </a>
+            <a href="planos.html" class="nav-item">
+                <i data-lucide="star"></i> <span>Ver Planos</span>
+            </a>
+
+            <button onclick="abrirRelatorioAnalitico()" class="btn-bi nav-item-mobile-custom">
+                <i data-lucide="bar-chart-2"></i> <span>Relatórios BI</span>
+            </button>
+            <a href="#" onclick="abrirImportacao()" class="nav-item nav-item-mobile-custom">
+                <i data-lucide="database-backup"></i> <span>Importar dados</span>
+            </a>
+            <a href="#" onclick="logout()" class="nav-item-logout-mobile-item">
+                <i data-lucide="log-out"></i> <span>Sair</span>
+            </a>
+        </nav>
+
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+
+        <header class="top-bar">
+            <div class="page-header">
+                <span class="page-kicker"><i data-lucide="sparkles"></i> Visão geral do negócio</span>
+                <h2 id="nomeUsuario">Olá, Usuário</h2>
+                <p>Gerencie suas finanças em tempo real</p>
+            </div>
+            <div class="top-actions">
+                <a href="nova-venda.html" class="top-action-primary"><i data-lucide="plus"></i><span>Nova
+                        venda</span></a>
+                <a href="novo-cliente.html" class="top-action-secondary"><i data-lucide="user-plus"></i><span>Novo
+                        cliente</span></a>
+                <div class="user-info">
+                    <div class="profile-dropdown">
+                        <button class="profile-toggle" onclick="toggleProfileDropdown(event)">
+                            <img id="fotoUsuario" src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                                alt="Perfil">
+                        </button>
+                        <div class="dropdown-menu" id="profileDropdown">
+                        <div class="dropdown-header">Minha Conta</div>
+                        <a href="#" onclick="abrirImportacao()" class="dropdown-item">
+                            <i data-lucide="database-backup"></i> <span>Importar dados</span>
+                        </a>
+                        <a href="#" onclick="abrirRelatorioAnalitico()" class="dropdown-item">
+                            <i data-lucide="bar-chart-2"></i> <span>Relatórios Avançados</span>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" onclick="logout()" class="dropdown-item logout">
+                            <i data-lucide="log-out"></i> <span>Sair</span>
+                        </a>
+                    </div>
+                    </div>
+                </div>
+        </header>
+
+        <section class="content-wrapper">
+            <div class="card-buscar dashboard-filtros-mobile dashboard-filtros-pc" style="margin-bottom: 1.5rem;">
+                <div class="filtro-mes-dashboard" style="display: flex; align-items: center; gap: 12px;">
+                    <div class="icon-venda pago"
+                        style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i data-lucide="calendar" style="width: 18px;"></i>
+                    </div>
+                    <div>
+                        <label for="filtroMesDashboard"
+                            style="font-size: 0.72rem; color: var(--texto-faint); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Mês
+                            de Análise</label>
+                        <input type="month" id="filtroMesDashboard" class="input-mes input-mes-dashboard"
+                            style="border: none; padding: 0; background: transparent; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-top: 0;">
+                    </div>
+                </div>
+                <button id="btnLimparFiltro" class="btn-secondary"
+                    style="font-size: 0.78rem; padding: 0.45rem 0.9rem; white-space: nowrap;">
+                    Mês Atual
+                </button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 1rem;">
+                <i data-lucide="bar-chart-3" style="color: var(--cor-primaria); width: 18px;"></i>
+                <h4 style="color: var(--texto-principal); font-weight: 600; font-size: 0.95rem;">Desempenho no Período
+                </h4>
+            </div>
+
+            <div class="resumo-cards">
+                <div class="metric-card pos">
+                    <span class="metric-label">
+                        <i data-lucide="trending-up"></i> Recebido (Mês)
+                    </span>
+                    <h2 id="totalEntradas" class="metric-value">R$ 0,00</h2>
+                    <div class="metric-foot">Vendas já pagas</div>
+                </div>
+
+                <div class="metric-card warn">
+                    <span class="metric-label">
+                        <i data-lucide="clock"></i> A Receber
+                    </span>
+                    <h2 id="totalSaidas" class="metric-value">R$ 0,00</h2>
+                    <div class="metric-foot">Vendas aguardando pgto</div>
+                </div>
+
+                <div class="metric-card neg">
+                    <span class="metric-label">
+                        <i data-lucide="trending-down"></i> Despesas (Mês)
+                    </span>
+                    <h2 id="totalGastosDashboard" class="metric-value">R$ 0,00</h2>
+                    <div class="metric-foot">Gastos operacionais</div>
+                </div>
+
+                <div class="metric-card acc">
+                    <span class="metric-label">
+                        <i data-lucide="target"></i> Lucro Líquido (Mês)
+                    </span>
+                    <h2 id="lucroReal" class="metric-value">R$ 0,00</h2>
+                    <div class="metric-foot">Recebido - Gastos</div>
+                </div>
+            </div>
+
+            <div class="card highlight">
+                <div>
+                    <span class="metric-label" style="letter-spacing: 2px;">Saldo Geral Disponível</span>
+                    <p style="font-size: 0.78rem; color: var(--texto-faint); margin-top: 4px;">Patrimônio acumulado
+                        (Entradas Totais - Gastos Totais)</p>
+                </div>
+                <h1 id="saldoGeralTotal" class="big">R$ 0,00</h1>
+            </div>
+
+            <!-- GRÁFICOS -->
+            <div class="graficos-grid">
+                <div class="card chart-card">
+                    <div class="chart-head">
+                        <span class="chart-title">Receitas × Despesas</span>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="chRevExp"></canvas>
+                    </div>
+                </div>
+
+                <div class="card chart-card">
+                    <div class="chart-head">
+                        <span class="chart-title">Evolução do Lucro</span>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="chProfit"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graficos-grid">
+                <div class="card chart-card">
+                    <div class="chart-head">
+                        <span class="chart-title">Distribuição de Vendas por Produto</span>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="chDonut"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="chart-title" style="margin-bottom: 14px;">Comparação com o Mês Anterior</div>
+                    <div class="insight" id="insightComparacao" style="margin-bottom: 14px;">
+                        <i data-lucide="info"></i>
+                        <div>Carregando comparação...</div>
+                    </div>
+                    <div id="comparacaoGrid" class="goal-grid" style="grid-template-columns: 1fr 1fr;">
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 1.5rem;">
+                <section class="recentes" style="min-height: 400px;">
+                    <div class="fluxo-cabecalho fluxo-cabecalho-mobile"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <h3 class="titulo-fluxo chart-title" style="border: none; padding: 0;">Fluxo de Caixa
+                            Recente</h3>
+                        <a href="vendas.html" class="link-ver-vendas"
+                            style="font-size: 0.75rem; color: var(--cor-primaria); text-decoration: none; font-weight: 600; display: block; text-align: center; width: 100%;">Ver
+                            vendas</a>
+                    </div>
+                    <div id="listaMovimentacoes">
+                    </div>
+                </section>
+
+                <section class="recentes" style="min-height: 400px;">
+                    <h3 class="chart-title" style="border: none; padding: 0; margin-bottom: 1.5rem;">Histórico Mensal
+                    </h3>
+                    <div id="listaLucroMensal">
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/dashboard.js"></script>
+    <script type="module" src="js/ai-fab.js"></script>
+    <script>
+        // Inicializa os ícones
+        lucide.createIcons();
+
+        // Dropdown do perfil
+        function toggleProfileDropdown(event) {
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.classList.toggle('active');
+            // Fechar se clicar fora
+            if (!event.target.closest('.profile-dropdown')) {
+                dropdown.classList.remove('active');
+            }
+        }
+
+        // Fechar dropdown ao clicar fora
+        document.addEventListener('click', (e) => {
+            const profileDropdown = document.querySelector('.profile-dropdown');
+            const profileToggle = document.querySelector('.profile-toggle');
+            if (profileDropdown && profileToggle) {
+                if (!e.target.closest('.profile-dropdown')) {
+                    profileDropdown.classList.remove('active');
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
