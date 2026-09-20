@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendas | FinMEI fluxo inteligente</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">MEI</div>
+                <span>finMEI</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
+            </a>
+            <a href="vendas.html" class="nav-item active">
+                <i data-lucide="shopping-cart"></i> <span>Vendas</span>
+            </a>
+            <a href="gastos.html" class="nav-item">
+                <i data-lucide="trending-down"></i> <span>Gastos</span>
+            </a>
+            <a href="contas.html" class="nav-item">
+                <i data-lucide="wallet"></i> <span>Contas</span>
+            </a>
+            <a href="clientes.html" class="nav-item">
+                <i data-lucide="users"></i> <span>Clientes</span>
+            </a>
+            <a href="devendo.html" class="nav-item">
+                <i data-lucide="alert-circle"></i> <span>Devedores</span>
+            </a>
+            <a href="produtos.html" class="nav-item">
+                <i data-lucide="package"></i> <span>Produtos</span>
+            </a>
+
+            <div class="sidebar-divider">ASSISTENTE</div>
+            <a href="ia.html" class="nav-item">
+                <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
+            </a>
+
+            <div class="sidebar-divider">ATALHOS</div>
+            <a href="novo-cliente.html" class="nav-item">
+                <i data-lucide="user-plus"></i> <span>Novo Cliente</span>
+            </a>
+            <a href="nova-venda.html" class="nav-item">
+                <i data-lucide="plus-circle"></i> <span>Nova Venda</span>
+            </a>
+
+            <button onclick="logout()" class="btn-logout" style="margin-top: auto;">
+                <i data-lucide="log-out"></i> <span>Sair</span>
+            </button>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+        <header class="top-bar">
+            <div class="page-header">
+                <h3>Histórico de Vendas</h3>
+                <p>Acompanhe todos os serviços e produtos vendidos</p>
+            </div>
+            <div class="user-info" style="display: flex; gap: 8px;">
+                <button id="btnExportarVendas" class="btn-secondary" style="font-size: 0.82rem;">
+                    <i data-lucide="download" style="width: 15px;"></i> <span>Exportar CSV</span>
+                </button>
+                <a href="nova-venda.html" class="btn-primary" style="width: auto; padding: 0.55rem 1.1rem; text-decoration: none; font-size: 0.85rem;">
+                    <i data-lucide="plus-circle" style="width: 15px;"></i> <span>Nova Venda</span>
+                </a>
+            </div>
+        </header>
+
+        <section class="content-wrapper">
+            <div class="card-buscar">
+                <label for="buscarVenda">Pesquisar por cliente ou serviço</label>
+                <input type="text" id="buscarVenda" placeholder="Ex: João ou Manutenção de PC...">
+            </div>
+
+            <div class="card-buscar">
+                <label for="filtroMesVendas">Filtrar por Mês</label>
+                <input type="month" id="filtroMesVendas" class="input-mes">
+            </div>
+
+            <div class="card-buscar">
+                <label for="filtroContaVendas">Filtrar por Conta</label>
+                <select id="filtroContaVendas" class="input-mes">
+                    <option value="">Todas as contas</option>
+                </select>
+            </div>
+
+            <div id="listaVendas">
+                </div>
+        </section>
+    </main>
+
+    <div id="modalEditarVenda" class="modal">
+        <div class="modal-content card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="color: var(--cor-primaria); font-size: 1.1rem;">Editar Venda</h3>
+                <button onclick="fecharModalEditarVenda()" class="btn-close" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+            
+            <form id="formEditarVenda">
+                <input type="hidden" id="editVendaId">
+                
+                <div class="input-group">
+                    <label>Serviço/Produto</label>
+                    <input type="text" id="editServicoVenda" required>
+                </div>
+
+                <div class="input-group">
+                    <label>Conta Financeira</label>
+                    <select id="editContaVenda">
+                        <option value="">Sem conta vinculada</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="input-group">
+                        <label>Valor (R$)</label>
+                        <input type="number" id="editValorVenda" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Status</label>
+                        <select id="editStatusVenda">
+                            <option value="pago">Pago</option>
+                            <option value="pendente">Pendente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" style="margin-top: 1.2rem;">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/ai-fab.js"></script>
+    <script src="js/confirm-modal.js"></script>
+    <script type="module" src="js/vendas.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

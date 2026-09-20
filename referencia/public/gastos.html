@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meus Gastos | FinMEI fluxo inteligente</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="dashboard-layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area"><div class="logo-icon">MEI</div><span>finMEI</span></div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html" class="nav-item"><i data-lucide="layout-dashboard"></i> <span>Dashboard</span></a>
+            <a href="vendas.html" class="nav-item"><i data-lucide="shopping-cart"></i> <span>Vendas</span></a>
+            <a href="gastos.html" class="nav-item active"><i data-lucide="trending-down"></i> <span>Gastos</span></a>
+            <a href="contas.html" class="nav-item"><i data-lucide="wallet"></i> <span>Contas</span></a>
+            <a href="clientes.html" class="nav-item"><i data-lucide="users"></i> <span>Clientes</span></a>
+            <a href="devendo.html" class="nav-item"><i data-lucide="alert-circle"></i> <span>Devedores</span></a>
+            <a href="produtos.html" class="nav-item"><i data-lucide="package"></i> <span>Produtos</span></a>
+            <div class="sidebar-divider">ASSISTENTE</div>
+            <a href="ia.html" class="nav-item"><i data-lucide="sparkles"></i> <span>FinMEI IA</span></a>
+            <div class="sidebar-divider">ATALHOS</div>
+            <a href="novo-cliente.html" class="nav-item">
+                <i data-lucide="user-plus"></i> <span>Novo Cliente</span>
+            </a>
+            <a href="nova-venda.html" class="nav-item">
+                <i data-lucide="plus-circle"></i> <span>Nova Venda</span>
+            </a>
+            <button onclick="logout()" class="btn-logout"><i data-lucide="log-out"></i> <span>Sair</span></button>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+        <header class="top-bar">
+            <div class="page-header">
+                <h3>Controle de Gastos</h3>
+                <p>Gerencie suas saídas e despesas</p>
+            </div>
+            <div class="user-info">
+                <button id="btnExportarGastos" class="btn-secondary">
+                    <i data-lucide="download" style="width: 15px;"></i> <span>Exportar CSV</span>
+                </button>
+                <button onclick="abrirModalGasto()" class="btn-primary gasto-btn-novo">
+                    <i data-lucide="plus-circle" style="width: 15px;"></i> <span>Novo Gasto</span>
+                </button>
+            </div>
+        </header>
+
+        <section class="content-wrapper">
+            <div class="card-buscar card-gastos-mobile">
+                <div class="gastos-selecao-mes">
+                    <label>Mês de Referência:</label>
+                    <input type="month" id="filtroMesGastos" class="input-mes input-mes-gastos">
+                </div>
+                <div class="gastos-selecao-mes">
+                    <label>Conta:</label>
+                    <select id="filtroContaGastos" class="input-mes input-mes-gastos">
+                        <option value="">Todas as contas</option>
+                    </select>
+                </div>
+                <div class="card card-total-gasto">
+                    <span style="font-size: 0.7rem;">TOTAL GASTO NO MÊS</span>
+                    <h3 id="totalGastoMes" style="color: var(--cor-erro); margin: 0;">R$ 0,00</h3>
+                </div>
+            </div>
+
+            <div id="listaGastos" class="gastos-lista"></div>
+        </section>
+    </main>
+
+    <div id="modalGasto" class="modal">
+        <div class="modal-content card">
+            <div class="modal-header-flex">
+                <h3 style="color: var(--cor-erro);">Registrar Saída</h3>
+                <button onclick="fecharModalGasto()" class="btn-close-modal">&times;</button>
+            </div>
+            
+            <form id="formNovoGasto">
+                <div class="input-group">
+                    <label>Descrição do Gasto</label>
+                    <input type="text" id="descGasto" placeholder="Ex: Compra de embalagens" required>
+                </div>
+                <div class="produto-form-grid">
+                    <div class="input-group">
+                        <label>Valor (R$)</label>
+                        <input type="number" id="valorGasto" placeholder="0,00" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Data</label>
+                        <input type="date" id="dataGasto" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Conta Financeira</label>
+                    <select id="contaGasto">
+                        <option value="">Sem conta vinculada</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Categoria</label>
+                    <select id="catGasto">
+                        <option value="Mercadoria">Mercadoria / Estoque</option>
+                        <option value="Aluguel">Aluguel / Espaço</option>
+                        <option value="Marketing">Marketing / Anúncios</option>
+                        <option value="Serviços">Luz / Água / Internet</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary gasto-btn-salvar">Salvar Gasto</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalEditarGasto" class="modal">
+        <div class="modal-content card">
+            <div class="modal-header-flex">
+                <h3>Editar Saída</h3>
+                <button onclick="fecharModalEditarGasto()" class="btn-close-modal">&times;</button>
+            </div>
+            
+            <form id="formEditarGasto">
+                <input type="hidden" id="editGastoId">
+                <div class="input-group">
+                    <label>Descrição do Gasto</label>
+                    <input type="text" id="editDescGasto" required>
+                </div>
+                <div class="input-group">
+                    <label>Conta Financeira</label>
+                    <select id="editContaGasto">
+                        <option value="">Sem conta vinculada</option>
+                    </select>
+                </div>
+                <div class="produto-form-grid">
+                    <div class="input-group">
+                        <label>Valor (R$)</label>
+                        <input type="number" id="editValorGasto" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Data</label>
+                        <input type="date" id="editDataGasto" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Categoria</label>
+                    <select id="editCatGasto">
+                        <option value="Mercadoria">Mercadoria / Estoque</option>
+                        <option value="Aluguel">Aluguel / Espaço</option>
+                        <option value="Marketing">Marketing / Anúncios</option>
+                        <option value="Serviços">Luz / Água / Internet</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/ai-fab.js"></script>
+    <script src="js/confirm-modal.js"></script>
+    <script type="module" src="js/gastos.js"></script>
+    <script>setTimeout(() => lucide.createIcons(), 500);</script>
+</body>
+</html>

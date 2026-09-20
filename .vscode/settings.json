@@ -9,5 +9,6 @@
             "matchCommandLine": true
         },
         "npx supabase": true
-    }
+    },
+    "liveServer.settings.port": 3001
 }

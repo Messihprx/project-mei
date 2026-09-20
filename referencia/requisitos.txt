@@ -1,0 +1,272 @@
+RF100 – Cadastrar conta financeira
+
+Descrição:
+O sistema deve permitir que o usuário cadastre uma conta financeira informando nome da conta, instituição financeira, tipo de conta, finalidade da conta e saldo inicial.
+
+Procedimentos:
+
+1. Acessar o módulo de contas financeiras;
+2. Selecionar a opção "Cadastrar conta";
+3. Informar o nome da conta;
+4. Informar a instituição financeira;
+5. Selecionar o tipo de conta;
+6. Definir a finalidade da conta;
+7. Informar o saldo inicial;
+8. Confirmar o cadastro.
+
+Prioridade: Essencial.
+
+RF101 – Classificar finalidade da conta
+
+Descrição:
+O sistema deve permitir que o usuário classifique a conta financeira de acordo com sua finalidade, podendo defini-la como conta exclusiva do negócio, conta pessoal ou conta de uso misto.
+
+Procedimentos:
+
+1. Acessar o cadastro ou edição de uma conta;
+2. Selecionar a finalidade da conta;
+3. Escolher entre negócio, pessoal ou uso misto;
+4. Salvar a classificação.
+
+Prioridade: Essencial.
+
+RF102 – Definir tipo de conta
+
+Descrição:
+O sistema deve permitir que o usuário selecione o tipo da conta financeira, incluindo conta bancária PJ, conta bancária PF, conta poupança, caixa, carteira digital ou outro tipo.
+
+Prioridade: Importante.
+
+RF103 – Informar saldo inicial
+
+Descrição:
+O sistema deve permitir que o usuário informe o saldo existente na conta no momento do cadastro.
+
+Prioridade: Essencial.
+
+RF104 – Listar contas cadastradas
+
+Descrição:
+O sistema deve permitir que o usuário visualize todas as contas cadastradas, apresentando informações como nome, instituição, tipo, finalidade e saldo atual.
+
+Procedimentos:
+
+1. Acessar o módulo de contas;
+2. Consultar a lista de contas cadastradas;
+3. Visualizar as informações de cada conta.
+
+Prioridade: Essencial.
+
+RF105 – Visualizar saldo individual da conta
+
+Descrição:
+O sistema deve apresentar o saldo atual de cada conta financeira cadastrada.
+
+Prioridade: Essencial.
+
+RF106 – Calcular saldo consolidado
+
+Descrição:
+O sistema deve calcular e apresentar o saldo total das contas selecionadas pelo usuário para compor o saldo consolidado do negócio.
+
+Procedimentos:
+
+1. Identificar as contas classificadas para compor o saldo do negócio;
+2. Somar os saldos dessas contas;
+3. Apresentar o saldo consolidado.
+
+Prioridade: Essencial.
+
+RF107 – Vincular movimentação à conta
+
+Descrição:
+O sistema deve permitir que cada entrada ou saída financeira seja vinculada a uma conta financeira cadastrada.
+
+Procedimentos:
+
+1. Acessar o cadastro de uma movimentação;
+2. Selecionar a conta financeira;
+3. Informar os demais dados da movimentação;
+4. Salvar o registro.
+
+Prioridade: Essencial.
+
+RF108 – Atualizar saldo automaticamente
+
+Descrição:
+O sistema deve atualizar automaticamente o saldo da conta após o registro de uma entrada, saída ou transferência.
+
+Prioridade: Essencial.
+
+RF109 – Realizar transferência entre contas
+
+Descrição:
+O sistema deve permitir que o usuário registre transferências de valores entre contas financeiras pertencentes ao próprio usuário.
+
+Procedimentos:
+
+1. Acessar a opção de transferência;
+2. Selecionar a conta de origem;
+3. Selecionar a conta de destino;
+4. Informar o valor da transferência;
+5. Confirmar a operação;
+6. Atualizar os saldos das contas envolvidas.
+
+Prioridade: Importante.
+
+RF110 – Não contabilizar transferência como receita ou despesa
+
+Descrição:
+O sistema deve reconhecer transferências realizadas entre contas pertencentes ao próprio usuário e impedir que esses valores sejam contabilizados como receita ou despesa no cálculo do lucro.
+
+Prioridade: Essencial.
+
+RF111 – Consultar movimentações da conta
+
+Descrição:
+O sistema deve permitir que o usuário visualize todas as movimentações financeiras vinculadas a uma determinada conta.
+
+Procedimentos:
+
+1. Acessar o módulo de contas;
+2. Selecionar uma conta;
+3. Consultar as movimentações vinculadas à conta.
+
+Prioridade: Importante.
+
+RF112 – Editar conta
+
+Descrição:
+O sistema deve permitir que o usuário altere os dados de uma conta financeira previamente cadastrada.
+
+Procedimentos:
+
+1. Acessar a lista de contas;
+2. Selecionar a conta desejada;
+3. Selecionar a opção "Editar";
+4. Alterar os dados necessários;
+5. Salvar as alterações.
+
+Prioridade: Importante.
+
+RF113 – Inativar conta
+
+Descrição:
+O sistema deve permitir que o usuário inative uma conta financeira, mantendo seu histórico de movimentações registrado no sistema.
+
+Procedimentos:
+
+1. Selecionar a conta;
+2. Escolher a opção de inativação;
+3. Confirmar a operação;
+4. Manter o histórico da conta disponível para consulta.
+
+Prioridade: Importante.
+
+RF114 – Excluir conta
+
+Descrição:
+O sistema deve permitir a exclusão de uma conta que não possua movimentações vinculadas ou solicitar confirmação do usuário caso existam dados relacionados à conta.
+
+Procedimentos:
+
+1. Selecionar a conta;
+2. Escolher a opção "Excluir";
+3. Verificar se existem movimentações vinculadas;
+4. Solicitar confirmação quando necessário;
+5. Excluir a conta quando permitido.
+
+Prioridade: Importante.
+
+RF115 – Filtrar movimentações por conta
+
+Descrição:
+O sistema deve permitir que o usuário filtre as entradas, saídas e transferências de acordo com a conta financeira selecionada.
+
+Prioridade: Importante.
+
+RF116 – Identificar contas utilizadas no negócio
+
+Descrição:
+O sistema deve permitir identificar quais contas financeiras são utilizadas exclusivamente para as atividades do MEI.
+
+Prioridade: Importante.
+
+RF117 – Considerar contas na análise financeira
+
+Descrição:
+O sistema deve utilizar os saldos e movimentações das contas classificadas como pertencentes ao negócio para alimentar os indicadores financeiros do FinMEI, como saldo disponível, fluxo de caixa, lucro e projeção de caixa.
+
+Prioridade: Essencial.
+
+4.3.X REQUISITOS NÃO FUNCIONAIS – GERENCIAMENTO DE CONTAS FINANCEIRAS
+
+NF47 – Segurança dos dados financeiros
+
+Descrição:
+O sistema deve garantir a confidencialidade e a proteção dos dados financeiros cadastrados pelo usuário contra acessos não autorizados.
+
+Tipo de requisito: Segurança.
+
+NF48 – Integridade dos dados das contas
+
+Descrição:
+O sistema deve garantir que os saldos das contas permaneçam consistentes com as movimentações financeiras registradas.
+
+Tipo de requisito: Software.
+
+NF49 – Atualização automática do saldo
+
+Descrição:
+Após o registro de uma movimentação financeira, o saldo da conta deve ser atualizado automaticamente sem necessidade de atualização manual da página.
+
+Tipo de requisito: Performance.
+
+NF50 – Desempenho no carregamento das contas
+
+Descrição:
+O sistema deve apresentar a lista de contas e seus respectivos saldos em até 3 segundos em condições normais de funcionamento.
+
+Tipo de requisito: Performance.
+
+NF51 – Usabilidade no cadastro de contas
+
+Descrição:
+O cadastro e gerenciamento de contas devem possuir uma interface simples e intuitiva, permitindo que o usuário realize as operações sem necessidade de conhecimento técnico.
+
+Tipo de requisito: Usabilidade.
+
+NF52 – Validação dos dados das contas
+
+Descrição:
+O sistema deve validar os campos obrigatórios do cadastro e impedir o registro de informações inválidas ou incompletas.
+
+Tipo de requisito: Software.
+
+NF53 – Rastreabilidade das movimentações
+
+Descrição:
+O sistema deve preservar o histórico das movimentações financeiras vinculadas a uma conta mesmo após sua inativação.
+
+Tipo de requisito: Software.
+
+NF54 – Disponibilidade do gerenciamento de contas
+
+Descrição:
+A funcionalidade de gerenciamento de contas deve permanecer disponível durante o funcionamento normal do sistema, exceto em períodos de manutenção programada.
+
+Tipo de requisito: Disponibilidade.
+
+NF55 – Compatibilidade
+
+Descrição:
+A funcionalidade de gerenciamento de contas deve funcionar corretamente nos navegadores e dispositivos suportados pelo FinMEI.
+
+Tipo de requisito: Software.
+
+NF56 – Consistência das transferências
+
+Descrição:
+O sistema não deve considerar uma transferência entre contas próprias como receita ou despesa, evitando distorções no cálculo do lucro e dos demais indicadores financeiros.
+
+Tipo de requisito: Software.
