@@ -1692,10 +1692,16 @@ async function renderContas() {
     if (uErr) throw uErr;
 
     const { data: contas, error: cErr } = await supabase
-      .from('contas').select('*, perfis(nome_completo, email)').order('created_at', { ascending: false });
+      .from('contas').select('*').order('created_at', { ascending: false });
     if (cErr) throw cErr;
 
-    contasCache = contas || [];
+    const userMap = {};
+    (usuarios || []).forEach(u => { userMap[u.id] = u; });
+
+    contasCache = (contas || []).map(c => ({
+      ...c,
+      _user: userMap[c.user_id] || null
+    }));
     const lista = contasUsuarioFiltro
       ? contasCache.filter(c => c.user_id === contasUsuarioFiltro)
       : contasCache;
@@ -1766,7 +1772,7 @@ function contasTableRows(lista) {
   const finLabels = { negocio: 'Negócio', pessoal: 'Pessoal', misto: 'Misto' };
 
   return lista.map(c => {
-    const nome = c.perfis?.nome_completo || c.perfis?.email || '—';
+    const nome = c._user?.nome_completo || c._user?.email || '—';
     return `<tr>
       <td>${esc(nome)}</td>
       <td><b>${esc(c.nome)}</b></td>
@@ -1794,8 +1800,8 @@ function onContaSearch(v) {
     if (contasUsuarioFiltro && c.user_id !== contasUsuarioFiltro) return false;
     return c.nome.toLowerCase().includes(termo)
       || (c.instituicao || '').toLowerCase().includes(termo)
-      || (c.perfis?.nome_completo || '').toLowerCase().includes(termo)
-      || (c.perfis?.email || '').toLowerCase().includes(termo);
+      || (c._user?.nome_completo || '').toLowerCase().includes(termo)
+      || (c._user?.email || '').toLowerCase().includes(termo);
   });
   document.getElementById('contasTableBody').innerHTML = contasTableRows(lista);
 }
