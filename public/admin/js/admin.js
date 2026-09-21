@@ -429,6 +429,7 @@ const TITLES = {
   usuarios: ['Usuários', 'Gerencie os usuários cadastrados'],
   assinaturas: ['Assinaturas', 'Gerencie as assinaturas do sistema'],
   pagamentos: ['Pagamentos', 'Acompanhe os pagamentos realizados'],
+  contas: ['Contas Financeiras', 'Gerencie contas de todos os usuários'],
   gateway: ['Configurações de pagamento', 'Integração com o Mercado Pago'],
   planos: ['Planos e limites', 'Limites de uso por plano'],
   iaconfig: ['Configuração de IA', 'Provedores, limites e uso da inteligência artificial'],
@@ -465,6 +466,7 @@ function renderPage(page) {
     usuarios: renderUsuarios,
     assinaturas: renderAssinaturas,
     pagamentos: renderPagamentos,
+    contas: renderContas,
     gateway: renderGateway,
     planos: renderPlanoLimites,
     iaconfig: renderAIConfig,
@@ -1675,6 +1677,239 @@ async function saveGatewayConfig() {
     toast(e.message || 'Erro ao salvar configurações.', 'err');
   }
 }
+
+/* Contas Financeiras (admin) */
+
+let contasCache = [];
+let contasUsuarioFiltro = '';
+
+async function renderContas() {
+  contentEl.innerHTML = '<div class="loading">Carregando contas...</div>';
+
+  try {
+    const { data: usuarios, error: uErr } = await supabase
+      .from('perfis').select('id, nome_completo, email').order('nome_completo');
+    if (uErr) throw uErr;
+
+    const { data: contas, error: cErr } = await supabase
+      .from('contas').select('*, perfis(nome_completo, email)').order('created_at', { ascending: false });
+    if (cErr) throw cErr;
+
+    contasCache = contas || [];
+    const lista = contasUsuarioFiltro
+      ? contasCache.filter(c => c.user_id === contasUsuarioFiltro)
+      : contasCache;
+
+    const userOptions = (usuarios || [])
+      .map(u => `<option value="${u.id}" ${contasUsuarioFiltro === u.id ? 'selected' : ''}>${esc(u.nome_completo || u.email)}</option>`)
+      .join('');
+
+    const totalContas = lista.length;
+    const totalSaldo = lista.reduce((s, c) => s + Number(c.saldo_atual || 0), 0);
+
+    contentEl.innerHTML = `
+      <div class="page-head">
+        <div>
+          <div class="page-title">Contas Financeiras</div>
+          <div class="page-desc">${totalContas} conta(s) encontrada(s) · Saldo total: ${brl(totalSaldo)}</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="7"/>
+            <path stroke-linecap="round" d="M21 21l-4.3-4.3"/>
+          </svg>
+          <input id="contaSearchInput" placeholder="Buscar por nome..." oninput="onContaSearch(this.value)">
+        </div>
+        <select onchange="onContaFilterUser(this.value)">
+          <option value="">Todos os usuários</option>
+          ${userOptions}
+        </select>
+      </div>
+
+      <div class="table-wrap table-scroll" id="contasTable">
+        <table>
+          <thead>
+            <tr>
+              <th>Usuário</th>
+              <th>Nome</th>
+              <th>Instituição</th>
+              <th>Tipo</th>
+              <th>Finalidade</th>
+              <th class="num">Saldo Inicial</th>
+              <th class="num">Saldo Atual</th>
+              <th>Status</th>
+              <th>Cadastro</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="contasTableBody">${contasTableRows(lista)}</tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    contentEl.innerHTML = `<div class="loading err">${esc(e.message)}</div>`;
+  }
+}
+
+function contasTableRows(lista) {
+  if (!lista.length) {
+    return '<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text-faint)">Nenhuma conta encontrada.</td></tr>';
+  }
+
+  const tipoLabels = {
+    banco_pj: 'Banco PJ', banco_pf: 'Banco PF', poupanca: 'Poupança',
+    caixa: 'Caixa', carteira_digital: 'Carteira Digital', outro: 'Outro'
+  };
+  const finLabels = { negocio: 'Negócio', pessoal: 'Pessoal', misto: 'Misto' };
+
+  return lista.map(c => {
+    const nome = c.perfis?.nome_completo || c.perfis?.email || '—';
+    return `<tr>
+      <td>${esc(nome)}</td>
+      <td><b>${esc(c.nome)}</b></td>
+      <td>${esc(c.instituicao || '—')}</td>
+      <td>${tipoLabels[c.tipo] || c.tipo}</td>
+      <td>${finLabels[c.finalidade] || c.finalidade}</td>
+      <td class="num">${brl(c.saldo_inicial)}</td>
+      <td class="num" style="font-weight:700;color:${Number(c.saldo_atual) >= 0 ? 'var(--positive)' : 'var(--negative)'}">${brl(c.saldo_atual)}</td>
+      <td>${c.ativo ? statusPill('success', 'Ativa') : statusPill('muted', 'Inativa')}</td>
+      <td>${c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : '—'}</td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="adminEditarConta('${c.id}')" style="margin-right:4px">Editar</button>
+        <button class="btn btn-secondary btn-sm" onclick="adminInativarConta('${c.id}','${esc(c.nome)}')" style="margin-right:4px">
+          ${c.ativo ? 'Inativar' : 'Ativar'}
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="adminExcluirConta('${c.id}','${esc(c.nome)}')">Excluir</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function onContaSearch(v) {
+  const termo = v.toLowerCase();
+  const lista = contasCache.filter(c => {
+    if (contasUsuarioFiltro && c.user_id !== contasUsuarioFiltro) return false;
+    return c.nome.toLowerCase().includes(termo)
+      || (c.instituicao || '').toLowerCase().includes(termo)
+      || (c.perfis?.nome_completo || '').toLowerCase().includes(termo)
+      || (c.perfis?.email || '').toLowerCase().includes(termo);
+  });
+  document.getElementById('contasTableBody').innerHTML = contasTableRows(lista);
+}
+window.onContaSearch = onContaSearch;
+
+function onContaFilterUser(userId) {
+  contasUsuarioFiltro = userId;
+  renderContas();
+}
+window.onContaFilterUser = onContaFilterUser;
+
+function adminEditarConta(id) {
+  const c = contasCache.find(x => x.id === id);
+  if (!c) return;
+
+  document.getElementById('modalTitle').textContent = 'Editar Conta';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field">
+      <label>Nome</label>
+      <input id="editNome" value="${esc(c.nome)}">
+    </div>
+    <div class="field">
+      <label>Instituição</label>
+      <input id="editInst" value="${esc(c.instituicao || '')}">
+    </div>
+    <div class="field">
+      <label>Tipo</label>
+      <select id="editTipo">
+        ${['banco_pj','banco_pf','poupanca','caixa','carteira_digital','outro'].map(t =>
+          `<option value="${t}" ${c.tipo === t ? 'selected' : ''}>${t.replace(/_/g,' ')}</option>`
+        ).join('')}
+      </select>
+    </div>
+    <div class="field">
+      <label>Finalidade</label>
+      <select id="editFin">
+        ${['negocio','pessoal','misto'].map(f =>
+          `<option value="${f}" ${c.finalidade === f ? 'selected' : ''}>${f}</option>`
+        ).join('')}
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarContaAdmin('${c.id}')">Salvar</button>
+    </div>
+  `;
+  openModal();
+}
+window.adminEditarConta = adminEditarConta;
+
+async function salvarContaAdmin(id) {
+  const nome = document.getElementById('editNome').value.trim();
+  if (!nome) { toast('Nome é obrigatório.', 'err'); return; }
+
+  try {
+    const { error } = await supabase.from('contas').update({
+      nome,
+      instituicao: document.getElementById('editInst').value.trim() || null,
+      tipo: document.getElementById('editTipo').value,
+      finalidade: document.getElementById('editFin').value,
+      updated_at: new Date().toISOString()
+    }).eq('id', id);
+    if (error) throw error;
+    closeModal();
+    toast('Conta atualizada com sucesso.');
+    renderContas();
+  } catch (e) {
+    toast(e.message || 'Erro ao atualizar.', 'err');
+  }
+}
+window.salvarContaAdmin = salvarContaAdmin;
+
+function adminInativarConta(id, nome) {
+  const c = contasCache.find(x => x.id === id);
+  const acao = c?.ativo ? 'inativar' : 'ativar';
+  confirmAction(
+    `${acao.charAt(0).toUpperCase() + acao.slice(1)} conta`,
+    `Deseja ${acao} a conta "<b>${esc(nome)}</b>"?`,
+    acao.charAt(0).toUpperCase() + acao.slice(1),
+    async () => {
+      try {
+        const { error } = await supabase.from('contas').update({
+          ativo: !c.ativo,
+          updated_at: new Date().toISOString()
+        }).eq('id', id);
+        if (error) throw error;
+        toast(`Conta ${acao === 'inativar' ? 'inativada' : 'reativada'}.`);
+        renderContas();
+      } catch (e) {
+        toast(e.message || 'Erro ao processar.', 'err');
+      }
+    }
+  );
+}
+window.adminInativarConta = adminInativarConta;
+
+function adminExcluirConta(id, nome) {
+  confirmAction(
+    'Excluir conta permanentemente',
+    `Tem certeza que deseja excluir a conta "<b>${esc(nome)}</b>"?<br><br>Se houver movimentações vinculadas, o vínculo será removido (os registros serão mantidos).`,
+    'Excluir',
+    async () => {
+      try {
+        const { error } = await supabase.from('contas').delete().eq('id', id);
+        if (error) throw error;
+        toast('Conta excluída permanentemente.');
+        renderContas();
+      } catch (e) {
+        toast(e.message || 'Erro ao excluir.', 'err');
+      }
+    }
+  );
+}
+window.adminExcluirConta = adminExcluirConta;
 
 async function renderGateway() {
   contentEl.innerHTML = '<div class="loading">Carregando configurações...</div>';
