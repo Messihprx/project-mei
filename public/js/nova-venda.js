@@ -1,5 +1,6 @@
 import { supabase } from './auth.js';
 import { esc } from './dom-utils.js';
+import { atualizarSaldoConta, calcDeltaVenda } from './conta-saldo.js';
 
 let listaDeClientesGlobal = [];
 let listaDeProdutosGlobal = [];
@@ -94,6 +95,7 @@ if (formNovaVenda) {
         const valor = inputValor.value;
         const status = document.getElementById("statusVenda").value;
         const produtoId = inputProdutoId.value || null;
+        const contaId = document.getElementById("contaVenda")?.value || null;
 
         const valorNumerico = parseFloat(valor);
 
@@ -121,6 +123,7 @@ if (formNovaVenda) {
                     user_id: user.id,
                     cliente_id: clienteId,
                     produto_id: produtoId,
+                    conta_id: contaId,
                     descricao: descricao,
                     valor: valorNumerico,
                     status: status
@@ -128,6 +131,11 @@ if (formNovaVenda) {
             ]);
 
             if (error) throw error;
+
+            if (contaId) {
+                const delta = calcDeltaVenda(valorNumerico, status, 'criar');
+                if (delta !== 0) await atualizarSaldoConta(contaId, delta);
+            }
             // A contagem mudou: o aviso de limite não pode continuar
             // mostrando o número anterior a esta operação.
             invalidarCachePlano();
@@ -146,3 +154,28 @@ if (formNovaVenda) {
 
 popularSugestoesClientes();
 popularSugestoesProdutos();
+
+// 5. POPULAR SELECT DE CONTAS
+async function popularSelectContas() {
+    const select = document.getElementById("contaVenda");
+    if (!select) return;
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: contas, error } = await supabase
+            .from('contas')
+            .select('id, nome')
+            .eq('user_id', user.id)
+            .eq('ativo', true)
+            .order('nome');
+
+        if (error) throw error;
+
+        select.innerHTML = '<option value="">Sem conta vinculada</option>' +
+            (contas || []).map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+    } catch (err) {
+        console.error("Erro ao carregar contas:", err.message);
+    }
+}
+
+popularSelectContas();

@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contas Financeiras | FinMEI fluxo inteligente</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+    <meta name="theme-color" content="#0b1120">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+    </script>
+    <style>
+        .conta-card {
+            background: var(--fundo-card);
+            border: 1px solid var(--borda-cor);
+            border-radius: var(--radius);
+            padding: 1.2rem;
+            margin-bottom: 0.8rem;
+            transition: var(--transition);
+        }
+        .conta-card:hover {
+            border-color: var(--cor-primaria);
+            box-shadow: var(--shadow-glow);
+        }
+        .conta-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .conta-icone {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--cor-primaria-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .conta-icone i {
+            width: 22px;
+            height: 22px;
+            color: var(--cor-primaria);
+        }
+        .conta-info {
+            flex: 1;
+            min-width: 150px;
+        }
+        .conta-info h4 {
+            margin: 0;
+            font-size: 0.95rem;
+            color: var(--texto-principal);
+        }
+        .conta-meta {
+            font-size: 0.78rem;
+            color: var(--texto-secundario);
+            display: block;
+            margin-top: 2px;
+        }
+        .conta-finalidade {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+        .badge-negocio {
+            background: var(--cor-primaria-soft);
+            color: var(--cor-primaria);
+        }
+        .badge-pessoal {
+            background: var(--cor-alerta-soft, rgba(255, 145, 0, 0.15));
+            color: var(--cor-alerta);
+        }
+        .badge-misto {
+            background: var(--cor-sucesso-soft, rgba(0, 229, 117, 0.15));
+            color: var(--cor-sucesso);
+        }
+        .conta-saldo-area {
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .conta-saldo-label {
+            font-size: 0.7rem;
+            color: var(--texto-secundario);
+            display: block;
+        }
+        .conta-saldo {
+            font-size: 1.15rem;
+            font-weight: 700;
+            font-family: 'Manrope', sans-serif;
+        }
+        .valor-sucesso { color: var(--cor-sucesso); }
+        .valor-erro { color: var(--cor-erro); }
+        .conta-acoes {
+            display: flex;
+            gap: 8px;
+            margin-top: 0.8rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid var(--borda-cor);
+            flex-wrap: wrap;
+        }
+        .conta-acoes .btn-acao {
+            background: none;
+            border: 1px solid var(--borda-cor);
+            color: var(--texto-secundario);
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: var(--transition);
+        }
+        .conta-acoes .btn-acao:hover {
+            border-color: var(--cor-primaria);
+            color: var(--cor-primaria);
+            background: var(--cor-primaria-soft);
+        }
+        .conta-acoes .btn-delete:hover {
+            border-color: var(--cor-erro);
+            color: var(--cor-erro);
+            background: var(--cor-erro-soft, rgba(255, 59, 48, 0.15));
+        }
+        .conta-acoes .btn-acao i {
+            width: 14px;
+            height: 14px;
+        }
+        .saldo-consolidado-card {
+            background: linear-gradient(135deg, var(--cor-primaria-soft), transparent);
+            border: 1px solid var(--cor-primaria);
+            border-radius: var(--radius);
+            padding: 1.2rem 1.5rem;
+            text-align: center;
+            margin-bottom: 1.2rem;
+        }
+        .saldo-consolidado-card span {
+            font-size: 0.75rem;
+            color: var(--texto-secundario);
+            display: block;
+        }
+        .saldo-consolidado-card h2 {
+            font-size: 1.6rem;
+            color: var(--cor-sucesso);
+            margin: 0.3rem 0 0;
+            font-family: 'Manrope', sans-serif;
+        }
+        @media (max-width: 600px) {
+            .conta-header { flex-direction: column; align-items: flex-start; }
+            .conta-saldo-area { text-align: left; }
+        }
+    </style>
+</head>
+<body class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">MEI</div>
+                <span>finMEI</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
+            </a>
+            <a href="vendas.html" class="nav-item">
+                <i data-lucide="shopping-cart"></i> <span>Vendas</span>
+            </a>
+            <a href="gastos.html" class="nav-item">
+                <i data-lucide="trending-down"></i> <span>Gastos</span>
+            </a>
+            <a href="contas.html" class="nav-item active">
+                <i data-lucide="wallet"></i> <span>Contas</span>
+            </a>
+            <a href="clientes.html" class="nav-item">
+                <i data-lucide="users"></i> <span>Clientes</span>
+            </a>
+            <a href="devendo.html" class="nav-item">
+                <i data-lucide="alert-circle"></i> <span>Devedores</span>
+            </a>
+            <a href="produtos.html" class="nav-item">
+                <i data-lucide="package"></i> <span>Produtos</span>
+            </a>
+
+            <div class="sidebar-divider">ASSISTENTE</div>
+            <a href="ia.html" class="nav-item">
+                <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
+            </a>
+
+            <div class="sidebar-divider">ATALHOS</div>
+            <a href="novo-cliente.html" class="nav-item">
+                <i data-lucide="user-plus"></i> <span>Novo Cliente</span>
+            </a>
+            <a href="nova-venda.html" class="nav-item">
+                <i data-lucide="plus-circle"></i> <span>Nova Venda</span>
+            </a>
+
+            <button onclick="logout()" class="btn-logout" style="margin-top: auto;">
+                <i data-lucide="log-out"></i> <span>Sair</span>
+            </button>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+        <header class="top-bar">
+            <div class="page-header">
+                <h3>Contas Financeiras</h3>
+                <p>Gerencie suas contas e acompanhe saldos</p>
+            </div>
+            <div class="user-info" style="display: flex; gap: 8px;">
+                <button onclick="abrirModalTransferencia()" class="btn-secondary" style="width: auto; padding: 0.55rem 1.1rem; font-size: 0.85rem;">
+                    <i data-lucide="arrow-left-right" style="width: 15px;"></i> <span>Transferir</span>
+                </button>
+                <button onclick="abrirModalNovaConta()" class="btn-primary" style="width: auto; padding: 0.55rem 1.1rem; text-decoration: none; font-size: 0.85rem;">
+                    <i data-lucide="plus-circle" style="width: 15px;"></i> <span>Nova Conta</span>
+                </button>
+            </div>
+        </header>
+
+        <section class="content-wrapper">
+            <div class="saldo-consolidado-card">
+                <span>SALDO CONSOLIDADO (Negócio)</span>
+                <h2 id="saldoConsolidado">R$ 0,00</h2>
+            </div>
+
+            <div id="listaContas"></div>
+        </section>
+    </main>
+
+    <!-- MODAL: Nova Conta -->
+    <div id="modalNovaConta" class="modal">
+        <div class="modal-content card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="color: var(--cor-primaria); font-size: 1.1rem;">Nova Conta</h3>
+                <button onclick="fecharModalNovaConta()" class="btn-close" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+
+            <form id="formNovaConta">
+                <div class="input-group">
+                    <label>Nome da Conta *</label>
+                    <input type="text" id="nomeConta" placeholder="Ex: Nubank PJ, Itaú Negócio" required>
+                </div>
+
+                <div class="input-group">
+                    <label>Instituição Financeira</label>
+                    <input type="text" id="instituicaoConta" placeholder="Ex: Nubank, Bradesco, Caixa">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="input-group">
+                        <label>Tipo de Conta</label>
+                        <select id="tipoConta">
+                            <option value="banco_pj">Banco PJ</option>
+                            <option value="banco_pf">Banco PF</option>
+                            <option value="poupanca">Poupança</option>
+                            <option value="caixa">Caixa</option>
+                            <option value="carteira_digital">Carteira Digital</option>
+                            <option value="outro">Outro</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Finalidade</label>
+                        <select id="finalidadeConta">
+                            <option value="negocio">Negócio</option>
+                            <option value="pessoal">Pessoal</option>
+                            <option value="misto">Misto</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Saldo Inicial (R$)</label>
+                    <input type="number" id="saldoInicial" step="0.01" value="0" min="0">
+                </div>
+
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;">Cadastrar Conta</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Transferência entre Contas -->
+    <div id="modalTransferencia" class="modal">
+        <div class="modal-content card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="color: var(--cor-primaria); font-size: 1.1rem;">Transferir entre Contas</h3>
+                <button onclick="fecharModalTransferencia()" class="btn-close" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+
+            <form id="formTransferencia">
+                <div class="input-group">
+                    <label>Conta de Origem *</label>
+                    <select id="contaOrigem" required>
+                        <option value="">Selecione a conta de origem</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Conta de Destino *</label>
+                    <select id="contaDestino" required>
+                        <option value="">Selecione a conta de destino</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Valor (R$) *</label>
+                    <input type="number" id="valorTransferencia" step="0.01" min="0.01" required placeholder="0,00">
+                </div>
+
+                <p style="font-size: 0.75rem; color: var(--texto-faint); margin-top: 0.5rem;">
+                    Transferências entre contas próprias não são contabilizadas como receita ou despesa.
+                </p>
+
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;">Confirmar Transferência</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Editar Conta -->
+    <div id="modalEditarConta" class="modal">
+        <div class="modal-content card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="color: var(--cor-primaria); font-size: 1.1rem;">Editar Conta</h3>
+                <button onclick="fecharModalEditarConta()" class="btn-close" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+
+            <form id="formEditarConta">
+                <input type="hidden" id="editContaId">
+
+                <div class="input-group">
+                    <label>Nome da Conta *</label>
+                    <input type="text" id="editNomeConta" required>
+                </div>
+
+                <div class="input-group">
+                    <label>Instituição Financeira</label>
+                    <input type="text" id="editInstituicaoConta">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="input-group">
+                        <label>Tipo de Conta</label>
+                        <select id="editTipoConta">
+                            <option value="banco_pj">Banco PJ</option>
+                            <option value="banco_pf">Banco PF</option>
+                            <option value="poupanca">Poupança</option>
+                            <option value="caixa">Caixa</option>
+                            <option value="carteira_digital">Carteira Digital</option>
+                            <option value="outro">Outro</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Finalidade</label>
+                        <select id="editFinalidadeConta">
+                            <option value="negocio">Negócio</option>
+                            <option value="pessoal">Pessoal</option>
+                            <option value="misto">Misto</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Saldo Inicial (R$)</label>
+                    <input type="number" id="editSaldoInicial" step="0.01" min="0">
+                </div>
+
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/ai-fab.js"></script>
+    <script src="js/confirm-modal.js"></script>
+    <script type="module" src="js/contas.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

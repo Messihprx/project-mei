@@ -40,6 +40,9 @@
             <a href="gastos.html" class="nav-item">
                 <i data-lucide="trending-down"></i> <span>Gastos</span>
             </a>
+            <a href="contas.html" class="nav-item">
+                <i data-lucide="wallet"></i> <span>Contas</span>
+            </a>
             <a href="clientes.html" class="nav-item">
                 <i data-lucide="users"></i> <span>Clientes</span>
             </a>
@@ -103,6 +106,12 @@
                     <div class="input-group">
                         <label>Descrição do Serviço/Produto</label>
                         <input type="text" id="servicoVenda" placeholder="Ex: Manutenção de Ar-condicionado" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Conta Financeira</label>
+                        <select id="contaVenda">
+                            <option value="">Sem conta vinculada</option>
+                        </select>
                     </div>
                     <div class="input-group input-group-val-status">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">

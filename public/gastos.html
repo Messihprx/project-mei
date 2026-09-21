@@ -31,6 +31,7 @@
             <a href="index.html" class="nav-item"><i data-lucide="layout-dashboard"></i> <span>Dashboard</span></a>
             <a href="vendas.html" class="nav-item"><i data-lucide="shopping-cart"></i> <span>Vendas</span></a>
             <a href="gastos.html" class="nav-item active"><i data-lucide="trending-down"></i> <span>Gastos</span></a>
+            <a href="contas.html" class="nav-item"><i data-lucide="wallet"></i> <span>Contas</span></a>
             <a href="clientes.html" class="nav-item"><i data-lucide="users"></i> <span>Clientes</span></a>
             <a href="devendo.html" class="nav-item"><i data-lucide="alert-circle"></i> <span>Devedores</span></a>
             <a href="produtos.html" class="nav-item"><i data-lucide="package"></i> <span>Produtos</span></a>
@@ -72,6 +73,12 @@
                     <label>Mês de Referência:</label>
                     <input type="month" id="filtroMesGastos" class="input-mes input-mes-gastos">
                 </div>
+                <div class="gastos-selecao-mes">
+                    <label>Conta:</label>
+                    <select id="filtroContaGastos" class="input-mes input-mes-gastos">
+                        <option value="">Todas as contas</option>
+                    </select>
+                </div>
                 <div class="card card-total-gasto">
                     <span style="font-size: 0.7rem;">TOTAL GASTO NO MÊS</span>
                     <h3 id="totalGastoMes" style="color: var(--cor-erro); margin: 0;">R$ 0,00</h3>
@@ -105,6 +112,12 @@
                     </div>
                 </div>
                 <div class="input-group">
+                    <label>Conta Financeira</label>
+                    <select id="contaGasto">
+                        <option value="">Sem conta vinculada</option>
+                    </select>
+                </div>
+                <div class="input-group">
                     <label>Categoria</label>
                     <select id="catGasto">
                         <option value="Mercadoria">Mercadoria / Estoque</option>
@@ -131,6 +144,12 @@
                 <div class="input-group">
                     <label>Descrição do Gasto</label>
                     <input type="text" id="editDescGasto" required>
+                </div>
+                <div class="input-group">
+                    <label>Conta Financeira</label>
+                    <select id="editContaGasto">
+                        <option value="">Sem conta vinculada</option>
+                    </select>
                 </div>
                 <div class="produto-form-grid">
                     <div class="input-group">

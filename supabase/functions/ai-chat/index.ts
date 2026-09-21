@@ -59,7 +59,7 @@ const SYSTEM_PROMPT = `Você é o FinMei, assistente financeiro inteligente do F
 
 ### Cadastro de Venda (criar_venda)
 - OBRIGATÓRIO: descrição, valor e data
-- OPCIONAL: cliente (use cliente_nome — o sistema busca pelo nome; se não encontrar, cria automaticamente como cliente avulso e avisa), produto
+- OPCIONAL: cliente (use cliente_nome — o sistema busca pelo nome; se não encontrar, cria automaticamente como cliente avulso e avisa), produto, conta
 - Status padrão: "pago" (se não informado)
 - FLUXO COM CLIENTE: se o usuário informar um nome de cliente, use cliente_nome
   - 1 resultado → vincula automaticamente
@@ -70,11 +70,13 @@ const SYSTEM_PROMPT = `Você é o FinMei, assistente financeiro inteligente do F
   - Múltiplos resultados → mostre nomes e preços, peça para o usuário escolher
   - Nenhum resultado → crie a venda sem vínculo (sem produto_id)
   - Nunca invente um produto_id
+- FLUXO COM CONTA: Se o usuário mencionar uma conta, use buscar_contas para encontrar e vincular (conta_id). Se não mencionar, a venda fica sem conta vinculada.
 
 ### Cadastro de Gasto (criar_gasto)
 - OBRIGATÓRIO: descrição, valor, data e categoria
 - Categorias disponíveis (escolha a mais adequada): "Mercadoria" (Mercadoria/Estoque), "Aluguel" (Aluguel/Espaço), "Marketing" (Marketing/Anúncios), "Serviços" (Luz/Água/Internet), "Outros"
 - Você deve deduzir a categoria automaticamente com base na descrição do usuário
+- OPCIONAL: conta financeira — se o usuário mencionar uma conta, use buscar_contas para vincular
 
 ### Cadastro de Produto (criar_produto)
 - OBRIGATÓRIO: nome, descrição e valor
@@ -142,6 +144,16 @@ const SYSTEM_PROMPT = `Você é o FinMei, assistente financeiro inteligente do F
 - Botão de cobrança via WhatsApp com mensagem automática
 - Botão para marcar como pago (muda status de pendente para pago)
 - Total a receber e quantidade de pendentes exibidos no topo
+
+### Contas Financeiras
+- Cadastro de contas bancárias, poupança, caixa ou carteira digital
+- Classificação por finalidade: Negócio, Pessoal ou Misto
+- Tipos: Banco PJ, Banco PF, Poupança, Caixa, Carteira Digital, Outro
+- Saldo inicial e atual de cada conta
+- Transferência entre contas (sem contabilizar como receita/despesa)
+- Saldo consolidado: soma das contas classificadas como Negócio ou Misto
+- Vinculação de vendas e gastos a contas específicas
+- Consulta de movimentações por conta
 
 ### IA (este chat)
 - Assistente financeiro que pode cadastrar, buscar, editar e excluir dados
@@ -295,7 +307,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "criar_venda",
-      description: "Cria uma nova venda para o usuário. Só chame quando descrição, valor e data estiverem informados. Se faltar algum, pergunte ao usuário e aguarde. Se o usuário mencionou um produto, use buscar_produtos antes para tentar vincular (produto_id). Se o produto não for encontrado, crie sem vínculo. Se o usuário informar um nome de cliente, use cliente_nome (o sistema busca ou cria automaticamente como avulso).",
+      description: "Cria uma nova venda para o usuário. Só chame quando descrição, valor e data estiverem informados. Se faltar algum, pergunte ao usuário e aguarde. Se o usuário mencionou um produto, use buscar_produtos antes para tentar vincular (produto_id). Se o produto não for encontrado, crie sem vínculo. Se o usuário informar um nome de cliente, use cliente_nome (o sistema busca ou cria automaticamente como avulso). Se mencionou uma conta, use buscar_contas para vincular (conta_id).",
       parameters: {
         type: "object",
         properties: {
@@ -305,7 +317,8 @@ const TOOLS = [
           data_venda: { type: "string", description: "Data da venda (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
           cliente_nome: { type: "string", description: "Nome do cliente. Se informado, o sistema busca automaticamente; se não encontrar, cria como cliente avulso." },
           cliente_id: { type: "string", description: "ID do cliente (opcional, use apenas se já tiver o ID)" },
-          produto_id: { type: "string", description: "ID do produto para vincular à venda (opcional). Use o retornado por buscar_produtos." }
+          produto_id: { type: "string", description: "ID do produto para vincular à venda (opcional). Use o retornado por buscar_produtos." },
+          conta_id: { type: "string", description: "ID da conta financeira para vincular (opcional). Use o retornado por buscar_contas." }
         },
         required: ["descricao", "valor", "data_venda"]
       }
@@ -332,14 +345,15 @@ const TOOLS = [
     type: "function",
     function: {
       name: "criar_gasto",
-      description: "Cria um novo gasto/despesa para o usuário. Só chame quando descrição, valor, data e categoria estiverem informados. Se faltar algum, pergunte ao usuário e aguarde. A IA deve selecionar a categoria automaticamente com base na descrição.",
+      description: "Cria um novo gasto/despesa para o usuário. Só chame quando descrição, valor, data e categoria estiverem informados. Se faltar algum, pergunte ao usuário e aguarde. A IA deve selecionar a categoria automaticamente com base na descrição. Se o usuário mencionar uma conta, use buscar_contas para vincular (conta_id).",
       parameters: {
         type: "object",
         properties: {
           descricao: { type: "string", description: "Descrição do gasto" },
           valor: { type: "number", description: "Valor do gasto em reais" },
           categoria: { type: "string", enum: ["Mercaria/Estoque", "Aluguel/Espaço", "Marketing/Anúncios", "Luz/Água/internet", "Outros"], description: "Categoria do gasto obrigatoriamente dentre as listadas" },
-          data: { type: "string", description: "Data do gasto (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" }
+          data: { type: "string", description: "Data do gasto (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
+          conta_id: { type: "string", description: "ID da conta financeira para vincular (opcional). Use o retornado por buscar_contas." }
         },
         required: ["descricao", "valor", "categoria", "data"]
       }
@@ -443,7 +457,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "editar_venda",
-      description: "Edita uma venda existente. Só chame com venda_id válido e pelo menos um campo de alteração (descrição, valor, status ou data). Se faltar, pergunte ao usuário e aguarde.",
+      description: "Edita uma venda existente. Só chame com venda_id válido e pelo menos um campo de alteração (descrição, valor, status, data ou conta). Se faltar, pergunte ao usuário e aguarde.",
       parameters: {
         type: "object",
         properties: {
@@ -451,7 +465,8 @@ const TOOLS = [
           descricao: { type: "string", description: "Nova descrição" },
           valor: { type: "number", description: "Novo valor" },
           status: { type: "string", description: "Novo status: pago, pendente, cancelado" },
-          data_venda: { type: "string", description: "Nova data (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" }
+          data_venda: { type: "string", description: "Nova data (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
+          conta_id: { type: "string", description: "ID da conta financeira (opcional). Use o retornado por buscar_contas." }
         },
         required: ["venda_id"]
       }
@@ -461,7 +476,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "editar_gasto",
-      description: "Edita um gasto/despesa existente. Só chame com gasto_id válido e pelo menos um campo de alteração (descrição, valor, categoria ou data). Se faltar, pergunte ao usuário e aguarde.",
+      description: "Edita um gasto/despesa existente. Só chame com gasto_id válido e pelo menos um campo de alteração (descrição, valor, categoria, data ou conta). Se faltar, pergunte ao usuário e aguarde.",
       parameters: {
         type: "object",
         properties: {
@@ -469,7 +484,8 @@ const TOOLS = [
           descricao: { type: "string", description: "Nova descrição" },
           valor: { type: "number", description: "Novo valor" },
           categoria: { type: "string", description: "Nova categoria" },
-          data: { type: "string", description: "Nova data (YYYY-MM-DD)" }
+          data: { type: "string", description: "Nova data (YYYY-MM-DD)" },
+          conta_id: { type: "string", description: "ID da conta financeira (opcional). Use o retornado por buscar_contas." }
         },
         required: ["gasto_id"]
       }
@@ -516,6 +532,102 @@ const TOOLS = [
           gasto_id: { type: "string", description: "ID do gasto" }
         },
         required: ["gasto_id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "buscar_contas",
+      description: "Busca contas financeiras do usuário. Pode filtrar por nome, tipo ou finalidade.",
+      parameters: {
+        type: "object",
+        properties: {
+          busca: { type: "string", description: "Nome da conta para buscar (busca parcial)" },
+          tipo: { type: "string", description: "Filtrar por tipo: banco_pj, banco_pf, poupanca, caixa, carteira_digital, outro" },
+          finalidade: { type: "string", description: "Filtrar por finalidade: negocio, pessoal, misto" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "criar_conta",
+      description: "Cadastra uma nova conta financeira. OBRIGATÓRIO: nome. OPCIONAL: instituição, tipo, finalidade, saldo inicial.",
+      parameters: {
+        type: "object",
+        properties: {
+          nome: { type: "string", description: "Nome da conta (ex: Nubank PJ, Itaú Negócio)" },
+          instituicao: { type: "string", description: "Instituição financeira (ex: Nubank, Bradesco)" },
+          tipo: { type: "string", enum: ["banco_pj", "banco_pf", "poupanca", "caixa", "carteira_digital", "outro"], description: "Tipo da conta" },
+          finalidade: { type: "string", enum: ["negocio", "pessoal", "misto"], description: "Finalidade da conta" },
+          saldo_inicial: { type: "number", description: "Saldo inicial da conta em reais" }
+        },
+        required: ["nome"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "editar_conta",
+      description: "Edita uma conta financeira existente. Só chame com conta_id válido e pelo menos um campo de alteração.",
+      parameters: {
+        type: "object",
+        properties: {
+          conta_id: { type: "string", description: "ID da conta" },
+          nome: { type: "string", description: "Novo nome da conta" },
+          instituicao: { type: "string", description: "Nova instituição" },
+          tipo: { type: "string", enum: ["banco_pj", "banco_pf", "poupanca", "caixa", "carteira_digital", "outro"], description: "Novo tipo" },
+          finalidade: { type: "string", enum: ["negocio", "pessoal", "misto"], description: "Nova finalidade" }
+        },
+        required: ["conta_id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "excluir_conta",
+      description: "Exclui uma conta financeira. Se não houver movimentações vinculadas, exclui permanentemente. Se houver, pede confirmação e remove o vínculo (mantém vendas/gastos). Use também para inativar (soft delete). Confirme com o usuário antes de usar.",
+      parameters: {
+        type: "object",
+        properties: {
+          conta_id: { type: "string", description: "ID da conta" },
+          permanente: { type: "boolean", description: "Se true, exclui permanentemente. Se false ou omitido, inativa (soft delete). Default: false" }
+        },
+        required: ["conta_id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "saldo_por_conta",
+      description: "Mostra o saldo de uma conta específica ou o saldo consolidado de todas as contas de negócio.",
+      parameters: {
+        type: "object",
+        properties: {
+          conta_id: { type: "string", description: "ID da conta (opcional — se não informado, retorna saldo consolidado)" },
+          consolidado: { type: "boolean", description: "Se true, retorna saldo consolidado das contas de negócio" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "transferir_entre_contas",
+      description: "Transfere valor de uma conta para outra. IMPORTANTE: isso NÃO é receita nem despesa — é apenas movimentação entre contas próprias.",
+      parameters: {
+        type: "object",
+        properties: {
+          conta_origem_id: { type: "string", description: "ID da conta de origem" },
+          conta_destino_id: { type: "string", description: "ID da conta de destino" },
+          valor: { type: "number", description: "Valor a transferir em reais" }
+        },
+        required: ["conta_origem_id", "conta_destino_id", "valor"]
       }
     }
   }
@@ -582,6 +694,36 @@ function numeroValido(value: unknown): boolean {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+function pago(status: string): boolean {
+  return status === 'pago' || status === 'recebido';
+}
+
+function calcDeltaVenda(valor: number, status: string, acao: string, valorAntigo?: number, statusAntigo?: any): number {
+  const v = Number(valor) || 0;
+  const va = Number(valorAntigo) || 0;
+  if (acao === 'criar') return pago(status) ? v : 0;
+  if (acao === 'excluir') return pago(status) ? -v : 0;
+  if (acao === 'editar') {
+    const eraPago = pago(statusAntigo || '');
+    const agoraPago = pago(status);
+    if (!eraPago && agoraPago) return v;
+    if (eraPago && !agoraPago) return -va;
+    if (eraPago && agoraPago) return v - va;
+    return 0;
+  }
+  return 0;
+}
+
+async function atualizarSaldoConta(supabaseAdmin: any, contaId: string, delta: number) {
+  if (!contaId || !delta) return;
+  const { data: conta } = await supabaseAdmin.from('contas').select('saldo_atual').eq('id', contaId).single();
+  if (!conta) return;
+  await supabaseAdmin.from('contas').update({
+    saldo_atual: Number(conta.saldo_atual || 0) + delta,
+    updated_at: new Date().toISOString()
+  }).eq('id', contaId);
+}
+
 // Tools que gravam no banco. Usado em dois lugares:
 //  - para checar o limite do plano ANTES de inserir
 //  - para não repetir a ação se um provedor de IA falhar no meio
@@ -589,6 +731,7 @@ const TOOLS_ESCRITA = new Set([
   "criar_produto", "criar_venda", "criar_devedor", "criar_gasto", "criar_cliente",
   "editar_produto", "editar_cliente", "editar_venda", "editar_gasto",
   "excluir_produto", "excluir_cliente", "excluir_venda", "excluir_gasto",
+  "criar_conta", "editar_conta", "excluir_conta", "transferir_entre_contas",
 ]);
 
 // Qual limite do plano cada cadastro consome
@@ -834,6 +977,16 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         produtoId = produto.id;
       }
 
+      let contaId = null;
+      if (args.conta_id) {
+        if (!idValido(args.conta_id)) return { error: 'O ID da conta é inválido.' };
+        const { data: conta, error: contaError } = await supabaseAdmin.from('contas')
+          .select('id').eq('id', args.conta_id).eq('user_id', userId).eq('ativo', true).maybeSingle();
+        if (contaError) throw contaError;
+        if (!conta) return { error: 'Conta não encontrada ou inativa. Busque a conta antes de vincular.' };
+        contaId = conta.id;
+      }
+
       const dup = await supabaseAdmin.from('vendas')
         .select('id, descricao, valor, data_venda, status')
         .eq('user_id', userId)
@@ -851,9 +1004,15 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       const { data, error } = await supabaseAdmin.from('vendas').insert({
         user_id: userId, descricao: args.descricao, valor: args.valor,
         status: args.status || 'pago', data_venda: dataVenda,
-        cliente_id: clienteId, produto_id: produtoId
+        cliente_id: clienteId, produto_id: produtoId, conta_id: contaId || null
       }).select().single();
       if (error) return { error: error.message };
+
+      if (contaId) {
+        const delta = calcDeltaVenda(Number(args.valor), args.status || 'pago', 'criar');
+        if (delta !== 0) await atualizarSaldoConta(supabaseAdmin, contaId, delta);
+      }
+
       data._cliente_avulso = clienteAvulso;
       return data;
     }
@@ -913,11 +1072,26 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       const dataGasto = parseData(args.data);
       if (!dataGasto) return { error: 'Data inválida. Use YYYY-MM-DD, dd/mm/aaaa, "hoje", "amanhã" ou "ontem".' };
 
+      let contaId = null;
+      if (args.conta_id) {
+        if (!idValido(args.conta_id)) return { error: 'O ID da conta é inválido.' };
+        const { data: conta, error: contaError } = await supabaseAdmin.from('contas')
+          .select('id').eq('id', args.conta_id).eq('user_id', userId).eq('ativo', true).maybeSingle();
+        if (contaError) throw contaError;
+        if (!conta) return { error: 'Conta não encontrada ou inativa. Busque a conta antes de vincular.' };
+        contaId = conta.id;
+      }
+
       const { data, error } = await supabaseAdmin.from('despesas').insert({
         user_id: userId, descricao: args.descricao, valor: args.valor,
-        categoria: args.categoria || null, data: dataGasto
+        categoria: args.categoria || null, data: dataGasto, conta_id: contaId
       }).select().single();
       if (error) return { error: error.message };
+
+      if (contaId) {
+        await atualizarSaldoConta(supabaseAdmin, contaId, -Number(args.valor));
+      }
+
       return data;
     }
     case "criar_cliente": {
@@ -1066,13 +1240,14 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       const { venda_id, ...updates } = args;
       if (!idValido(venda_id)) return { error: 'O ID da venda é obrigatório e inválido.' };
       const { data: vendaAtual, error: findError } = await supabaseAdmin.from('vendas')
-        .select('id, descricao, valor, data_venda, cliente_id').eq('id', venda_id).eq('user_id', userId).maybeSingle();
+        .select('id, descricao, valor, data_venda, cliente_id, status, conta_id').eq('id', venda_id).eq('user_id', userId).maybeSingle();
       if (findError) throw findError;
       if (!vendaAtual) return { error: 'Venda não encontrada ou sem permissão para alterar.' };
 
       const allowed = ['descricao', 'valor', 'status', 'data_venda'];
       const patch: Record<string, unknown> = {};
       for (const k of allowed) if (updates[k] !== undefined) patch[k] = updates[k];
+      if (updates.conta_id !== undefined) patch.conta_id = updates.conta_id;
       if (!Object.keys(patch).length) return { error: 'Informe pelo menos um campo da venda para alterar.' };
       if (patch.descricao !== undefined && !textoValido(patch.descricao)) return { error: 'A descrição não pode ficar vazia.' };
       if (patch.valor !== undefined && Number(patch.valor) <= 0) return { error: 'O valor da venda deve ser maior que zero.' };
@@ -1105,19 +1280,35 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         .update(patch).eq('id', venda_id).eq('user_id', userId).select().maybeSingle();
       if (error) throw error;
       if (!data) return { error: 'Venda não encontrada ou sem permissão para alterar.' };
+
+      const novaStatus = String(patch.status || vendaAtual.status);
+      const novoValor = Number(patch.valor || vendaAtual.valor);
+      const novaConta = patch.conta_id !== undefined ? patch.conta_id : (vendaAtual.conta_id || null);
+      const oldStatus = vendaAtual.status;
+      const oldValor = Number(vendaAtual.valor);
+
+      if (novaConta || vendaAtual.conta_id) {
+        const delta = calcDeltaVenda(novoValor, novaStatus, 'editar', oldValor, oldStatus);
+        if (delta !== 0) {
+          const contaAlvo = novaConta || vendaAtual.conta_id;
+          if (contaAlvo) await atualizarSaldoConta(supabaseAdmin, contaAlvo, delta);
+        }
+      }
+
       return data;
     }
     case "editar_gasto": {
       const { gasto_id, ...updates } = args;
       if (!idValido(gasto_id)) return { error: 'O ID do gasto é obrigatório e inválido.' };
       const { data: gastoAtual, error: findError } = await supabaseAdmin.from('despesas')
-        .select('id, descricao, valor, data, categoria').eq('id', gasto_id).eq('user_id', userId).maybeSingle();
+        .select('id, descricao, valor, data, categoria, conta_id').eq('id', gasto_id).eq('user_id', userId).maybeSingle();
       if (findError) throw findError;
       if (!gastoAtual) return { error: 'Gasto não encontrado ou sem permissão para alterar.' };
 
       const allowed = ['descricao', 'valor', 'categoria', 'data'];
       const patch: Record<string, unknown> = {};
       for (const k of allowed) if (updates[k] !== undefined) patch[k] = updates[k];
+      if (updates.conta_id !== undefined) patch.conta_id = updates.conta_id;
       if (!Object.keys(patch).length) return { error: 'Informe pelo menos um campo do gasto para alterar.' };
       if (patch.descricao !== undefined && !textoValido(patch.descricao)) return { error: 'A descrição não pode ficar vazia.' };
       if (patch.categoria !== undefined && typeof patch.categoria !== 'string') return { error: 'A categoria deve ser um texto.' };
@@ -1142,6 +1333,21 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         .update(patch).eq('id', gasto_id).eq('user_id', userId).select().maybeSingle();
       if (error) throw error;
       if (!data) return { error: 'Gasto não encontrado ou sem permissão para alterar.' };
+
+      const novoValor = Number(patch.valor || gastoAtual.valor);
+      const novaConta = patch.conta_id !== undefined ? patch.conta_id : null;
+      const valorAntigo = Number(gastoAtual.valor);
+      const contaAntiga = gastoAtual.conta_id;
+
+      if (contaAntiga || novaConta) {
+        if (contaAntiga && contaAntiga !== novaConta) {
+          await atualizarSaldoConta(supabaseAdmin, contaAntiga, valorAntigo);
+          if (novaConta) await atualizarSaldoConta(supabaseAdmin, novaConta, -novoValor);
+        } else if (contaAntiga && contaAntiga === novaConta) {
+          await atualizarSaldoConta(supabaseAdmin, novaConta, valorAntigo - novoValor);
+        }
+      }
+
       return data;
     }
     case "excluir_cliente": {
@@ -1168,24 +1374,197 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
     case "excluir_venda": {
       if (!args.venda_id) return { error: 'Informe o ID da venda para excluir.' };
       const { data: venda, error: findError } = await supabaseAdmin.from('vendas')
-        .select('id, descricao').eq('id', args.venda_id).eq('user_id', userId).maybeSingle();
+        .select('id, descricao, valor, status, conta_id').eq('id', args.venda_id).eq('user_id', userId).maybeSingle();
       if (findError) throw findError;
       if (!venda) return { error: 'Venda não encontrada. Busque a venda novamente e tente outra vez.' };
+
       const { error } = await supabaseAdmin.from('vendas')
         .delete().eq('id', venda.id).eq('user_id', userId);
       if (error) throw error;
+
+      if (venda.conta_id) {
+        const delta = calcDeltaVenda(Number(venda.valor), venda.status, 'excluir');
+        if (delta !== 0) await atualizarSaldoConta(supabaseAdmin, venda.conta_id, delta);
+      }
+
       return { sucesso: true, mensagem: `Venda "${venda.descricao}" excluída` };
     }
     case "excluir_gasto": {
       if (!args.gasto_id) return { error: 'Informe o ID do gasto para excluir.' };
       const { data: gasto, error: findError } = await supabaseAdmin.from('despesas')
-        .select('id, descricao').eq('id', args.gasto_id).eq('user_id', userId).maybeSingle();
+        .select('id, descricao, valor, conta_id').eq('id', args.gasto_id).eq('user_id', userId).maybeSingle();
       if (findError) throw findError;
       if (!gasto) return { error: 'Gasto não encontrado. Busque o gasto novamente e tente outra vez.' };
+
       const { error } = await supabaseAdmin.from('despesas')
         .delete().eq('id', gasto.id).eq('user_id', userId);
       if (error) throw error;
+
+      if (gasto.conta_id) {
+        await atualizarSaldoConta(supabaseAdmin, gasto.conta_id, Number(gasto.valor || 0));
+      }
+
       return { sucesso: true, mensagem: `Gasto "${gasto.descricao}" excluído` };
+    }
+    case "buscar_contas": {
+      let q = supabaseAdmin.from('contas').select('*').eq('user_id', userId).eq('ativo', true);
+      if (args.busca) q = q.ilike('nome', `%${args.busca}%`);
+      if (args.tipo) q = q.eq('tipo', args.tipo);
+      if (args.finalidade) q = q.eq('finalidade', args.finalidade);
+      q = q.order('created_at', { ascending: false });
+      const { data, error } = await q;
+      if (error) return { error: error.message };
+      return data || [];
+    }
+    case "criar_conta": {
+      if (!textoValido(args.nome)) return { error: 'Conta exige um nome.' };
+      const tipo = args.tipo || 'banco_pj';
+      const finalidade = args.finalidade || 'negocio';
+      const saldoInicial = Number(args.saldo_inicial) || 0;
+
+      const { data, error } = await supabaseAdmin.from('contas').insert({
+        user_id: userId,
+        nome: args.nome,
+        instituicao: args.instituicao || null,
+        tipo: tipo,
+        finalidade: finalidade,
+        saldo_inicial: saldoInicial,
+        saldo_atual: saldoInicial
+      }).select().single();
+      if (error) return { error: error.message };
+      return data;
+    }
+    case "editar_conta": {
+      const { conta_id, ...updates } = args;
+      if (!idValido(conta_id)) return { error: 'O ID da conta é obrigatório e inválido.' };
+      const { data: contaAtual, error: findError } = await supabaseAdmin.from('contas')
+        .select('id, nome, instituicao, tipo, finalidade, saldo_inicial, saldo_atual')
+        .eq('id', conta_id).eq('user_id', userId).eq('ativo', true).maybeSingle();
+      if (findError) throw findError;
+      if (!contaAtual) return { error: 'Conta não encontrada ou inativa.' };
+
+      const allowed = ['nome', 'instituicao', 'tipo', 'finalidade'];
+      const patch: Record<string, unknown> = {};
+      for (const k of allowed) if (updates[k] !== undefined) patch[k] = updates[k];
+      if (!Object.keys(patch).length) return { error: 'Informe pelo menos um campo para alterar.' };
+      if (patch.nome !== undefined && !textoValido(patch.nome)) return { error: 'O nome não pode ficar vazio.' };
+
+      const { data, error } = await supabaseAdmin.from('contas')
+        .update({ ...patch, updated_at: new Date().toISOString() })
+        .eq('id', conta_id).eq('user_id', userId).select().maybeSingle();
+      if (error) throw error;
+      if (!data) return { error: 'Conta não encontrada ou sem permissão.' };
+      return data;
+    }
+    case "excluir_conta": {
+      if (!args.conta_id) return { error: 'Informe o ID da conta.' };
+      const { data: conta, error: findError } = await supabaseAdmin.from('contas')
+        .select('id, nome').eq('id', args.conta_id).eq('user_id', userId).maybeSingle();
+      if (findError) throw findError;
+      if (!conta) return { error: 'Conta não encontrada.' };
+
+      if (args.permanente) {
+        const [resVendas, resDespesas] = await Promise.all([
+          supabaseAdmin.from('vendas').select('id', { count: 'exact', head: true }).eq('conta_id', conta.id),
+          supabaseAdmin.from('despesas').select('id', { count: 'exact', head: true }).eq('conta_id', conta.id)
+        ]);
+        const totalVinculadas = (resVendas.count || 0) + (resDespesas.count || 0);
+        if (totalVinculadas > 0) {
+          const { error } = await supabaseAdmin.from('contas').delete().eq('id', conta.id).eq('user_id', userId);
+          if (error) return { error: error.message };
+          return { sucesso: true, mensagem: `Conta "${conta.nome}" excluída. ${totalVinculadas} movimentação(ões) ficaram sem vínculo.` };
+        }
+        const { error } = await supabaseAdmin.from('contas').delete().eq('id', conta.id).eq('user_id', userId);
+        if (error) return { error: error.message };
+        return { sucesso: true, mensagem: `Conta "${conta.nome}" excluída permanentemente.` };
+      }
+
+      const { error } = await supabaseAdmin.from('contas')
+        .update({ ativo: false, updated_at: new Date().toISOString() })
+        .eq('id', conta.id).eq('user_id', userId);
+      if (error) return { error: error.message };
+      return { sucesso: true, mensagem: `Conta "${conta.nome}" inativada. O histórico foi mantido.` };
+    }
+    case "saldo_por_conta": {
+      if (args.consolidado) {
+        const { data: contas, error } = await supabaseAdmin.from('contas')
+          .select('saldo_atual, finalidade, nome')
+          .eq('user_id', userId).eq('ativo', true);
+        if (error) return { error: error.message };
+        const contasNegocio = (contas || []).filter((c: any) => c.finalidade === 'negocio' || c.finalidade === 'misto');
+        const total = contasNegocio.reduce((s: number, c: any) => s + Number(c.saldo_atual || 0), 0);
+        return {
+          saldo_consolidado: total,
+          contas: contasNegocio.map((c: any) => ({ nome: c.nome, saldo: Number(c.saldo_atual) })),
+          mensagem: `Saldo consolidado (Negócio/Misto): R$ ${total.toFixed(2)}`
+        };
+      }
+      if (args.conta_id) {
+        if (!idValido(args.conta_id)) return { error: 'ID da conta inválido.' };
+        const { data: conta, error } = await supabaseAdmin.from('contas')
+          .select('id, nome, saldo_atual, saldo_inicial, tipo, finalidade')
+          .eq('id', args.conta_id).eq('user_id', userId).eq('ativo', true).maybeSingle();
+        if (error) throw error;
+        if (!conta) return { error: 'Conta não encontrada.' };
+        return {
+          nome: conta.nome,
+          saldo: Number(conta.saldo_atual),
+          saldo_inicial: Number(conta.saldo_inicial),
+          tipo: conta.tipo,
+          finalidade: conta.finalidade,
+          mensagem: `Saldo da conta "${conta.nome}": R$ ${Number(conta.saldo_atual).toFixed(2)}`
+        };
+      }
+      const { data: todas, error } = await supabaseAdmin.from('contas')
+        .select('id, nome, saldo_atual, tipo, finalidade')
+        .eq('user_id', userId).eq('ativo', true);
+      if (error) return { error: error.message };
+      const total = (todas || []).reduce((s: number, c: any) => s + Number(c.saldo_atual || 0), 0);
+      return {
+        total_geral: total,
+        contas: (todas || []).map((c: any) => ({ id: c.id, nome: c.nome, saldo: Number(c.saldo_atual), tipo: c.tipo, finalidade: c.finalidade }))
+      };
+    }
+    case "transferir_entre_contas": {
+      if (!idValido(args.conta_origem_id) || !idValido(args.conta_destino_id)) {
+        return { error: 'IDs de conta inválidos.' };
+      }
+      if (args.conta_origem_id === args.conta_destino_id) {
+        return { error: 'A conta de origem e destino não podem ser a mesma.' };
+      }
+      if (!numeroValido(args.valor) || Number(args.valor) <= 0) {
+        return { error: 'O valor da transferência deve ser maior que zero.' };
+      }
+      const valor = Number(args.valor);
+
+      const [origemRes, destinoRes] = await Promise.all([
+        supabaseAdmin.from('contas').select('id, nome, saldo_atual').eq('id', args.conta_origem_id).eq('user_id', userId).eq('ativo', true).maybeSingle(),
+        supabaseAdmin.from('contas').select('id, nome').eq('id', args.conta_destino_id).eq('user_id', userId).eq('ativo', true).maybeSingle()
+      ]);
+      if (origemRes.error || !origemRes.data) return { error: 'Conta de origem não encontrada.' };
+      if (destinoRes.error || !destinoRes.data) return { error: 'Conta de destino não encontrada.' };
+      if (Number(origemRes.data.saldo_atual) < valor) {
+        return { error: `Saldo insuficiente na conta "${origemRes.data.nome}". Saldo disponível: R$ ${Number(origemRes.data.saldo_atual).toFixed(2)}` };
+      }
+
+      const novoSaldoOrigem = Number(origemRes.data.saldo_atual) - valor;
+      const [updateOrigem, updateDestino] = await Promise.all([
+        supabaseAdmin.from('contas').update({ saldo_atual: novoSaldoOrigem, updated_at: new Date().toISOString() }).eq('id', args.conta_origem_id),
+        supabaseAdmin.rpc('incrementar_saldo', { p_conta_id: args.conta_destino_id, p_valor: valor }).then(async (r: any) => {
+          if (r.error) {
+            const { data: dest } = await supabaseAdmin.from('contas').select('saldo_atual').eq('id', args.conta_destino_id).single();
+            return supabaseAdmin.from('contas').update({ saldo_atual: Number(dest.saldo_atual) + valor, updated_at: new Date().toISOString() }).eq('id', args.conta_destino_id);
+          }
+          return r;
+        })
+      ]);
+
+      return {
+        sucesso: true,
+        mensagem: `Transferência de R$ ${valor.toFixed(2)} realizada: "${origemRes.data.nome}" → "${destinoRes.data.nome}"`,
+        origem: { nome: origemRes.data.nome, novo_saldo: novoSaldoOrigem },
+        destino: { nome: destinoRes.data.nome }
+      };
     }
     default:
       return { error: `Ferramenta desconhecida: ${name}` };
@@ -1930,6 +2309,28 @@ function gerarRespostaTools(toolResults: any[]): string {
         break;
       case 'excluir_gasto':
         responses.push(r.mensagem || 'Gasto excluído.');
+        break;
+      case 'criar_conta':
+        responses.push(`Conta "${r.nome}" cadastrada com sucesso!${r.saldo_atual ? ' Saldo: R$ ' + Number(r.saldo_atual).toFixed(2) : ''}`);
+        break;
+      case 'editar_conta':
+        responses.push(`Conta "${r.nome}" atualizada.`);
+        break;
+      case 'excluir_conta':
+        responses.push(r.mensagem || 'Conta inativada.');
+        break;
+      case 'saldo_por_conta':
+        responses.push(r.mensagem || `Saldo: R$ ${Number(r.saldo || r.saldo_consolidado || r.total_geral || 0).toFixed(2)}`);
+        break;
+      case 'transferir_entre_contas':
+        responses.push(r.mensagem || 'Transferência realizada.');
+        break;
+      case 'buscar_contas':
+        if (Array.isArray(r) && r.length > 0) {
+          responses.push(`Encontrei ${r.length} conta(s): ${r.map((c: any) => `"${c.nome}" (R$ ${Number(c.saldo_atual).toFixed(2)})`).join(', ')}.`);
+        } else if (Array.isArray(r) && r.length === 0) {
+          responses.push('Nenhuma conta encontrada.');
+        }
         break;
       case 'verificar_duplicata':
         if (r.encontrados > 0) responses.push(`Encontrei ${r.encontrados} registro(s) similar(es).`);

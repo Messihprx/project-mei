@@ -1,11 +1,52 @@
 import { supabase } from './auth.js';
 import { verificarStatusPlano, invalidarCachePlano } from './planos.js';
 import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais } from './dom-utils.js';
+import { atualizarSaldoConta } from './conta-saldo.js';
 
 let gastosRenderizados = [];
 
 const filtroMes = document.getElementById("filtroMesGastos");
 const formGasto = document.getElementById("formNovoGasto");
+
+// --- POPULAR SELECT DE CONTAS ---
+async function popularSelectContasGasto() {
+    const selects = document.querySelectorAll('#contaGasto, #editContaGasto');
+    if (selects.length === 0) return;
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: contas, error } = await supabase
+            .from('contas')
+            .select('id, nome')
+            .eq('user_id', user.id)
+            .eq('ativo', true)
+            .order('nome');
+
+        if (error) throw error;
+
+        const options = '<option value="">Sem conta vinculada</option>' +
+            (contas || []).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
+
+        selects.forEach(sel => { sel.innerHTML = options; });
+    } catch (err) {
+        console.error("Erro ao carregar contas:", err.message);
+    }
+}
+
+async function popularSelectContasFiltroGastos() {
+    const select = document.getElementById("filtroContaGastos");
+    if (!select) return;
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: contas } = await supabase
+            .from('contas').select('id, nome')
+            .eq('user_id', user.id).eq('ativo', true).order('nome');
+        select.innerHTML = '<option value="">Todas as contas</option>' +
+            (contas || []).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
+    } catch (err) {
+        console.error("Erro ao carregar filtro:", err.message);
+    }
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -34,6 +75,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     carregarGastos();
+    popularSelectContasGasto();
+
+    // Filtro por conta
+    const filtroContaGastos = document.getElementById("filtroContaGastos");
+    if (filtroContaGastos) {
+        popularSelectContasFiltroGastos();
+        filtroContaGastos.addEventListener("change", () => carregarGastos(TAMANHO_PAGINA));
+    }
 
     if (formGasto) {
         formGasto.addEventListener("submit", async (e) => {
@@ -57,12 +106,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                     valor: valorGasto,
                     data: document.getElementById("dataGasto").value,
                     categoria: document.getElementById("catGasto").value,
+                    conta_id: document.getElementById("contaGasto").value || null,
                     user_id: user.id
                 };
                 const { error } = await supabase.from('despesas').insert([dados]);
                 if (error) throw error;
-                // A contagem mudou: o aviso de limite não pode continuar
-                // mostrando o número anterior a esta operação.
+                if (dados.conta_id) {
+                    await atualizarSaldoConta(dados.conta_id, -valorGasto);
+                }
                 invalidarCachePlano();
                 fecharModalGasto();
                 carregarGastos();
@@ -167,13 +218,20 @@ async function carregarGastos(limite = limiteGastos) {
     const ultimoDia = new Date(ano, mes, 0).getDate();
 
     try {
-        const { data: gastos, error } = await supabase
+        let query = supabase
             .from('despesas')
-            .select('id, descricao, valor, data, categoria')
+            .select('id, descricao, valor, data, categoria, conta_id')
             .gte('data', `${ano}-${mes}-01`)
             .lte('data', `${ano}-${mes}-${ultimoDia}`)
             .order('data', { ascending: false })
             .limit(limite);
+
+        const filtroConta = document.getElementById("filtroContaGastos");
+        if (filtroConta && filtroConta.value) {
+            query = query.eq('conta_id', filtroConta.value);
+        }
+
+        const { data: gastos, error } = await query;
 
         if (error) throw error;
 
@@ -228,7 +286,7 @@ async function carregarGastos(limite = limiteGastos) {
 
 window.abrirEditarGasto = async function(id) {
     try {
-        const { data, error } = await supabase.from('despesas').select('id, descricao, valor, data, categoria').eq('id', id).single();
+        const { data, error } = await supabase.from('despesas').select('id, descricao, valor, data, categoria, conta_id').eq('id', id).single();
         if (error) throw error;
 
         document.getElementById("editGastoId").value = data.id;
@@ -236,6 +294,7 @@ window.abrirEditarGasto = async function(id) {
         document.getElementById("editValorGasto").value = data.valor;
         document.getElementById("editDataGasto").value = data.data;
         document.getElementById("editCatGasto").value = data.categoria;
+        document.getElementById("editContaGasto").value = data.conta_id || '';
 
         document.getElementById("modalEditarGasto").style.display = 'flex';
         lucide.createIcons();
@@ -252,10 +311,12 @@ window.deletarGasto = async function(id) {
     const confirmed = await confirmModal("Excluir gasto", "Tem certeza que deseja excluir este gasto? Essa ação não pode ser desfeita.");
     if (!confirmed) return;
     try {
+        const { data: gasto } = await supabase.from('despesas').select('conta_id, valor').eq('id', id).single();
         const { error } = await supabase.from('despesas').delete().eq('id', id);
         if (error) throw error;
-        // A contagem mudou: o aviso de limite não pode continuar
-        // mostrando o número anterior a esta operação.
+        if (gasto?.conta_id) {
+            await atualizarSaldoConta(gasto.conta_id, parseFloat(gasto.valor || 0));
+        }
         invalidarCachePlano();
         carregarGastos();
     } catch (err) {
@@ -272,14 +333,30 @@ if (formEditarGasto) {
         
         try {
             btn.disabled = true;
+            const { data: gastoAntigo } = await supabase.from('despesas').select('conta_id, valor').eq('id', id).single();
+            const novoValor = parseFloat(document.getElementById("editValorGasto").value);
+            const novaConta = document.getElementById("editContaGasto").value || null;
+
             const dados = {
                 descricao: document.getElementById("editDescGasto").value,
-                valor: parseFloat(document.getElementById("editValorGasto").value),
+                valor: novoValor,
                 data: document.getElementById("editDataGasto").value,
-                categoria: document.getElementById("editCatGasto").value
+                categoria: document.getElementById("editCatGasto").value,
+                conta_id: novaConta
             };
             const { error } = await supabase.from('despesas').update(dados).eq('id', id);
             if (error) throw error;
+
+            if (gastoAntigo) {
+                const valorAntigo = parseFloat(gastoAntigo.valor || 0);
+                const contaAntiga = gastoAntigo.conta_id;
+                if (contaAntiga && contaAntiga !== novaConta) {
+                    await atualizarSaldoConta(contaAntiga, valorAntigo);
+                    if (novaConta) await atualizarSaldoConta(novaConta, -novoValor);
+                } else if (contaAntiga && contaAntiga === novaConta) {
+                    await atualizarSaldoConta(novaConta, valorAntigo - novoValor);
+                }
+            }
             // A contagem mudou: o aviso de limite não pode continuar
             // mostrando o número anterior a esta operação.
             invalidarCachePlano();

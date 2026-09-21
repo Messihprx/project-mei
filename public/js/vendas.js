@@ -1,5 +1,6 @@
 import { supabase } from './auth.js';
 import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais } from './dom-utils.js';
+import { atualizarSaldoConta, calcDeltaVenda } from './conta-saldo.js';
 
 // Vendas da última renderização. Antes a descrição era injetada
 // dentro de onclick="...('${venda.descricao}')", então uma venda
@@ -27,6 +28,46 @@ async function popularSelectClientes() {
     }
 }
 
+// --- 1.5 CARREGAR CONTAS NO SELECT ---
+async function popularSelectContasVendas() {
+    const selects = document.querySelectorAll('#contaVenda, #editContaVenda');
+    if (selects.length === 0) return;
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: contas, error } = await supabase
+            .from('contas')
+            .select('id, nome')
+            .eq('user_id', user.id)
+            .eq('ativo', true)
+            .order('nome');
+
+        if (error) throw error;
+
+        const options = '<option value="">Sem conta vinculada</option>' +
+            (contas || []).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
+
+        selects.forEach(sel => { sel.innerHTML = options; });
+    } catch (err) {
+        console.error("Erro ao carregar contas:", err.message);
+    }
+}
+
+async function popularSelectContasFiltro(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: contas } = await supabase
+            .from('contas').select('id, nome')
+            .eq('user_id', user.id).eq('ativo', true).order('nome');
+        select.innerHTML = '<option value="">Todas as contas</option>' +
+            (contas || []).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
+    } catch (err) {
+        console.error("Erro ao carregar filtro de contas:", err.message);
+    }
+}
+
 // --- 2. SALVAR NOVA VENDA ---
 import { protegerAcao, verificarStatusPlano, invalidarCachePlano } from './planos.js';
 const formNovaVenda = document.getElementById("formNovaVenda");
@@ -43,6 +84,7 @@ if (formNovaVenda) {
         const descricao = document.getElementById("servicoVenda").value.trim();
         const valor = document.getElementById("valorVenda").value;
         const status = document.getElementById("statusVenda").value;
+        const contaId = document.getElementById("contaVenda")?.value || null;
 
         try {
             btn.disabled = true;
@@ -54,6 +96,7 @@ if (formNovaVenda) {
                 {
                     user_id: user.id,
                     cliente_id: clienteId,
+                    conta_id: contaId,
                     descricao: descricao,
                     valor: parseFloat(valor),
                     status: status
@@ -61,6 +104,11 @@ if (formNovaVenda) {
             ]);
 
             if (error) throw error;
+
+            if (contaId) {
+                const delta = calcDeltaVenda(parseFloat(valor), status, 'criar');
+                if (delta !== 0) await atualizarSaldoConta(contaId, delta);
+            }
             // A contagem mudou: o aviso de limite não pode continuar
             // mostrando o número anterior a esta operação.
             invalidarCachePlano();
@@ -84,16 +132,14 @@ async function carregarVendas(limite = limiteVendas) {
     limiteVendas = limite;
     const container = document.getElementById("listaVendas");
     const filtroMesInput = document.getElementById("filtroMesVendas"); 
+    const filtroContaInput = document.getElementById("filtroContaVendas");
     
     if (!container) return;
 
     try {
         let query = supabase
             .from('vendas')
-            .select('id, descricao, valor, status, data_venda, cliente_id, clientes(nome)')
-            // data_venda é a data de negócio (o dashboard usa a mesma).
-            // Antes esta lista ordenava e filtrava por created_at, então
-            // uma venda retroativa aparecia num mês aqui e noutro lá.
+            .select('id, descricao, valor, status, data_venda, cliente_id, clientes(nome), conta_id')
             .order('data_venda', { ascending: false })
             .limit(limite);
 
@@ -102,6 +148,10 @@ async function carregarVendas(limite = limiteVendas) {
             const primeiroDia = `${ano}-${mes}-01T00:00:00Z`;
             const ultimoDia = new Date(ano, mes, 0).toISOString().replace(/T.*$/, 'T23:59:59Z');
             query = query.gte('data_venda', primeiroDia).lte('data_venda', ultimoDia);
+        }
+
+        if (filtroContaInput && filtroContaInput.value) {
+            query = query.eq('conta_id', filtroContaInput.value);
         }
 
         const { data: vendas, error } = await query;
@@ -153,11 +203,12 @@ async function carregarVendas(limite = limiteVendas) {
 }
 
 // --- 4. FUNÇÕES DE EDIÇÃO E EXCLUSÃO (WINDOW) ---
-window.abrirModalEditarVenda = (id, servico, valor, status) => {
+window.abrirModalEditarVenda = (id, servico, valor, status, contaId) => {
     document.getElementById("editVendaId").value = id;
     document.getElementById("editServicoVenda").value = servico;
     document.getElementById("editValorVenda").value = valor;
     document.getElementById("editStatusVenda").value = status;
+    document.getElementById("editContaVenda").value = contaId || '';
     document.getElementById("modalEditarVenda").style.display = "flex";
     if (window.lucide) lucide.createIcons();
 };
@@ -170,10 +221,13 @@ window.deletarVenda = async (id) => {
     const confirmed = await confirmModal("Excluir venda", "Tem certeza que deseja excluir esta venda? Essa ação não pode ser desfeita.");
     if (!confirmed) return;
     try {
+        const { data: venda } = await supabase.from('vendas').select('conta_id, valor, status').eq('id', id).single();
         const { error } = await supabase.from('vendas').delete().eq('id', id);
         if (error) throw error;
-        // A contagem mudou: o aviso de limite não pode continuar
-        // mostrando o número anterior a esta operação.
+        if (venda?.conta_id) {
+            const delta = calcDeltaVenda(venda.valor, venda.status, 'excluir');
+            if (delta !== 0) await atualizarSaldoConta(venda.conta_id, delta);
+        }
         invalidarCachePlano();
         carregarVendas();
     } catch (err) {
@@ -196,12 +250,15 @@ if (formEditarVenda) {
         const dadosAtualizados = {
             descricao: document.getElementById("editServicoVenda").value,
             valor: parseFloat(document.getElementById("editValorVenda").value),
-            status: document.getElementById("editStatusVenda").value
+            status: document.getElementById("editStatusVenda").value,
+            conta_id: document.getElementById("editContaVenda").value || null
         };
 
         try {
             btn.disabled = true;
             btn.innerText = "Atualizando...";
+
+            const { data: vendaAntiga } = await supabase.from('vendas').select('conta_id, valor, status').eq('id', id).single();
 
             const { error } = await supabase
                 .from('vendas')
@@ -209,6 +266,14 @@ if (formEditarVenda) {
                 .eq('id', id);
 
             if (error) throw error;
+
+            if (vendaAntiga) {
+                const delta = calcDeltaVenda(dadosAtualizados.valor, dadosAtualizados.status, 'editar', vendaAntiga.valor, vendaAntiga.status);
+                if (delta !== 0) {
+                    const contaAlvo = dadosAtualizados.conta_id || vendaAntiga.conta_id;
+                    if (contaAlvo) await atualizarSaldoConta(contaAlvo, delta);
+                }
+            }
             // A contagem mudou: o aviso de limite não pode continuar
             // mostrando o número anterior a esta operação.
             invalidarCachePlano();
@@ -232,7 +297,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const venda = vendasRenderizadas.find(v => v.id === botao.dataset.id);
         if (!venda) return;
         if (botao.dataset.acao === 'editar') {
-            window.abrirModalEditarVenda(venda.id, venda.descricao, venda.valor, venda.status);
+            window.abrirModalEditarVenda(venda.id, venda.descricao, venda.valor, venda.status, venda.conta_id || '');
         } else if (botao.dataset.acao === 'excluir') {
             window.deletarVenda(venda.id);
         }
@@ -262,6 +327,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     carregarVendas();
     popularSelectClientes();
+    popularSelectContasVendas();
+
+    // Filtro por conta
+    const filtroContaVendas = document.getElementById("filtroContaVendas");
+    if (filtroContaVendas) {
+        popularSelectContasFiltro('filtroContaVendas');
+        filtroContaVendas.addEventListener("change", () => carregarVendas(TAMANHO_PAGINA));
+    }
 
     // --- 7. EXPORTAÇÃO PARA CSV (PREMIUM) ---
     const btnExport = document.getElementById("btnExportarVendas");

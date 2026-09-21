@@ -84,6 +84,30 @@ async function carregarDashboard() {
             cardSaldo.style.color = saldoGeral < 0 ? 'var(--cor-erro)' : 'var(--cor-primaria-strong)';
         }
 
+        // --- SALDO CONSOLIDADO DAS CONTAS (RF106) ---
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: contas } = await supabase
+                    .from('contas')
+                    .select('saldo_atual, finalidade')
+                    .eq('user_id', user.id)
+                    .eq('ativo', true);
+
+                const saldoConsolidado = (contas || [])
+                    .filter(c => c.finalidade === 'negocio' || c.finalidade === 'misto')
+                    .reduce((sum, c) => sum + parseFloat(c.saldo_atual || 0), 0);
+
+                const cardSaldoConsolidado = document.getElementById("saldoConsolidadoDashboard");
+                if (cardSaldoConsolidado) {
+                    cardSaldoConsolidado.textContent = `R$ ${saldoConsolidado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+                    cardSaldoConsolidado.style.color = saldoConsolidado < 0 ? 'var(--cor-erro)' : 'var(--cor-sucesso)';
+                }
+            }
+        } catch (e) {
+            console.error("Erro ao calcular saldo consolidado:", e);
+        }
+
         renderizarMovimentacoes(resumo.ultimas_movimentacoes || []);
         atualizarListaHistorica(serie);
         renderizarGraficos(serie, resumo.donut || []);

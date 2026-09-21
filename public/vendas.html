@@ -40,6 +40,9 @@
             <a href="gastos.html" class="nav-item">
                 <i data-lucide="trending-down"></i> <span>Gastos</span>
             </a>
+            <a href="contas.html" class="nav-item">
+                <i data-lucide="wallet"></i> <span>Contas</span>
+            </a>
             <a href="clientes.html" class="nav-item">
                 <i data-lucide="users"></i> <span>Clientes</span>
             </a>
@@ -99,6 +102,13 @@
                 <input type="month" id="filtroMesVendas" class="input-mes">
             </div>
 
+            <div class="card-buscar">
+                <label for="filtroContaVendas">Filtrar por Conta</label>
+                <select id="filtroContaVendas" class="input-mes">
+                    <option value="">Todas as contas</option>
+                </select>
+            </div>
+
             <div id="listaVendas">
                 </div>
         </section>
@@ -117,6 +127,13 @@
                 <div class="input-group">
                     <label>Serviço/Produto</label>
                     <input type="text" id="editServicoVenda" required>
+                </div>
+
+                <div class="input-group">
+                    <label>Conta Financeira</label>
+                    <select id="editContaVenda">
+                        <option value="">Sem conta vinculada</option>
+                    </select>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
