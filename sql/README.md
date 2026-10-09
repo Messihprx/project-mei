@@ -19,6 +19,7 @@ nada.
 | 9 | `ai_individual_limits.sql` | Limite de IA por usuário |
 | 10 | `fix_perfis_nome_email.sql` | Preenche nome e e-mail nos perfis |
 | 11 | `verificar_email_confirmado.sql` | Confirmação de e-mail entre dispositivos |
+| 12 | `transferencias.sql` | Histórico de transferências entre contas |
 
 > `admin_supabase.sql` precisa vir antes de qualquer script que use
 > `is_admin()` — que são quase todos os seguintes.
@@ -63,6 +64,13 @@ etc.), liga `conta_id` a vendas e despesas e cria a RPC `incrementar_saldo`
 usada pela tool `transferir_entre_contas` da IA. As páginas de Contas do site e
 as 6 tools de contas do chat dependem dele. Idempotente: se a tabela já existe,
 só falta a RPC.
+
+**`transferencias.sql`** cria a tabela `transferencias` — antes, a transferência
+só ajustava os saldos e nenhum registro era gravado, então não havia histórico
+para consultar (RF111) nem por qual conta filtrar (RF115). A página de Contas e
+a tool `transferir_entre_contas` da IA passam a gravar cada transferência aqui.
+As FKs usam `ON DELETE SET NULL` (mesmo padrão de vendas e despesas): o caminho
+normal é **inativar** a conta, que preserva tudo (RF113).
 
 ## Estrutura resultante
 

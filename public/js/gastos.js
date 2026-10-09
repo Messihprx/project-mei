@@ -1,7 +1,7 @@
 import { supabase } from './auth.js';
 import { verificarStatusPlano, invalidarCachePlano } from './planos.js';
 import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais } from './dom-utils.js';
-import { atualizarSaldoConta } from './conta-saldo.js';
+import { atualizarSaldoConta, garantirOpcaoConta } from './conta-saldo.js';
 
 let gastosRenderizados = [];
 
@@ -38,11 +38,13 @@ async function popularSelectContasFiltroGastos() {
     if (!select) return;
     try {
         const { data: { user } } = await supabase.auth.getUser();
+        // Lista também contas inativadas: o histórico de gastos da conta
+        // inativada continua consultável pelo filtro (RF113/RF115).
         const { data: contas } = await supabase
-            .from('contas').select('id, nome')
-            .eq('user_id', user.id).eq('ativo', true).order('nome');
+            .from('contas').select('id, nome, ativo')
+            .eq('user_id', user.id).order('nome');
         select.innerHTML = '<option value="">Todas as contas</option>' +
-            (contas || []).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
+            (contas || []).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}${c.ativo ? '' : ' (inativa)'}</option>`).join('');
     } catch (err) {
         console.error("Erro ao carregar filtro:", err.message);
     }
@@ -294,6 +296,9 @@ window.abrirEditarGasto = async function(id) {
         document.getElementById("editValorGasto").value = data.valor;
         document.getElementById("editDataGasto").value = data.data;
         document.getElementById("editCatGasto").value = data.categoria;
+        // Se a conta vinculada está inativada, injeta a opção no select
+        // antes de setar o value — senão o salvar desvinculava o gasto.
+        await garantirOpcaoConta(document.getElementById("editContaGasto"), data.conta_id);
         document.getElementById("editContaGasto").value = data.conta_id || '';
 
         document.getElementById("modalEditarGasto").style.display = 'flex';

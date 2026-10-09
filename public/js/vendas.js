@@ -1,6 +1,6 @@
 import { supabase } from './auth.js';
 import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais } from './dom-utils.js';
-import { atualizarSaldoConta, calcDeltaVenda } from './conta-saldo.js';
+import { atualizarSaldoConta, calcDeltaVenda, garantirOpcaoConta } from './conta-saldo.js';
 
 // Vendas da última renderização. Antes a descrição era injetada
 // dentro de onclick="...('${venda.descricao}')", então uma venda
@@ -58,11 +58,13 @@ async function popularSelectContasFiltro(selectId) {
     if (!select) return;
     try {
         const { data: { user } } = await supabase.auth.getUser();
+        // Lista também contas inativadas: o histórico de vendas da conta
+        // inativada continua consultável pelo filtro (RF113/RF115).
         const { data: contas } = await supabase
-            .from('contas').select('id, nome')
-            .eq('user_id', user.id).eq('ativo', true).order('nome');
+            .from('contas').select('id, nome, ativo')
+            .eq('user_id', user.id).order('nome');
         select.innerHTML = '<option value="">Todas as contas</option>' +
-            (contas || []).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
+            (contas || []).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}${c.ativo ? '' : ' (inativa)'}</option>`).join('');
     } catch (err) {
         console.error("Erro ao carregar filtro de contas:", err.message);
     }
@@ -203,11 +205,14 @@ async function carregarVendas(limite = limiteVendas) {
 }
 
 // --- 4. FUNÇÕES DE EDIÇÃO E EXCLUSÃO (WINDOW) ---
-window.abrirModalEditarVenda = (id, servico, valor, status, contaId) => {
+window.abrirModalEditarVenda = async (id, servico, valor, status, contaId) => {
     document.getElementById("editVendaId").value = id;
     document.getElementById("editServicoVenda").value = servico;
     document.getElementById("editValorVenda").value = valor;
     document.getElementById("editStatusVenda").value = status;
+    // Se a conta vinculada está inativada, injeta a opção no select
+    // antes de setar o value — senão o salvar desvinculava a venda.
+    await garantirOpcaoConta(document.getElementById("editContaVenda"), contaId);
     document.getElementById("editContaVenda").value = contaId || '';
     document.getElementById("modalEditarVenda").style.display = "flex";
     if (window.lucide) lucide.createIcons();

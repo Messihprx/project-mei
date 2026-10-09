@@ -10,6 +10,27 @@ export async function atualizarSaldoConta(contaId, valor) {
     }).eq('id', contaId);
 }
 
+// Os selects de conta dos formulários listam apenas contas ATIVAS.
+// Quando um registro editado está vinculado a uma conta INATIVADA, a
+// opção não existe no select, o value virava "" e o salvar gravava
+// conta_id null — desvinculando o registro em silêncio e movendo o
+// saldo para lugar nenhum. Esta função garante a opção (RF113).
+export async function garantirOpcaoConta(select, contaId) {
+    if (!select || !contaId) return;
+    if (select.querySelector(`option[value="${contaId}"]`)) return;
+    try {
+        const { data: conta } = await supabase
+            .from('contas').select('id, nome, ativo').eq('id', contaId).single();
+        if (!conta) return;
+        const opt = document.createElement('option');
+        opt.value = conta.id;
+        opt.textContent = `${conta.nome}${conta.ativo ? '' : ' (inativa)'}`;
+        select.appendChild(opt);
+    } catch (err) {
+        console.error('Erro ao carregar conta vinculada:', err.message);
+    }
+}
+
 export function calcDeltaVenda(valor, status, acao, valorAntigo, statusAntigo) {
     const v = parseFloat(valor) || 0;
     const va = parseFloat(valorAntigo) || 0;

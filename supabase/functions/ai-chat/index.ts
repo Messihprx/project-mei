@@ -197,6 +197,7 @@ const TOOLS = [
           data_fim: { type: "string", description: "Data fim (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
           status: { type: "string", description: "Filtrar por status: pago, pendente, cancelado" },
           cliente_id: { type: "string", description: "ID do cliente para filtrar" },
+          conta_id: { type: "string", description: "ID da conta financeira para filtrar as movimentações da conta. Use o retornado por buscar_contas." },
           limite: { type: "number", description: "Máximo de vendas retornadas (padrão: todas, teto 200)" }
         }
       }
@@ -213,6 +214,7 @@ const TOOLS = [
           data_inicio: { type: "string", description: "Data início (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
           data_fim: { type: "string", description: "Data fim (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
           categoria: { type: "string", description: "Filtrar por categoria: Mercadoria, Aluguel, Marketing, Serviços ou Outros" },
+          conta_id: { type: "string", description: "ID da conta financeira para filtrar as movimentações da conta. Use o retornado por buscar_contas." },
           limite: { type: "number", description: "Máximo de gastos retornados (padrão: todos, teto 200)" }
         }
       }
@@ -623,13 +625,14 @@ const TOOLS = [
     type: "function",
     function: {
       name: "transferir_entre_contas",
-      description: "Transfere valor de uma conta para outra. IMPORTANTE: isso NÃO é receita nem despesa — é apenas movimentação entre contas próprias.",
+      description: "Transfere valor de uma conta para outra e registra no histórico de transferências. IMPORTANTE: isso NÃO é receita nem despesa — é apenas movimentação entre contas próprias.",
       parameters: {
         type: "object",
         properties: {
           conta_origem_id: { type: "string", description: "ID da conta de origem" },
           conta_destino_id: { type: "string", description: "ID da conta de destino" },
-          valor: { type: "number", description: "Valor a transferir em reais" }
+          valor: { type: "number", description: "Valor a transferir em reais" },
+          descricao: { type: "string", description: "Descrição opcional para identificar a transferência no histórico (ex: tirada do caixa pro Nubank)" }
         },
         required: ["conta_origem_id", "conta_destino_id", "valor"]
       }
@@ -836,6 +839,10 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       }
       if (args.status) q = q.eq('status', args.status);
       if (args.cliente_id) q = q.eq('cliente_id', args.cliente_id);
+      if (args.conta_id) {
+        if (!idValido(args.conta_id)) return { error: 'O ID da conta é inválido.' };
+        q = q.eq('conta_id', args.conta_id);
+      }
       q = q.order('data_venda', { ascending: false });
       const lim = limiteBusca(args.limite);
       if (lim) q = q.limit(lim);
@@ -857,6 +864,10 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         const categoria = normalizarCategoriaGasto(args.categoria);
         if (categoria) q = q.eq('categoria', categoria);
         else q = q.ilike('categoria', `%${args.categoria}%`);
+      }
+      if (args.conta_id) {
+        if (!idValido(args.conta_id)) return { error: 'O ID da conta é inválido.' };
+        q = q.eq('conta_id', args.conta_id);
       }
       q = q.order('data', { ascending: false });
       const lim = limiteBusca(args.limite);
@@ -1625,11 +1636,22 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         })
       ]);
 
+      // Histórico (RF111/RF115): gravar o registro da transferência.
+      // Sem isto, só o saldo muda e não existe nada para consultar.
+      const { error: erroHistorico } = await supabaseAdmin.from('transferencias').insert({
+        user_id: userId,
+        conta_origem_id: args.conta_origem_id,
+        conta_destino_id: args.conta_destino_id,
+        valor,
+        descricao: args.descricao ? String(args.descricao).slice(0, 200) : null,
+      });
+
       return {
         sucesso: true,
-        mensagem: `Transferência de R$ ${valor.toFixed(2)} realizada: "${origemRes.data.nome}" → "${destinoRes.data.nome}"`,
+        mensagem: `Transferência de R$ ${valor.toFixed(2)} realizada: "${origemRes.data.nome}" → "${destinoRes.data.nome}"${erroHistorico ? ' (histórico não registrado — rode sql/transferencias.sql no Supabase)' : ''}`,
         origem: { nome: origemRes.data.nome, novo_saldo: novoSaldoOrigem },
-        destino: { nome: destinoRes.data.nome }
+        destino: { nome: destinoRes.data.nome },
+        historico_registrado: !erroHistorico,
       };
     }
     default:
@@ -1771,6 +1793,15 @@ async function lerJson(provider: any, res: Response) {
   }
 }
 
+// Tempo de espera sugerido num 429 (rate limit). O Groq devolve
+// "Please try again in 19.125s"; sem sugestão no corpo, 5s. Teto de
+// 30s para não estourar o orçamento total da requisição.
+function esperaRateLimit(corpo: string): number {
+  const m = /try again in (\d+(?:\.\d+)?)s/i.exec(corpo || '');
+  const sugerido = m ? Math.ceil(parseFloat(m[1]) * 1000) : 5000;
+  return Math.min(Math.max(sugerido, 1000), 30000);
+}
+
 // Uma segunda tentativa só quando a falha aparenta ser passageira.
 // Não há risco de efeito colateral duplicado: se a chamada falhou,
 // nenhuma tool chegou a rodar nessa rodada.
@@ -1779,8 +1810,15 @@ async function comRetry<T>(provider: any, fn: () => Promise<T>): Promise<T> {
     return await fn();
   } catch (e) {
     if (!(e as any)?.transitorio) throw e;
-    console.warn(`[${provider.provider_name}] falha passageira, tentando de novo: ${msgErro(e)}`);
-    await new Promise(r => setTimeout(r, 800));
+    // 429 (rate limit) não passa em 800ms: duas chamadas seguidas do
+    // loop de tools estouram o TPM do Groq e o provedor manda esperar
+    // dezenas de segundos. Usa o tempo sugerido, mas nunca além do que
+    // resta do orçamento — abaixo de 5s não adianta nem tentar.
+    const eh429 = (e as any)?.status === 429;
+    let espera = eh429 ? esperaRateLimit(String((e as any)?.corpo || '')) : 800;
+    espera = Math.min(espera, Math.max(0, restanteMs(provider) - 5000));
+    console.warn(`[${provider.provider_name}] falha passageira, tentando de novo em ${espera}ms: ${msgErro(e)}`);
+    if (espera > 0) await new Promise(r => setTimeout(r, espera));
     return await fn();
   }
 }
@@ -2599,9 +2637,7 @@ async function resolverProvedor(supabase: any, enviado: any) {
 // ------------------------------------------------------------------
 // Uma chamada ao provedor, medindo tempo e devolvendo o erro cru
 // ------------------------------------------------------------------
-async function chamarProvedor(provider: any, messages: any[], tools?: any[]) {
-  const inicio = Date.now();
-
+async function chamarProvedorUmaVez(provider: any, messages: any[], tools?: any[], inicio = Date.now()) {
   try {
     if (provider.provider_type === 'anthropic') {
       const r = await callAnthropic(provider, messages, tools);
@@ -2669,9 +2705,37 @@ async function chamarProvedor(provider: any, messages: any[], tools?: any[]) {
     return { ok: true, ms: Date.now() - inicio, resposta: JSON.parse(texto) };
 
   } catch (e) {
-    // Erro de rede, DNS, timeout ou URL inválida
-    return { ok: false, ms: Date.now() - inicio, status: null, corpo: (e as Error).message };
+    // Erro de rede, DNS, timeout ou URL inválida — ou erro de provedor
+    // lançado por lerJson/callAnthropic (aí com status e corpo reais,
+    // o que permite o retry de 429 aqui embaixo).
+    return {
+      ok: false,
+      ms: Date.now() - inicio,
+      status: (e as any)?.status ?? null,
+      corpo: (e as any)?.corpo ?? msgErro(e),
+    };
   }
+}
+
+// Rate limit (429) não se resolve em milissegundos: dorme o tempo que
+// o provedor sugerir e refaz a chamada uma vez. Sem isso, toda a
+// segunda rodada de tool no playground morria no TPM do Groq — duas
+// chamadas seguidas estouram a cota do tier gratuito.
+async function chamarProvedor(provider: any, messages: any[], tools?: any[]) {
+  const inicio = Date.now();
+  let r: any = await chamarProvedorUmaVez(provider, messages, tools, inicio);
+
+  if (r.status === 429) {
+    const espera = Math.min(
+      esperaRateLimit(String(r.corpo || '')),
+      Math.max(0, restanteMs(provider) - 5000),
+    );
+    console.warn(`[${provider.provider_name}] rate limit 429, esperando ${espera}ms`);
+    if (espera > 0) await new Promise(res => setTimeout(res, espera));
+    r = await chamarProvedorUmaVez(provider, messages, tools, inicio);
+  }
+
+  return r;
 }
 
 // Extrai texto e tool calls de qualquer um dos formatos
@@ -2792,6 +2856,7 @@ async function testarTools(supabase: any, userId: string, incluirEscrita: boolea
   const TABELAS_TESTE: Array<[string, string]> = [
     ['clientes', 'nome'], ['despesas', 'descricao'],
     ['vendas', 'descricao'], ['produtos', 'nome'], ['contas', 'nome'],
+    ['transferencias', 'descricao'],
   ];
   const faxinar = async () => {
     let total = 0;
@@ -2871,6 +2936,7 @@ async function testarTools(supabase: any, userId: string, incluirEscrita: boolea
       conta_origem_id: contaA.id,
       conta_destino_id: contaB.id,
       valor: 1,
+      descricao: `${MARCA} transferencia`,
     }, 'transferir_entre_contas (A→B)');
     await rodar('saldo_por_conta', { conta_id: contaA.id }, 'saldo_por_conta (conta A)');
   }

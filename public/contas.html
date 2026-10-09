@@ -222,10 +222,13 @@
                 <p>Gerencie suas contas e acompanhe saldos</p>
             </div>
             <div class="user-info" style="display: flex; gap: 8px;">
+                <button id="btnToggleInativas" onclick="alternarContasInativas()" class="btn-secondary" style="width: auto; padding: 0.55rem 1.1rem; font-size: 0.85rem;">
+                    <i data-lucide="eye-off" style="width: 15px;"></i> <span>Inativadas</span>
+                </button>
                 <button onclick="abrirModalTransferencia()" class="btn-secondary" style="width: auto; padding: 0.55rem 1.1rem; font-size: 0.85rem;">
                     <i data-lucide="arrow-left-right" style="width: 15px;"></i> <span>Transferir</span>
                 </button>
-                <button onclick="abrirModalNovaConta()" class="btn-primary" style="width: auto; padding: 0.55rem 1.1rem; text-decoration: none; font-size: 0.85rem;">
+                <button onclick="abrirModalNovaConta()" class="btn-primary" style="width: auto; padding: 0.55rem 1.1rem; font-size: 0.85rem; text-decoration: none;">
                     <i data-lucide="plus-circle" style="width: 15px;"></i> <span>Nova Conta</span>
                 </button>
             </div>
@@ -238,6 +241,14 @@
             </div>
 
             <div id="listaContas"></div>
+        </section>
+
+        <section class="content-wrapper" style="margin-top: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 0.75rem;">
+                <h4 style="margin: 0; font-size: 1rem;">Histórico de Transferências</h4>
+                <select id="filtroContaTransferencias" style="max-width: 260px; padding: 0.5rem 0.75rem; font-size: 0.85rem;"></select>
+            </div>
+            <div id="listaTransferencias"></div>
         </section>
     </main>
 

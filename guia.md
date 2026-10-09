@@ -37,6 +37,7 @@ Rode no **Supabase → SQL Editor**, **nesta ordem**:
 | 9 | `sql/ai_logs.sql` | Registro de falhas da IA, visível no painel |
 | 10 | `sql/consistencia.sql` | Corrige a data das vendas importadas e unifica os limites entre tela e banco |
 | 11 | `sql/contas_financeiras.sql` | Tabela `contas`, `conta_id` em vendas/despesas e a RPC `incrementar_saldo` (páginas de Contas e as tools de contas da IA) |
+| 12 | `sql/transferencias.sql` | Tabela `transferencias` — histórico de transferências entre contas (RF111/RF115), gravado pelo site e pela IA |
 
 > Os scripts assumem que `sql/admin_supabase.sql` (função `is_admin()`) já foi
 > executado. Se ainda não foi, rode-o antes do item 1.

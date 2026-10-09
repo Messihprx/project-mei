@@ -232,8 +232,8 @@ SISTEMA DE FALLBACK:
 28 TOOLS DISPONIVEIS:
 
   BUSCA:
-  - buscar_vendas: busca por periodo, status, cliente
-  - buscar_gastos: busca por periodo, categoria
+  - buscar_vendas: busca por periodo, status, cliente, conta
+  - buscar_gastos: busca por periodo, categoria, conta
   - buscar_clientes: busca por nome/telefone
   - buscar_produtos: busca por nome
   - resumo_financeiro: total vendas, gastos, lucro, ticket medio
@@ -267,7 +267,8 @@ SISTEMA DE FALLBACK:
   - excluir_conta (padrao: inativar; permanente: apagar)
 
   FINANCAS:
-  - transferir_entre_contas (usa a RPC incrementar_saldo)
+  - transferir_entre_contas (usa a RPC incrementar_saldo e grava o
+    historico na tabela transferencias)
 
 CONTEXTO AUTOMATICO:
   Cada mensagem recebe bloco com dados do usuario:
