@@ -235,6 +235,10 @@ function destroyCharts() {
 }
 
 const cv = () => getComputedStyle(document.documentElement);
+const narrow = () => window.matchMedia('(max-width:768px)').matches;
+// Em telas estreitas a legenda embaixo rende muito mais que na lateral.
+const legendPos = () => (narrow() ? 'bottom' : 'right');
+const legendFont = () => ({ size: narrow() ? 11 : 12 });
 const ctext = () => cv().getPropertyValue('--text-faint');
 const cgrid = () => cv().getPropertyValue('--border');
 const csurf = () => cv().getPropertyValue('--surface');
@@ -252,7 +256,8 @@ const baseOpts = e =>
           color: ctext(),
           boxWidth: 12,
           boxHeight: 12,
-          usePointStyle: true
+          usePointStyle: true,
+          font: legendFont()
         }
       }
     },
@@ -378,11 +383,12 @@ function makeSubsChart(labels, data) {
       cutout: '60%',
       plugins: {
         legend: {
-          position: 'right',
+          position: legendPos(),
           labels: {
             color: ctext(),
             boxWidth: 12,
-            usePointStyle: true
+            usePointStyle: true,
+            font: legendFont()
           }
         }
       }
@@ -408,11 +414,12 @@ function makePlansChart(labels, data) {
       cutout: '60%',
       plugins: {
         legend: {
-          position: 'right',
+          position: legendPos(),
           labels: {
             color: ctext(),
             boxWidth: 12,
-            usePointStyle: true
+            usePointStyle: true,
+            font: legendFont()
           }
         }
       }
@@ -2141,7 +2148,7 @@ async function renderGateway() {
       </div>
 
       <!-- Botões de ação -->
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap">
         <button class="btn btn-secondary" onclick="renderGateway()">
           Cancelar
         </button>
@@ -2203,7 +2210,7 @@ function renderProviderCard(p, idx) {
   const isCustom = !AI_PRESETS[p.provider_name];
   return `
     <div style="padding:16px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);margin-bottom:12px" id="providerCard_${idx}">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="row-between" style="margin-bottom:14px">
         <div style="display:flex;align-items:center;gap:8px">
           <div style="width:28px;height:28px;border-radius:7px;background:${preset.color || '#64748b'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px">${preset.icon || '?'}</div>
           <strong style="font-size:14px">${esc(p.provider_name)}</strong>
@@ -2228,7 +2235,7 @@ function renderProviderCard(p, idx) {
         <label>URL da API</label>
         <input id="aiUrl_${idx}" type="text" value="${esc(p.api_url)}" placeholder="https://api.exemplo.com/v1/chat/completions">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div class="fgrid fgrid-3">
         <div class="field">
           <label>Modelo</label>
           <div style="display:flex;gap:6px">
@@ -2251,7 +2258,7 @@ function renderProviderCard(p, idx) {
           <input id="aiTokensMax_${idx}" type="number" min="100" max="128000" value="${p.max_tokens ?? 2000}">
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fgrid fgrid-2">
         <div class="field">
           <label>Tipo</label>
           <select id="aiType_${idx}">
@@ -2268,7 +2275,7 @@ function renderProviderCard(p, idx) {
 
       <details class="avancado">
         <summary>Autenticação e headers avançados</summary>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fgrid fgrid-2">
           <div class="field">
             <label>Header de auth</label>
             <input id="aiAuthHeader_${idx}" type="text" value="${esc(p.auth_header ?? 'Authorization')}" placeholder="Authorization">
@@ -2777,19 +2784,37 @@ async function renderAIProvedores() {
 /* Sidebar e inicialização */
 
 function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
+  toggleSidebar(false);
 }
 
-document.querySelector('.brand').addEventListener('click', () => {
-  if (window.innerWidth <= 768) {
-    document.getElementById('sidebar').classList.toggle('open');
-  }
+function toggleSidebar(force) {
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  const btn = document.getElementById('menuBtn');
+  if (!sidebar) return;
+
+  const mobile = window.innerWidth <= 768;
+  const open = typeof force === 'boolean' ? force : !sidebar.classList.contains('open');
+
+  sidebar.classList.toggle('open', open && mobile);
+  if (backdrop) backdrop.classList.toggle('show', open && mobile);
+  if (btn) btn.setAttribute('aria-expanded', String(open && mobile));
+  // Com o menu aberto a página de fundo não deve rolar junto.
+  document.body.style.overflow = (open && mobile) ? 'hidden' : '';
+}
+window.toggleSidebar = toggleSidebar;
+
+document.getElementById('menuBtn')?.addEventListener('click', () => toggleSidebar());
+document.getElementById('sidebarBackdrop')?.addEventListener('click', () => closeSidebar());
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeSidebar();
 });
 
-document.querySelector('.topbar-title').addEventListener('click', () => {
-  if (window.innerWidth <= 768) {
-    document.getElementById('sidebar').classList.toggle('open');
-  }
+// Em telas grandes não existe menu recolhido: ao voltar pro desktop,
+// garante que nem a sombra nem o estado "open" continuem por aí.
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) toggleSidebar(false);
 });
 
 // Protege o painel e abre a página inicial.
@@ -3157,13 +3182,14 @@ async function renderAIPlayground() {
               Usar contexto e tools reais
               <div style="font-size:11.5px;color:var(--text-faint);font-weight:400;margin-top:2px">
                 Desmarcado, faz só um ping para validar chave, URL e modelo.
-                Marcado, roda com o mesmo system prompt e as mesmas tools do chat —
-                é o que de fato reproduz o comportamento real.
+                Marcado, roda com o mesmo system prompt e as mesmas tools do chat:
+                as de leitura executam de verdade e as de escrita são simuladas
+                (nada é gravado). É o que de fato reproduz o comportamento real.
               </div>
             </label>
           </div>
 
-          <button class="btn btn-primary" onclick="rodarPlayground()">Enviar</button>
+          <button class="btn btn-primary" onclick="rodarPlayground()" style="width:100%">Enviar</button>
         </div>
 
         <div class="card">
@@ -3217,20 +3243,23 @@ async function rodarPlayground() {
     }
 
     caixa.className = 'console-box ok';
+    const linhasExec = (r.tools_execucoes || []).map(t => {
+      const marca = t.simulado ? '<span class="c-dim">[sim ]</span>'
+        : t.ok ? '<span class="c-ok">[ ok ]</span>' : '<span class="c-err">[erro]</span>';
+      return `  ${marca} ${esc(t.tool)} — ${esc(t.resumo)}`;
+    });
     caixa.innerHTML = [
-      `<span class="c-ok"><b>OK</b></span> em ${r.ms}ms · ${r.tokens || 0} tokens`,
+      `<span class="c-ok"><b>OK</b></span> em ${r.ms}ms · ${r.tokens || 0} tokens${r.rodadas > 1 ? ` · ${r.rodadas} rodadas` : ''}`,
       `provedor : ${esc(r.provider || p.provider_name)}`,
       `modelo   : ${esc(r.model || '')}`,
-      r.tools_chamadas?.length
-        ? `tools    : ${esc(r.tools_chamadas.join(', '))}`
+      r.tools_execucoes?.length
+        ? `tools    : ${r.tools_execucoes.length} executada(s)`
         : '<span class="c-dim">tools    : nenhuma chamada</span>',
+      ...(linhasExec.length ? ['', '<b>Execução das tools</b>', ...linhasExec] : []),
       '',
       '<b>Resposta</b>',
       esc(r.texto || '(vazio)'),
-      '',
-      r.tools_chamadas?.length
-        ? '<span class="c-dim">O modelo pediu as tools acima. No chat real elas seriam executadas e a resposta final viria depois — aqui paramos na primeira rodada.</span>'
-        : '',
+      r.aviso ? ['', `<span class="c-err">${esc(r.aviso)}</span>`] : '',
     ].filter(Boolean).join('\n');
 
   } catch (e) {
@@ -3254,10 +3283,10 @@ async function renderAIDiagnostico() {
         <label for="dgEscrita" style="text-transform:none;font-size:13px;color:var(--text);cursor:pointer;letter-spacing:0">
           Incluir tools de escrita
           <div style="font-size:11.5px;color:var(--text-faint);font-weight:400;margin-top:2px">
-            Cria um cliente, um gasto, uma venda e um produto marcados com
-            <code>[TESTE]</code> <b>na sua conta</b> e apaga logo em seguida.
-            É o que revela bloqueio por limite de plano ou por trigger —
-            justamente os erros que hoje não aparecem em lugar nenhum.
+            Cria clientes, produtos, vendas, gastos e contas marcados com
+            <code>[TESTE]</code> <b>na sua conta</b>, exercita edição/exclusão
+            e apaga tudo ao final. É o que revela bloqueio por limite de plano
+            ou por trigger — justamente os erros que hoje não aparecem em lugar nenhum.
           </div>
         </label>
       </div>

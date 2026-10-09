@@ -12,12 +12,13 @@ nada.
 | 2 | `produtos.sql` | Tabela `produtos` + bucket de fotos |
 | 3 | `vendas_add_produto.sql` | Liga venda a produto |
 | 4 | `admin_supabase.sql` | `role`, `is_admin()` e as policies de admin |
-| 5 | `gateway_config.sql` | Configuração do Mercado Pago |
-| 6 | `ai_config.sql` | Provedores, limites, uso e conversas de IA |
-| 7 | `ai_sessions.sql` | Sessões do chat |
-| 8 | `ai_individual_limits.sql` | Limite de IA por usuário |
-| 9 | `fix_perfis_nome_email.sql` | Preenche nome e e-mail nos perfis |
-| 10 | `verificar_email_confirmado.sql` | Confirmação de e-mail entre dispositivos |
+| 5 | `contas_financeiras.sql` | Tabela `contas`, `conta_id` em vendas/despesas e a RPC `incrementar_saldo` |
+| 6 | `gateway_config.sql` | Configuração do Mercado Pago |
+| 7 | `ai_config.sql` | Provedores, limites, uso e conversas de IA |
+| 8 | `ai_sessions.sql` | Sessões do chat |
+| 9 | `ai_individual_limits.sql` | Limite de IA por usuário |
+| 10 | `fix_perfis_nome_email.sql` | Preenche nome e e-mail nos perfis |
+| 11 | `verificar_email_confirmado.sql` | Confirmação de e-mail entre dispositivos |
 
 > `admin_supabase.sql` precisa vir antes de qualquer script que use
 > `is_admin()` — que são quase todos os seguintes.
@@ -56,6 +57,12 @@ pessoa.
 **`consistencia.sql`** corrige as vendas importadas por CSV, que gravavam a data
 da planilha em `created_at` e deixavam `data_venda` com o horário da importação
 — uma planilha de janeiro importada hoje aparecia inteira no mês corrente.
+
+**`contas_financeiras.sql`** cria a tabela `contas` (Carteira, Banco, Poupança
+etc.), liga `conta_id` a vendas e despesas e cria a RPC `incrementar_saldo`
+usada pela tool `transferir_entre_contas` da IA. As páginas de Contas do site e
+as 6 tools de contas do chat dependem dele. Idempotente: se a tabela já existe,
+só falta a RPC.
 
 ## Estrutura resultante
 

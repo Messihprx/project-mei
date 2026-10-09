@@ -196,7 +196,8 @@ const TOOLS = [
           data_inicio: { type: "string", description: "Data início (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
           data_fim: { type: "string", description: "Data fim (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
           status: { type: "string", description: "Filtrar por status: pago, pendente, cancelado" },
-          cliente_id: { type: "string", description: "ID do cliente para filtrar" }
+          cliente_id: { type: "string", description: "ID do cliente para filtrar" },
+          limite: { type: "number", description: "Máximo de vendas retornadas (padrão: todas, teto 200)" }
         }
       }
     }
@@ -211,7 +212,8 @@ const TOOLS = [
         properties: {
           data_inicio: { type: "string", description: "Data início (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
           data_fim: { type: "string", description: "Data fim (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
-          categoria: { type: "string", description: "Filtrar por categoria" }
+          categoria: { type: "string", description: "Filtrar por categoria: Mercadoria, Aluguel, Marketing, Serviços ou Outros" },
+          limite: { type: "number", description: "Máximo de gastos retornados (padrão: todos, teto 200)" }
         }
       }
     }
@@ -224,7 +226,8 @@ const TOOLS = [
       parameters: {
         type: "object",
         properties: {
-          busca: { type: "string", description: "Nome ou telefone para buscar" }
+          busca: { type: "string", description: "Nome ou telefone para buscar" },
+          limite: { type: "number", description: "Máximo de clientes retornados (padrão: todos, teto 200)" }
         }
       }
     }
@@ -237,7 +240,8 @@ const TOOLS = [
       parameters: {
         type: "object",
         properties: {
-          busca: { type: "string", description: "Nome do produto para buscar (busca parcial, tolerante a erros)" }
+          busca: { type: "string", description: "Nome do produto para buscar (busca parcial, tolerante a erros)" },
+          limite: { type: "number", description: "Máximo de produtos retornados (padrão: todos, teto 200)" }
         }
       }
     }
@@ -351,7 +355,7 @@ const TOOLS = [
         properties: {
           descricao: { type: "string", description: "Descrição do gasto" },
           valor: { type: "number", description: "Valor do gasto em reais" },
-          categoria: { type: "string", enum: ["Mercaria/Estoque", "Aluguel/Espaço", "Marketing/Anúncios", "Luz/Água/internet", "Outros"], description: "Categoria do gasto obrigatoriamente dentre as listadas" },
+          categoria: { type: "string", enum: ["Mercadoria", "Aluguel", "Marketing", "Serviços", "Outros"], description: "Categoria do gasto: Mercadoria, Aluguel, Marketing, Serviços ou Outros (exatamente um destes valores)" },
           data: { type: "string", description: "Data do gasto (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
           conta_id: { type: "string", description: "ID da conta financeira para vincular (opcional). Use o retornado por buscar_contas." }
         },
@@ -483,7 +487,7 @@ const TOOLS = [
           gasto_id: { type: "string", description: "ID do gasto" },
           descricao: { type: "string", description: "Nova descrição" },
           valor: { type: "number", description: "Novo valor" },
-          categoria: { type: "string", description: "Nova categoria" },
+          categoria: { type: "string", enum: ["Mercadoria", "Aluguel", "Marketing", "Serviços", "Outros"], description: "Nova categoria: Mercadoria, Aluguel, Marketing, Serviços ou Outros" },
           data: { type: "string", description: "Nova data (YYYY-MM-DD)" },
           conta_id: { type: "string", description: "ID da conta financeira (opcional). Use o retornado por buscar_contas." }
         },
@@ -691,7 +695,43 @@ function textoValido(value: unknown): boolean {
 }
 
 function numeroValido(value: unknown): boolean {
-  return typeof value === 'number' && Number.isFinite(value);
+  if (typeof value === 'number') return Number.isFinite(value);
+  // Gemini e Ollama costumam mandar número como texto ("10.5") — aceitar
+  // evita recusar cadastro válido; os handlers já usam Number() depois.
+  if (typeof value === 'string' && value.trim() !== '') return Number.isFinite(Number(value));
+  return false;
+}
+
+// As 5 categorias que o site aceita em gastos. O modelo às vezes manda o
+// rótulo longo ("Mercadoria/Estoque") ou variação de escrita — gravar
+// fora desta lista faz o gasto sumir do filtro de categoria do site.
+const CATEGORIAS_GASTO = ["Mercadoria", "Aluguel", "Marketing", "Serviços", "Outros"];
+
+const CATEGORIA_ALIAS: Record<string, string> = {
+  "mercadoria": "Mercadoria", "mercadoria/estoque": "Mercadoria", "estoque": "Mercadoria",
+  "mercaria": "Mercadoria", "mercaria/estoque": "Mercadoria",
+  "aluguel": "Aluguel", "aluguel/espaço": "Aluguel", "aluguel/espaco": "Aluguel",
+  "espaço": "Aluguel", "espaco": "Aluguel", "escritorio": "Aluguel",
+  "marketing": "Marketing", "marketing/anúncios": "Marketing", "marketing/anuncios": "Marketing",
+  "anúncios": "Marketing", "anuncios": "Marketing", "publicidade": "Marketing",
+  "serviços": "Serviços", "servicos": "Serviços", "luz/água/internet": "Serviços",
+  "luz/agua/internet": "Serviços", "luz/água": "Serviços", "luz/agua": "Serviços",
+  "internet": "Serviços", "telefone": "Serviços",
+  "outros": "Outros", "outro": "Outros", "diversos": "Outros",
+};
+
+function normalizarCategoriaGasto(valor: unknown): string | null {
+  const chave = String(valor ?? "").trim().toLowerCase();
+  if (!chave) return null;
+  return CATEGORIA_ALIAS[chave] || null;
+}
+
+// Limite opcional das buscas: aceita o que o modelo mandar (inclusive
+// texto), com teto de 200 para não derrubar a resposta da API.
+function limiteBusca(valor: unknown, padrao?: number): number | undefined {
+  const n = Math.floor(Number(valor));
+  if (Number.isFinite(n) && n > 0) return Math.min(n, 200);
+  return padrao;
 }
 
 function pago(status: string): boolean {
@@ -797,7 +837,10 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       if (args.status) q = q.eq('status', args.status);
       if (args.cliente_id) q = q.eq('cliente_id', args.cliente_id);
       q = q.order('data_venda', { ascending: false });
-      const { data } = await q;
+      const lim = limiteBusca(args.limite);
+      if (lim) q = q.limit(lim);
+      const { data, error } = await q;
+      if (error) return { error: error.message };
       return data || [];
     }
     case "buscar_gastos": {
@@ -810,22 +853,34 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         const df = parseData(args.data_fim);
         if (df) q = q.lte('data', df);
       }
-      if (args.categoria) q = q.ilike('categoria', `%${args.categoria}%`);
+      if (args.categoria) {
+        const categoria = normalizarCategoriaGasto(args.categoria);
+        if (categoria) q = q.eq('categoria', categoria);
+        else q = q.ilike('categoria', `%${args.categoria}%`);
+      }
       q = q.order('data', { ascending: false });
-      const { data } = await q;
+      const lim = limiteBusca(args.limite);
+      if (lim) q = q.limit(lim);
+      const { data, error } = await q;
+      if (error) return { error: error.message };
       return data || [];
     }
     case "buscar_clientes": {
       let q = supabaseAdmin.from('clientes').select('*').eq('user_id', userId).eq('ativo', true);
       if (args.busca) q = q.or(`nome.ilike.%${args.busca}%,telefone.ilike.%${args.busca}%`);
       q = q.order('nome');
-      const { data } = await q;
+      const lim = limiteBusca(args.limite);
+      if (lim) q = q.limit(lim);
+      const { data, error } = await q;
+      if (error) return { error: error.message };
       return data || [];
     }
     case "buscar_produtos": {
       let q = supabaseAdmin.from('produtos').select('id, nome, descricao, valor').eq('user_id', userId);
       if (args.busca) q = q.ilike('nome', `%${args.busca}%`);
       q = q.order('nome');
+      const lim = limiteBusca(args.limite);
+      if (lim) q = q.limit(lim);
       const { data, error } = await q;
       if (error) return { error: error.message };
       return data || [];
@@ -849,7 +904,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         user_id: userId,
         nome: args.nome,
         descricao: args.descricao,
-        valor: args.valor
+        valor: Number(args.valor)
       }).select().single();
       if (error) return { error: error.message };
       return data;
@@ -869,6 +924,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       if (patch.nome !== undefined && !textoValido(patch.nome)) return { error: 'O nome não pode ficar vazio.' };
       if (patch.descricao !== undefined && !textoValido(patch.descricao)) return { error: 'A descrição não pode ficar vazia.' };
       if (patch.valor !== undefined && Number(patch.valor) <= 0) return { error: 'O valor do produto deve ser maior que zero.' };
+      if (patch.valor !== undefined) patch.valor = Number(patch.valor);
 
       if (patch.nome) {
         const dup = await supabaseAdmin.from('produtos')
@@ -897,12 +953,14 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       return { sucesso: true, mensagem: `Produto "${produto.nome}" excluído` };
     }
     case "resumo_financeiro": {
-      const di = args.data_inicio ? parseData(args.data_inicio) : defaultStart;
-      const df = args.data_fim ? parseData(args.data_fim) : defaultEnd;
+      const di = (args.data_inicio ? parseData(args.data_inicio) : null) || defaultStart;
+      const df = (args.data_fim ? parseData(args.data_fim) : null) || defaultEnd;
       const [vendasRes, gastosRes] = await Promise.all([
         supabaseAdmin.from('vendas').select('valor, status, data_venda').eq('user_id', userId).gte('data_venda', di).lte('data_venda', df + 'T23:59:59'),
         supabaseAdmin.from('despesas').select('valor, data').eq('user_id', userId).gte('data', di).lte('data', df)
       ]);
+      if (vendasRes.error) return { error: vendasRes.error.message };
+      if (gastosRes.error) return { error: gastosRes.error.message };
       const vendas = vendasRes.data || [];
       const gastos = gastosRes.data || [];
       const vendasPagas = vendas.filter((v: any) => v.status === 'pago' || v.status === 'recebido');
@@ -991,7 +1049,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         .select('id, descricao, valor, data_venda, status')
         .eq('user_id', userId)
         .ilike('descricao', `%${args.descricao}%`)
-        .eq('valor', args.valor)
+        .eq('valor', Number(args.valor))
         .gte('data_venda', dataVenda)
         .lte('data_venda', dataVenda + 'T23:59:59')
         .limit(1);
@@ -1002,7 +1060,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       }
 
       const { data, error } = await supabaseAdmin.from('vendas').insert({
-        user_id: userId, descricao: args.descricao, valor: args.valor,
+        user_id: userId, descricao: args.descricao, valor: Number(args.valor),
         status: args.status || 'pago', data_venda: dataVenda,
         cliente_id: clienteId, produto_id: produtoId, conta_id: contaId || null
       }).select().single();
@@ -1046,7 +1104,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         .eq('user_id', userId)
         .eq('cliente_id', cliente.id)
         .eq('status', 'pendente')
-        .eq('valor', args.valor)
+        .eq('valor', Number(args.valor))
         .gte('data_venda', dataInicio)
         .lte('data_venda', dataFim)
         .limit(1);
@@ -1057,7 +1115,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         user_id: userId,
         cliente_id: cliente.id,
         descricao: args.descricao,
-        valor: args.valor,
+        valor: Number(args.valor),
         status: 'pendente',
         data_venda: dataVenda
       }).select('id, cliente_id, descricao, valor, status, data_venda, clientes(nome)').single();
@@ -1071,6 +1129,10 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       if (Number(args.valor) <= 0) return { error: 'O valor do gasto deve ser maior que zero.' };
       const dataGasto = parseData(args.data);
       if (!dataGasto) return { error: 'Data inválida. Use YYYY-MM-DD, dd/mm/aaaa, "hoje", "amanhã" ou "ontem".' };
+      const categoria = normalizarCategoriaGasto(args.categoria);
+      if (!categoria) {
+        return { error: `Categoria inválida. Use uma destas: ${CATEGORIAS_GASTO.join(', ')}.` };
+      }
 
       let contaId = null;
       if (args.conta_id) {
@@ -1083,8 +1145,8 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       }
 
       const { data, error } = await supabaseAdmin.from('despesas').insert({
-        user_id: userId, descricao: args.descricao, valor: args.valor,
-        categoria: args.categoria || null, data: dataGasto, conta_id: contaId
+        user_id: userId, descricao: args.descricao, valor: Number(args.valor),
+        categoria, data: dataGasto, conta_id: contaId
       }).select().single();
       if (error) return { error: error.message };
 
@@ -1131,20 +1193,22 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       return data;
     }
     case "top_gastos": {
-      const di = args.data_inicio ? parseData(args.data_inicio) : defaultStart;
-      const df = args.data_fim ? parseData(args.data_fim) : defaultEnd;
+      const di = (args.data_inicio ? parseData(args.data_inicio) : null) || defaultStart;
+      const df = (args.data_fim ? parseData(args.data_fim) : null) || defaultEnd;
       const limite = Math.min(50, Math.max(1, Number(args.limite) || 5));
-      const { data } = await supabaseAdmin.from('despesas')
+      const { data, error } = await supabaseAdmin.from('despesas')
         .select('descricao, valor, categoria, data').eq('user_id', userId)
         .gte('data', di).lte('data', df).order('valor', { ascending: false }).limit(limite);
+      if (error) return { error: error.message };
       return data || [];
     }
     case "vendas_por_cliente": {
-      const di = args.data_inicio ? parseData(args.data_inicio) : defaultStart;
-      const df = args.data_fim ? parseData(args.data_fim) : defaultEnd;
-      const { data } = await supabaseAdmin.from('vendas')
+      const di = (args.data_inicio ? parseData(args.data_inicio) : null) || defaultStart;
+      const df = (args.data_fim ? parseData(args.data_fim) : null) || defaultEnd;
+      const { data, error } = await supabaseAdmin.from('vendas')
         .select('cliente_id, valor, clientes(nome)').eq('user_id', userId).eq('status', 'pago')
         .gte('data_venda', di).lte('data_venda', df + 'T23:59:59');
+      if (error) return { error: error.message };
       const grouped: Record<string, { nome: string, total: number, qtd: number }> = {};
       for (const v of data || []) {
         const nome = (v as any).clientes?.nome || 'Sem cliente';
@@ -1164,7 +1228,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
           .select('id, descricao, valor, data_venda, status')
           .eq('user_id', userId)
           .ilike('descricao', `%${descricao}%`);
-        if (args.valor !== undefined) q = q.eq('valor', args.valor);
+        if (args.valor !== undefined) q = q.eq('valor', Number(args.valor));
         if (args.data) {
           const parsedData = parseData(args.data);
           if (parsedData) q = q.gte('data_venda', parsedData).lte('data_venda', parsedData + 'T23:59:59');
@@ -1177,7 +1241,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
           .select('id, descricao, valor, data, categoria')
           .eq('user_id', userId)
           .ilike('descricao', `%${descricao}%`);
-        if (args.valor !== undefined) q = q.eq('valor', args.valor);
+        if (args.valor !== undefined) q = q.eq('valor', Number(args.valor));
         if (args.data) {
           const parsedData = parseData(args.data);
           if (parsedData) q = q.eq('data', parsedData);
@@ -1200,12 +1264,13 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       return { encontrados: results.length, registros: results };
     }
     case "resumo_por_categoria": {
-      const di = args.data_inicio ? parseData(args.data_inicio) : defaultStart;
-      const df = args.data_fim ? parseData(args.data_fim) : defaultEnd;
-      const { data } = await supabaseAdmin.from('despesas')
+      const di = (args.data_inicio ? parseData(args.data_inicio) : null) || defaultStart;
+      const df = (args.data_fim ? parseData(args.data_fim) : null) || defaultEnd;
+      const { data, error } = await supabaseAdmin.from('despesas')
         .select('categoria, valor')
         .eq('user_id', userId)
         .gte('data', di).lte('data', df);
+      if (error) return { error: error.message };
       const grouped: Record<string, number> = {};
       for (const g of data || []) {
         const cat = (g as any).categoria || 'Sem categoria';
@@ -1251,6 +1316,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       if (!Object.keys(patch).length) return { error: 'Informe pelo menos um campo da venda para alterar.' };
       if (patch.descricao !== undefined && !textoValido(patch.descricao)) return { error: 'A descrição não pode ficar vazia.' };
       if (patch.valor !== undefined && Number(patch.valor) <= 0) return { error: 'O valor da venda deve ser maior que zero.' };
+      if (patch.valor !== undefined) patch.valor = Number(patch.valor);
       if (patch.data_venda !== undefined) {
         const parsed = parseData(patch.data_venda);
         if (!parsed) return { error: 'Data inválida. Use YYYY-MM-DD, dd/mm/aaaa, "hoje", "amanhã" ou "ontem".' };
@@ -1268,13 +1334,6 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         .limit(1);
       if (dup.error) throw dup.error;
       if (dup.data?.length) return { error: 'Já existe outra venda com mesma descrição, valor e data.' };
-
-      if (patch.cliente_id) {
-        if (!idValido(patch.cliente_id)) return { error: 'O ID do cliente é inválido.' };
-        const { data: cli } = await supabaseAdmin.from('clientes')
-          .select('id').eq('id', patch.cliente_id).eq('user_id', userId).eq('ativo', true).maybeSingle();
-        if (!cli) return { error: 'Cliente não encontrado ou inativo.' };
-      }
 
       const { data, error } = await supabaseAdmin.from('vendas')
         .update(patch).eq('id', venda_id).eq('user_id', userId).select().maybeSingle();
@@ -1311,8 +1370,13 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       if (updates.conta_id !== undefined) patch.conta_id = updates.conta_id;
       if (!Object.keys(patch).length) return { error: 'Informe pelo menos um campo do gasto para alterar.' };
       if (patch.descricao !== undefined && !textoValido(patch.descricao)) return { error: 'A descrição não pode ficar vazia.' };
-      if (patch.categoria !== undefined && typeof patch.categoria !== 'string') return { error: 'A categoria deve ser um texto.' };
+      if (patch.categoria !== undefined) {
+        const categoria = normalizarCategoriaGasto(patch.categoria);
+        if (!categoria) return { error: `Categoria inválida. Use uma destas: ${CATEGORIAS_GASTO.join(', ')}.` };
+        patch.categoria = categoria;
+      }
       if (patch.valor !== undefined && Number(patch.valor) <= 0) return { error: 'O valor do gasto deve ser maior que zero.' };
+      if (patch.valor !== undefined) patch.valor = Number(patch.valor);
       if (patch.data !== undefined) {
         const parsed = parseData(patch.data);
         if (!parsed) return { error: 'Data inválida. Use YYYY-MM-DD, dd/mm/aaaa, "hoje", "amanhã" ou "ontem".' };
@@ -1366,10 +1430,12 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       if (clientes.length > 1) return { error: 'Encontrei mais de um cliente com esses dados. Informe o telefone ou ID correto.' };
 
       const cliente = clientes[0];
+      // Soft delete, igual ao site (clientes.js): o histórico de vendas
+      // do cliente continua no relatório e no BI.
       const { error } = await supabaseAdmin.from('clientes')
-        .delete().eq('id', cliente.id).eq('user_id', userId);
+        .update({ ativo: false }).eq('id', cliente.id).eq('user_id', userId);
       if (error) return { error: error.message };
-      return { sucesso: true, mensagem: `Cliente "${cliente.nome}" excluído` };
+      return { sucesso: true, mensagem: `Cliente "${cliente.nome}" excluído (o histórico de vendas foi mantido)` };
     }
     case "excluir_venda": {
       if (!args.venda_id) return { error: 'Informe o ID da venda para excluir.' };
@@ -1990,14 +2056,91 @@ async function callOpenAICompatible(provider: any, messages: any[], tools?: any[
   return await lerJson(provider, res);
 }
 
+// O Gemini não entende o formato OpenAI de tool_calls/tool messages:
+// precisa de functionCall nas mensagens do modelo e functionResponse
+// nas respostas. Sem isso ele recebe parts vazio e recusa o pedido
+// (400) logo na segunda rodada do loop de tools.
+function montarContentsGemini(messages: any[]) {
+  // Nome da tool por tool_call_id, recuperado das mensagens assistant
+  // anteriores — a mensagem role:tool do formato OpenAI não traz nome.
+  const nomePorId = new Map<string, string>();
+  for (const m of messages) {
+    for (const tc of m?.tool_calls || []) {
+      if (tc?.id && tc?.function?.name) nomePorId.set(tc.id, tc.function.name);
+    }
+  }
+
+  const contents: any[] = [];
+  for (const m of messages) {
+    if (m.role === 'system') continue;
+
+    // Resultado de tool → functionResponse
+    if (m.role === 'tool') {
+      const nome = nomePorId.get(m.tool_call_id) || 'ferramenta';
+      let resposta: unknown;
+      try { resposta = JSON.parse(m.content); } catch { resposta = { texto: String(m.content ?? '') }; }
+      contents.push({ role: 'user', parts: [{ functionResponse: { name: nome, response: resposta } }] });
+      continue;
+    }
+
+    // Assistant com pedidos de tool → functionCall (+ texto, se houver)
+    if (m.role === 'assistant' && m.tool_calls?.length) {
+      const parts: any[] = [];
+      if (m.content) parts.push({ text: m.content });
+      for (const tc of m.tool_calls) {
+        let args: unknown = {};
+        try { args = JSON.parse(tc.function.arguments || '{}'); } catch { args = {}; }
+        parts.push({ functionCall: { name: tc.function.name, args } });
+      }
+      if (parts.length) contents.push({ role: 'model', parts });
+      continue;
+    }
+
+    const texto = typeof m.content === 'string'
+      ? m.content
+      : m.content == null ? '' : JSON.stringify(m.content);
+    if (!texto) continue;  // nunca mandar parts vazio
+    contents.push({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: texto }],
+    });
+  }
+
+  // A API Gemini espera turnos alternados (user/model). Vários resultados
+  // de tool viram vários blocos "user" seguidos — juntar os adjacentes
+  // mantém a troca de papéis estrita e é o formato canônico de múltiplos
+  // functionResponse.
+  const mesclados: any[] = [];
+  for (const conteudo of contents) {
+    const anterior = mesclados[mesclados.length - 1];
+    if (anterior && anterior.role === conteudo.role) {
+      anterior.parts.push(...conteudo.parts);
+    } else {
+      mesclados.push(conteudo);
+    }
+  }
+  return mesclados;
+}
+
+// O Schema da API Gemini usa enums em maiúscula (STRING, NUMBER...).
+// Alguns modelos toleram minúscula, outros rejeitam o pedido inteiro —
+// mapear deixa a chamada válida em qualquer um.
+function geminiSchema(tipo: any): any {
+  if (Array.isArray(tipo)) return tipo.map(geminiSchema);
+  if (tipo && typeof tipo === 'object') {
+    const saida: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(tipo)) {
+      if (k === 'type' && typeof v === 'string') saida[k] = v.toUpperCase();
+      else saida[k] = geminiSchema(v);
+    }
+    return saida;
+  }
+  return tipo;
+}
+
 // Adapter Gemini nativo
 async function callGemini(provider: any, messages: any[], tools?: any[]) {
-  const contents = messages
-    .filter((m: any) => m.role !== 'system')
-    .map((m: any) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
-    }));
+  const contents = montarContentsGemini(messages);
 
   const body: Record<string, unknown> = {
     contents,
@@ -2012,7 +2155,7 @@ async function callGemini(provider: any, messages: any[], tools?: any[]) {
       functionDeclarations: tools.map((t: any) => ({
         name: t.function.name,
         description: t.function.description,
-        parameters: t.function.parameters,
+        parameters: geminiSchema(t.function.parameters),
       }))
     }];
   }
@@ -2038,6 +2181,8 @@ async function callGemini(provider: any, messages: any[], tools?: any[]) {
       choices: [{
         message: {
           role: 'assistant',
+          // Texto que o modelo escreveu junto do pedido de tool não pode se perder.
+          content: textPart?.text || null,
           tool_calls: funcParts.map((p: any) => ({
             id: `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
             type: 'function',
@@ -2227,22 +2372,30 @@ function rotuloTool(nome: string) {
     buscar_gastos: 'Consultando seus gastos...',
     buscar_clientes: 'Consultando seus clientes...',
     buscar_produtos: 'Consultando seus produtos...',
+    buscar_contas: 'Consultando suas contas...',
     resumo_financeiro: 'Calculando o resumo financeiro...',
     top_gastos: 'Levantando os maiores gastos...',
-    top_clientes: 'Levantando os melhores clientes...',
+    vendas_por_cliente: 'Consolidando vendas por cliente...',
+    resumo_por_categoria: 'Consolidando gastos por categoria...',
+    verificar_duplicata: 'Verificando registros similares...',
+    saldo_por_conta: 'Consultando saldos...',
     criar_venda: 'Registrando a venda...',
     criar_gasto: 'Registrando o gasto...',
     criar_cliente: 'Cadastrando o cliente...',
     criar_produto: 'Cadastrando o produto...',
     criar_devedor: 'Registrando o devedor...',
+    criar_conta: 'Cadastrando a conta...',
     editar_venda: 'Atualizando a venda...',
     editar_gasto: 'Atualizando o gasto...',
     editar_cliente: 'Atualizando o cliente...',
     editar_produto: 'Atualizando o produto...',
+    editar_conta: 'Atualizando a conta...',
     excluir_venda: 'Excluindo a venda...',
     excluir_gasto: 'Excluindo o gasto...',
     excluir_cliente: 'Excluindo o cliente...',
     excluir_produto: 'Excluindo o produto...',
+    excluir_conta: 'Excluindo a conta...',
+    transferir_entre_contas: 'Transferindo entre contas...',
   };
   return mapa[nome] || 'Processando...';
 }
@@ -2261,10 +2414,14 @@ async function callAI(provider: any, messages: any[], tools?: any[]) {
 }
 
 function gerarRespostaTools(toolResults: any[]): string {
+  const brl = (v: any) => `R$ ${(Number(v) || 0).toFixed(2)}`;
+  const resumoLista = (itens: string[]) =>
+    itens.length > 6 ? itens.slice(0, 6).join(', ') + `, e mais ${itens.length - 6}` : itens.join(', ');
+
   const responses: string[] = [];
   for (const t of toolResults) {
     const r = t.result;
-    if (r?.error) { responses.push(`Erro: ${r.error}`); continue; }
+    if (r?.error) { responses.push(`Erro em ${t.name}: ${r.error}`); continue; }
     switch (t.name) {
       case 'criar_cliente':
         responses.push(`Cliente "${r.nome}" cadastrado com sucesso!${r.telefone ? ' Tel: ' + r.telefone : ''}`);
@@ -2276,10 +2433,10 @@ function gerarRespostaTools(toolResults: any[]): string {
         responses.push(r.mensagem || 'Cliente excluído.');
         break;
       case 'criar_venda':
-        responses.push(`Venda "${r.descricao}" cadastrada: R$ ${Number(r.valor).toFixed(2)} (${r.status || 'pago'}).${r._cliente_avulso ? ' ⚠️ Cliente não encontrado — foi criado como cliente avulso.' : ''}`);
+        responses.push(`Venda "${r.descricao}" cadastrada: ${brl(r.valor)} (${r.status || 'pago'}).${r._cliente_avulso ? ' ⚠️ Cliente não encontrado — foi criado como cliente avulso.' : ''}`);
         break;
       case 'criar_produto':
-        responses.push(`Produto "${r.nome}" cadastrado: R$ ${Number(r.valor).toFixed(2)}. Adicione a foto pelo site se quiser.`);
+        responses.push(`Produto "${r.nome}" cadastrado: ${brl(r.valor)}. Adicione a foto pelo site se quiser.`);
         break;
       case 'editar_produto':
         responses.push(`Produto "${r.nome}" atualizado.`);
@@ -2289,11 +2446,61 @@ function gerarRespostaTools(toolResults: any[]): string {
         break;
       case 'buscar_produtos':
         if (Array.isArray(r) && r.length > 0) {
-          responses.push(`Encontrei ${r.length} produto(s): ${r.map((p: any) => `"${p.nome}" (R$ ${Number(p.valor).toFixed(2)})`).join(', ')}.`);
+          responses.push(`Encontrei ${r.length} produto(s): ${r.map((p: any) => `"${p.nome}" (${brl(p.valor)})`).join(', ')}.`);
+        } else {
+          responses.push('Nenhum produto encontrado.');
+        }
+        break;
+      case 'buscar_vendas':
+        if (Array.isArray(r) && r.length > 0) {
+          responses.push(`Encontrei ${r.length} venda(s): ${resumoLista(r.map((v: any) => `"${v.descricao}" (${brl(v.valor)}, ${v.status || 'pago'})`))}.`);
+        } else {
+          responses.push('Nenhuma venda encontrada no período.');
+        }
+        break;
+      case 'buscar_gastos':
+        if (Array.isArray(r) && r.length > 0) {
+          responses.push(`Encontrei ${r.length} gasto(s): ${resumoLista(r.map((g: any) => `"${g.descricao}" (${brl(g.valor)}, ${g.categoria || 'sem categoria'})`))}.`);
+        } else {
+          responses.push('Nenhum gasto encontrado no período.');
+        }
+        break;
+      case 'buscar_clientes':
+        if (Array.isArray(r) && r.length > 0) {
+          responses.push(`Encontrei ${r.length} cliente(s): ${resumoLista(r.map((c: any) => `"${c.nome}"${c.telefone ? ' (' + c.telefone + ')' : ''}`))}.`);
+        } else {
+          responses.push('Nenhum cliente encontrado.');
+        }
+        break;
+      case 'resumo_financeiro':
+        responses.push(
+          `Resumo de ${r.periodo}: vendas pagas ${brl(r.total_vendas)} (${r.qtd_vendas} venda(s)), ` +
+          `gastos ${brl(r.total_gastos)} (${r.qtd_gastos}), lucro ${brl(r.lucro)}, ticket médio ${brl(r.ticket_medio)}.`
+        );
+        break;
+      case 'top_gastos':
+        if (Array.isArray(r) && r.length > 0) {
+          responses.push(`Maiores gastos: ${resumoLista(r.map((g: any) => `"${g.descricao}" (${brl(g.valor)})`))}.`);
+        } else {
+          responses.push('Nenhum gasto encontrado no período.');
+        }
+        break;
+      case 'vendas_por_cliente':
+        if (Array.isArray(r) && r.length > 0) {
+          responses.push(`Vendas pagas por cliente: ${resumoLista(r.map((c: any) => `${c.nome} — ${brl(c.total)} em ${c.qtd} venda(s)`))}.`);
+        } else {
+          responses.push('Nenhuma venda paga por cliente no período.');
+        }
+        break;
+      case 'resumo_por_categoria':
+        if (Array.isArray(r) && r.length > 0) {
+          responses.push(`Gastos por categoria: ${resumoLista(r.map((c: any) => `${c.categoria || 'Sem categoria'} — ${brl(c.total)}`))}.`);
+        } else {
+          responses.push('Nenhum gasto encontrado no período.');
         }
         break;
       case 'criar_devedor':
-        responses.push(`Devedor "${r.clientes?.nome || 'cliente'}" cadastrado: R$ ${Number(r.valor).toFixed(2)}.`);
+        responses.push(`Devedor "${r.clientes?.nome || 'cliente'}" cadastrado: ${brl(r.valor)}.`);
         break;
       case 'editar_venda':
         responses.push(`Venda "${r.descricao}" atualizada.`);
@@ -2302,7 +2509,7 @@ function gerarRespostaTools(toolResults: any[]): string {
         responses.push(r.mensagem || 'Venda excluída.');
         break;
       case 'criar_gasto':
-        responses.push(`Gasto "${r.descricao}" cadastrado: R$ ${Number(r.valor).toFixed(2)}.`);
+        responses.push(`Gasto "${r.descricao}" cadastrado: ${brl(r.valor)}.`);
         break;
       case 'editar_gasto':
         responses.push(`Gasto "${r.descricao}" atualizado.`);
@@ -2311,7 +2518,7 @@ function gerarRespostaTools(toolResults: any[]): string {
         responses.push(r.mensagem || 'Gasto excluído.');
         break;
       case 'criar_conta':
-        responses.push(`Conta "${r.nome}" cadastrada com sucesso!${r.saldo_atual ? ' Saldo: R$ ' + Number(r.saldo_atual).toFixed(2) : ''}`);
+        responses.push(`Conta "${r.nome}" cadastrada com sucesso!${r.saldo_atual ? ' Saldo: ' + brl(r.saldo_atual) : ''}`);
         break;
       case 'editar_conta':
         responses.push(`Conta "${r.nome}" atualizada.`);
@@ -2320,23 +2527,25 @@ function gerarRespostaTools(toolResults: any[]): string {
         responses.push(r.mensagem || 'Conta inativada.');
         break;
       case 'saldo_por_conta':
-        responses.push(r.mensagem || `Saldo: R$ ${Number(r.saldo || r.saldo_consolidado || r.total_geral || 0).toFixed(2)}`);
+        responses.push(r.mensagem || `Saldo: ${brl(r.saldo ?? r.saldo_consolidado ?? r.total_geral ?? 0)}`);
         break;
       case 'transferir_entre_contas':
         responses.push(r.mensagem || 'Transferência realizada.');
         break;
       case 'buscar_contas':
         if (Array.isArray(r) && r.length > 0) {
-          responses.push(`Encontrei ${r.length} conta(s): ${r.map((c: any) => `"${c.nome}" (R$ ${Number(c.saldo_atual).toFixed(2)})`).join(', ')}.`);
+          responses.push(`Encontrei ${r.length} conta(s): ${r.map((c: any) => `"${c.nome}" (${brl(c.saldo_atual)})`).join(', ')}.`);
         } else if (Array.isArray(r) && r.length === 0) {
-          responses.push('Nenhuma conta encontrada.');
+          responses.push('Nenhuma conta financeira cadastrada.');
         }
         break;
       case 'verificar_duplicata':
         if (r.encontrados > 0) responses.push(`Encontrei ${r.encontrados} registro(s) similar(es).`);
+        else responses.push('Não encontrei registros similares.');
         break;
       default:
         if (r?.sucesso) responses.push(r.mensagem || 'Ação concluída.');
+        else if (Array.isArray(r)) responses.push(r.length ? `${r.length} registro(s) encontrado(s).` : 'Nenhum registro encontrado.');
     }
   }
   return responses.length ? responses.join('\n') : 'Ferramenta executada sem retorno visível.';
@@ -2400,12 +2609,7 @@ async function chamarProvedor(provider: any, messages: any[], tools?: any[]) {
     }
 
     if (provider.provider_type === 'gemini') {
-      const contents = messages
-        .filter((m: any) => m.role !== 'system')
-        .map((m: any) => ({
-          role: m.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: String(m.content ?? '') }],
-        }));
+      const contents = montarContentsGemini(messages);
 
       const sistema = messages.find((m: any) => m.role === 'system');
       const body: Record<string, unknown> = {
@@ -2421,7 +2625,7 @@ async function chamarProvedor(provider: any, messages: any[], tools?: any[]) {
           functionDeclarations: tools.map((t: any) => ({
             name: t.function.name,
             description: t.function.description,
-            parameters: t.function.parameters,
+            parameters: geminiSchema(t.function.parameters),
           })),
         }];
       }
@@ -2481,6 +2685,16 @@ function resumirResposta(provider: any, resposta: any) {
     };
   }
 
+  // Anthropic devolve blocos content (text / tool_use), não choices.
+  if (provider.provider_type === 'anthropic') {
+    const blocos = resposta?.content || [];
+    return {
+      texto: blocos.filter((b: any) => b.type === 'text').map((b: any) => b.text).join(''),
+      tools: blocos.filter((b: any) => b.type === 'tool_use').map((b: any) => b.name),
+      tokens: (resposta?.usage?.input_tokens || 0) + (resposta?.usage?.output_tokens || 0),
+    };
+  }
+
   const msg = resposta?.choices?.[0]?.message;
   return {
     texto: msg?.content || '',
@@ -2489,24 +2703,51 @@ function resumirResposta(provider: any, resposta: any) {
   };
 }
 
+// Idem, mas devolvendo os tool_calls completos (com id e argumentos)
+// no formato OpenAI — o playground usa para executar as tools.
+function toolCallsDe(provider: any, resposta: any): any[] {
+  if (provider.provider_type === 'gemini') {
+    const partes = resposta?.candidates?.[0]?.content?.parts || [];
+    return partes.filter((p: any) => p.functionCall).map((p: any) => ({
+      id: `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      type: 'function',
+      function: { name: p.functionCall.name, arguments: JSON.stringify(p.functionCall.args || {}) },
+    }));
+  }
+  if (provider.provider_type === 'anthropic') {
+    const blocos = resposta?.content || [];
+    return blocos.filter((b: any) => b.type === 'tool_use').map((b: any) => ({
+      id: b.id, type: 'function',
+      function: { name: b.name, arguments: JSON.stringify(b.input || {}) },
+    }));
+  }
+  return resposta?.choices?.[0]?.message?.tool_calls || [];
+}
+
 // ------------------------------------------------------------------
 // Diagnóstico das tools
 // ------------------------------------------------------------------
 const HOJE = () => new Date().toISOString().split('T')[0];
 
+const MARCA = '[TESTE] diagnostico';
+// Termo para o verificar_duplicata de leitura (que roda antes da marca
+// existir de verdade): nunca vai bater com registro real.
+const MARCA_DUP = 'registro inexistente de diagnostico finmei';
+
 // Leitura: rodam sempre, não deixam rastro
 const TESTES_LEITURA: Array<{ nome: string; args: Record<string, unknown> }> = [
-  { nome: 'buscar_vendas',     args: { limite: 3 } },
-  { nome: 'buscar_gastos',     args: { limite: 3 } },
-  { nome: 'buscar_clientes',   args: {} },
-  { nome: 'buscar_produtos',   args: {} },
-  { nome: 'resumo_financeiro', args: {} },
-  { nome: 'top_gastos',        args: { limite: 3 } },
-  { nome: 'vendas_por_cliente', args: {} },
+  { nome: 'buscar_vendas',       args: { limite: 3 } },
+  { nome: 'buscar_gastos',       args: { limite: 3 } },
+  { nome: 'buscar_clientes',     args: { limite: 3 } },
+  { nome: 'buscar_produtos',     args: { limite: 3 } },
+  { nome: 'buscar_contas',       args: { limite: 3 } },
+  { nome: 'resumo_financeiro',   args: {} },
+  { nome: 'top_gastos',          args: { limite: 3 } },
+  { nome: 'vendas_por_cliente',  args: {} },
   { nome: 'resumo_por_categoria', args: {} },
+  { nome: 'saldo_por_conta',     args: {} },
+  { nome: 'verificar_duplicata', args: { tipo: 'venda', descricao: MARCA_DUP } },
 ];
-
-const MARCA = '[TESTE] diagnostico';
 
 async function testarTools(supabase: any, userId: string, incluirEscrita: boolean) {
   const linhas: any[] = [];
@@ -2548,65 +2789,116 @@ async function testarTools(supabase: any, userId: string, incluirEscrita: boolea
   // Faxina antes de começar. As tools de criação recusam duplicata
   // (mesmo telefone, mesma descrição+valor+data), então uma sobra de
   // execução anterior faria o teste reportar falha que não existe.
-  const sobras = { clientes: 0, despesas: 0, vendas: 0, produtos: 0 };
-  for (const [tabela, campo] of [
+  const TABELAS_TESTE: Array<[string, string]> = [
     ['clientes', 'nome'], ['despesas', 'descricao'],
-    ['vendas', 'descricao'], ['produtos', 'nome'],
-  ] as Array<[string, string]>) {
-    const { data } = await supabase.from(tabela).select(`id, ${campo}`)
-      .eq('user_id', userId).like(campo, `${MARCA}%`);
-    if (data?.length) {
-      await supabase.from(tabela).delete().eq('user_id', userId).like(campo, `${MARCA}%`);
-      (sobras as any)[tabela] = data.length;
+    ['vendas', 'descricao'], ['produtos', 'nome'], ['contas', 'nome'],
+  ];
+  const faxinar = async () => {
+    let total = 0;
+    for (const [tabela, campo] of TABELAS_TESTE) {
+      const { data } = await supabase.from(tabela).select(`id, ${campo}`)
+        .eq('user_id', userId).like(campo, `${MARCA}%`);
+      if (data?.length) {
+        await supabase.from(tabela).delete().eq('user_id', userId).like(campo, `${MARCA}%`);
+        total += data.length;
+      }
     }
-  }
-  const totalSobras = Object.values(sobras).reduce((a, b) => a + b, 0);
-  if (totalSobras) {
+    return total;
+  };
+
+  const sobras = await faxinar();
+  if (sobras) {
     linhas.push({
       tool: 'limpeza prévia', ok: true, ms: 0,
-      mensagem: `${totalSobras} registro(s) de teste de uma execução anterior foram removidos`,
+      mensagem: `${sobras} registro(s) de teste de uma execução anterior foram removidos`,
     });
   }
 
-  // Escrita: cria com marca visível e apaga em seguida. Se a limpeza
-  // falhar, a linha diz qual id ficou para trás — nunca some calado.
-  const limpar = async (tabela: string, id: string, rotulo: string) => {
-    const { error } = await supabase.from(tabela).delete().eq('id', id).eq('user_id', userId);
-    linhas.push(error
-      ? { tool: rotulo, ok: false, ms: 0, mensagem: `NÃO REMOVIDO (id ${id}): ${error.message}` }
-      : { tool: rotulo, ok: true, ms: 0, mensagem: 'registro de teste removido' });
-  };
-
+  // Escrita: cria com marca visível, exercita edição/exclusão em
+  // cima do que criou e apaga tudo no fim. Os registros são encadeados
+  // (o devedor usa o cliente criado, a venda usa a conta criada) para
+  // testar os vínculos — se um passo falhar, a faxina final recolhe o resto.
   const cliente: any = await rodar('criar_cliente', {
     nome: `${MARCA} cliente`,
     // Número improvável de existir de verdade: a tool recusa cadastro
     // com telefone repetido, e 11999999999 é comum demais em teste.
     telefone: '11900000001',
   });
-  if (cliente?.id) await limpar('clientes', cliente.id, 'criar_cliente · limpeza');
-
-  const gasto: any = await rodar('criar_gasto', {
-    descricao: `${MARCA} gasto`,
-    valor: 1,
-    data: HOJE(),
-    categoria: 'Outros',
-  });
-  if (gasto?.id) await limpar('despesas', gasto.id, 'criar_gasto · limpeza');
-
-  const venda: any = await rodar('criar_venda', {
-    descricao: `${MARCA} venda`,
-    valor: 1,
-    data_venda: HOJE(),
-    status: 'pago',
-  });
-  if (venda?.id) await limpar('vendas', venda.id, 'criar_venda · limpeza');
 
   const produto: any = await rodar('criar_produto', {
     nome: `${MARCA} produto`,
     descricao: 'Registro temporário de diagnóstico',
     valor: 1,
   });
-  if (produto?.id) await limpar('produtos', produto.id, 'criar_produto · limpeza');
+
+  const contaA: any = await rodar('criar_conta', {
+    nome: `${MARCA} conta A`,
+    tipo: 'caixa',
+    finalidade: 'negocio',
+    saldo_inicial: 10,
+  });
+  const contaB: any = await rodar('criar_conta', {
+    nome: `${MARCA} conta B`,
+    tipo: 'caixa',
+    finalidade: 'negocio',
+    saldo_inicial: 10,
+  });
+
+  const venda: any = await rodar('criar_venda', {
+    descricao: `${MARCA} venda`,
+    valor: 1,
+    data_venda: HOJE(),
+    status: 'pago',
+    conta_id: contaA?.id,
+  });
+
+  const devedor: any = cliente?.id ? await rodar('criar_devedor', {
+    cliente_nome: `${MARCA} cliente`,
+    descricao: `${MARCA} devido`,
+    valor: 1,
+  }) : null;
+
+  const gasto: any = await rodar('criar_gasto', {
+    descricao: `${MARCA} gasto`,
+    valor: 1,
+    data: HOJE(),
+    categoria: 'Outros',
+    conta_id: contaA?.id,
+  });
+
+  if (contaA?.id && contaB?.id) {
+    await rodar('transferir_entre_contas', {
+      conta_origem_id: contaA.id,
+      conta_destino_id: contaB.id,
+      valor: 1,
+    }, 'transferir_entre_contas (A→B)');
+    await rodar('saldo_por_conta', { conta_id: contaA.id }, 'saldo_por_conta (conta A)');
+  }
+  await rodar('buscar_contas', { busca: MARCA }, 'buscar_contas (por marca)');
+
+  if (produto?.id) await rodar('editar_produto', { produto_id: produto.id, valor: 2 });
+  if (cliente?.id) await rodar('editar_cliente', { cliente_id: cliente.id, observacao: 'edição de diagnóstico' });
+  if (venda?.id) await rodar('editar_venda', { venda_id: venda.id, valor: 2 });
+  if (gasto?.id) await rodar('editar_gasto', { gasto_id: gasto.id, valor: 2 });
+  if (contaA?.id) await rodar('editar_conta', { conta_id: contaA.id, instituicao: 'Banco de teste' });
+
+  if (venda?.id) await rodar('excluir_venda', { venda_id: venda.id });
+  if (devedor?.id) await rodar('excluir_venda', { venda_id: devedor.id }, 'excluir_venda (devedor)');
+  if (gasto?.id) await rodar('excluir_gasto', { gasto_id: gasto.id });
+  if (produto?.id) await rodar('excluir_produto', { produto_id: produto.id });
+  if (contaB?.id) await rodar('excluir_conta', { conta_id: contaB.id, permanente: true });
+  if (contaA?.id) await rodar('excluir_conta', { conta_id: contaA.id, permanente: true });
+  // excluir_cliente faz soft delete (igual ao site); a faxina abaixo
+  // remove o registro de verdade.
+  if (cliente?.id) await rodar('excluir_cliente', { cliente_id: cliente.id });
+
+  const sobrasFinais = await faxinar();
+  if (sobrasFinais) {
+    linhas.push({
+      tool: 'limpeza final', ok: true, ms: 0,
+      mensagem: `${sobrasFinais} registro(s) restantes foram removidos`,
+    });
+  }
 
   return linhas;
 }
@@ -2623,7 +2915,10 @@ async function tratarDiagnostico(req: Request, body: any) {
   const acao = body.action;
 
   // --------------------------------------------------------------
-  // Playground: uma chamada de teste ao provedor
+  // Playground: chamada de teste ao provedor. Se o modelo pedir
+  // tools, elas são executadas (leitura de verdade, escrita simulada)
+  // e o modelo responde de novo — até 3 rodadas, o bastante para ver
+  // o fluxo real do chat sem risco de alterar dados.
   // --------------------------------------------------------------
   if (acao === 'test_provider') {
     const provider = await resolverProvedor(supabase, body.provider || {});
@@ -2641,7 +2936,8 @@ async function tratarDiagnostico(req: Request, body: any) {
       ? [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: mensagem }]
       : [{ role: 'user', content: mensagem }];
 
-    const r = await chamarProvedor(provider, messages, comContexto ? TOOLS : undefined);
+    const inicio = Date.now();
+    let r = await chamarProvedor(provider, messages, comContexto ? TOOLS : undefined);
 
     if (!r.ok) {
       return json({
@@ -2654,14 +2950,80 @@ async function tratarDiagnostico(req: Request, body: any) {
       });
     }
 
+    const toolsExecutadas: Array<{ tool: string, ok: boolean, simulado: boolean, resumo: string }> = [];
+    let rodadas = 0;
+
+    while (rodadas < 3) {
+      const chamadas = toolCallsDe(provider, r.resposta);
+      if (!chamadas.length) break;
+      rodadas++;
+
+      const textoRodada = resumirResposta(provider, r.resposta).texto;
+      messages.push({
+        role: 'assistant',
+        content: textoRodada || null,
+        tool_calls: chamadas,
+      });
+
+      for (const call of chamadas) {
+        let args: Record<string, unknown> = {};
+        try { args = JSON.parse(call.function.arguments || '{}'); } catch { args = {}; }
+
+        let resultado: any;
+        if (TOOLS_ESCRITA.has(call.function.name)) {
+          resultado = {
+            simulado: true,
+            mensagem: `${call.function.name}: tool de escrita NÃO executada no playground, para não alterar dados. No chat real ela roda.`,
+          };
+        } else {
+          try {
+            resultado = await executeTool(call.function.name, args, supabase, admin.user!.id);
+          } catch (e) {
+            resultado = { error: (e as Error).message };
+          }
+        }
+
+        toolsExecutadas.push({
+          tool: call.function.name,
+          ok: !resultado?.error,
+          simulado: Boolean(resultado?.simulado),
+          resumo: resultado?.error
+            ? String(resultado.error)
+            : resultado?.simulado
+              ? String(resultado.mensagem || 'simulado')
+              : Array.isArray(resultado)
+                ? `${resultado.length} registro(s)`
+                : resultado?.mensagem || 'ok',
+        });
+
+        messages.push({
+          role: 'tool',
+          tool_call_id: call.id,
+          content: JSON.stringify(resultado),
+        });
+      }
+
+      const proxima = await chamarProvedor(provider, messages, comContexto ? TOOLS : undefined);
+      // A rodada seguinte falhou: mantém a resposta anterior e mostra o
+      // que já foi executado — o erro do provedor vem no `aviso`.
+      if (!proxima.ok) {
+        r = { ...r, aviso: `Falha na rodada ${rodadas + 1}: ${String(proxima.corpo || '').slice(0, 300)}` };
+        break;
+      }
+      r = proxima;
+    }
+
     const resumo = resumirResposta(provider, r.resposta);
     return json({
       ok: true,
-      ms: r.ms,
+      ms: Date.now() - inicio,
       provider: provider.provider_name,
       model: provider.model,
       texto: resumo.texto,
       tools_chamadas: resumo.tools,
+      tools_execucoes: toolsExecutadas,
+      rodadas: rodadas + 1,
+      aviso: (r as any).aviso || null,
       tokens: resumo.tokens,
     });
   }
@@ -3073,16 +3435,21 @@ Use esses dados pra dar respostas inteligentes e contextualizadas. Não repita o
             iterations++;
           }
 
+          // A resposta do modelo tem prioridade. Se alguma tool falhou,
+          // os erros são anexados ao lado — nunca sobrescrevem o texto
+          // que o modelo já tinha escrito.
+          const errosTools = toolResults.filter((t: any) => t.result?.error);
           if (choice?.message?.content) {
             finalContent = choice.message.content;
+            if (errosTools.length) {
+              finalContent += '\n\n' + errosTools
+                .map((t: any) => `⚠️ ${t.name}: ${String(t.result.error)}`)
+                .join('\n');
+            }
           } else if (toolResults.length > 0) {
             finalContent = gerarRespostaTools(toolResults);
           } else {
             finalContent = 'Desculpe, não consegui processar a ação. (Falha de comunicação interna)';
-          }
-
-          if (toolResults.some((toolResult: any) => toolResult.result?.error)) {
-            finalContent = gerarRespostaTools(toolResults);
           }
 
           // O texto pode ter sido montado por gerarRespostaTools em vez

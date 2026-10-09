@@ -229,7 +229,7 @@ SISTEMA DE FALLBACK:
   - Retry em erros transitorios (408, 425, 429, 500, 502, 503, 504)
   - Se tool de escrita ja executou, cancela fallback pra evitar duplicatas
 
-22 TOOLS DISPONIVEIS:
+28 TOOLS DISPONIVEIS:
 
   BUSCA:
   - buscar_vendas: busca por periodo, status, cliente
@@ -241,6 +241,8 @@ SISTEMA DE FALLBACK:
   - vendas_por_cliente: vendas agrupadas por cliente
   - resumo_por_categoria: gastos agrupados por categoria
   - verificar_duplicata: verifica registros duplicados antes de criar
+  - buscar_contas: contas financeiras por nome/tipo/finalidade
+  - saldo_por_conta: saldo de uma conta, de todas ou consolidado
 
   CRIACAO:
   - criar_cliente (nome + telefone obrigatorios)
@@ -248,18 +250,24 @@ SISTEMA DE FALLBACK:
   - criar_gasto (descricao + valor + data + categoria obrigatorios)
   - criar_produto (nome + descricao + valor obrigatorios)
   - criar_devedor (venda pendente)
+  - criar_conta (nome obrigatorio)
 
   EDICAO:
   - editar_cliente
   - editar_venda
   - editar_gasto
   - editar_produto
+  - editar_conta
 
   EXCLUSAO (com confirmacao):
-  - excluir_cliente
+  - excluir_cliente (soft delete, igual ao site)
   - excluir_venda
   - excluir_gasto
   - excluir_produto
+  - excluir_conta (padrao: inativar; permanente: apagar)
+
+  FINANCAS:
+  - transferir_entre_contas (usa a RPC incrementar_saldo)
 
 CONTEXTO AUTOMATICO:
   Cada mensagem recebe bloco com dados do usuario:
