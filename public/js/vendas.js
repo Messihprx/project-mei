@@ -1,5 +1,5 @@
 import { supabase } from './auth.js';
-import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais } from './dom-utils.js';
+import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais, dataVendaISO, formatarDataVenda } from './dom-utils.js';
 import { atualizarSaldoConta, calcDeltaVenda, garantirOpcaoConta } from './conta-saldo.js';
 
 // Vendas da última renderização. Antes a descrição era injetada
@@ -175,7 +175,7 @@ async function carregarVendas(limite = limiteVendas) {
                     <div class="venda-detalhes">
                         <h4>${esc(venda.clientes?.nome || 'Cliente avulso')}</h4>
                         <p>${esc(venda.descricao || 'Serviço Geral')}</p>
-                        <span class="venda-data">${new Date(venda.data_venda || venda.created_at).toLocaleDateString('pt-BR')}</span>
+                        <span class="venda-data">${formatarDataVenda(venda.data_venda || venda.created_at)}</span>
                     </div>
                 </div>
                 <div class="venda-financeiro">
@@ -205,11 +205,15 @@ async function carregarVendas(limite = limiteVendas) {
 }
 
 // --- 4. FUNÇÕES DE EDIÇÃO E EXCLUSÃO (WINDOW) ---
-window.abrirModalEditarVenda = async (id, servico, valor, status, contaId) => {
+window.abrirModalEditarVenda = async (id, servico, valor, status, contaId, dataVenda) => {
     document.getElementById("editVendaId").value = id;
     document.getElementById("editServicoVenda").value = servico;
     document.getElementById("editValorVenda").value = valor;
     document.getElementById("editStatusVenda").value = status;
+    // HTML antigo em cache pode não ter o campo; nesse caso a data
+    // da venda fica como está (data_venda ausente no update).
+    const campoData = document.getElementById("editDataVenda");
+    if (campoData) campoData.value = dataVendaISO(dataVenda || '');
     // Se a conta vinculada está inativada, injeta a opção no select
     // antes de setar o value — senão o salvar desvinculava a venda.
     await garantirOpcaoConta(document.getElementById("editContaVenda"), contaId);
@@ -252,11 +256,13 @@ if (formEditarVenda) {
         const id = document.getElementById("editVendaId").value;
         const btn = formEditarVenda.querySelector('button');
 
+        const dataEscolhida = document.getElementById("editDataVenda")?.value;
         const dadosAtualizados = {
             descricao: document.getElementById("editServicoVenda").value,
             valor: parseFloat(document.getElementById("editValorVenda").value),
             status: document.getElementById("editStatusVenda").value,
-            conta_id: document.getElementById("editContaVenda").value || null
+            conta_id: document.getElementById("editContaVenda").value || null,
+            data_venda: dataEscolhida ? `${dataEscolhida}T12:00:00Z` : undefined
         };
 
         try {
@@ -302,7 +308,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const venda = vendasRenderizadas.find(v => v.id === botao.dataset.id);
         if (!venda) return;
         if (botao.dataset.acao === 'editar') {
-            window.abrirModalEditarVenda(venda.id, venda.descricao, venda.valor, venda.status, venda.conta_id || '');
+            window.abrirModalEditarVenda(venda.id, venda.descricao, venda.valor, venda.status, venda.conta_id || '', venda.data_venda || venda.created_at);
         } else if (botao.dataset.acao === 'excluir') {
             window.deletarVenda(venda.id);
         }
@@ -384,7 +390,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const csv = montarCsv(
                     ["Data", "Cliente", "Servico", "Valor", "Status"],
                     vendas.map(v => [
-                        new Date(v.data_venda || v.created_at).toLocaleDateString('pt-BR'),
+                        formatarDataVenda(v.data_venda || v.created_at),
                         v.clientes ? v.clientes.nome : 'N/A',
                         v.descricao || '',
                         Number(v.valor || 0).toFixed(2).replace('.', ','),

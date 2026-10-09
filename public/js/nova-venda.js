@@ -76,6 +76,19 @@ if (inputProduto) {
     });
 }
 
+// Data da venda: usa a data local de quem registra (new Date() aqui
+// só serve para calcular; nunca via toISOString(), que mudaria o dia
+// depois das 21h no horário de Brasília).
+function hojeISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const inputDataVenda = document.getElementById("dataVenda");
+if (inputDataVenda && !inputDataVenda.value) {
+    inputDataVenda.value = hojeISO();
+}
+
 // 4. SALVAR VENDA
 const formNovaVenda = document.getElementById("formNovaVenda");
 import { protegerAcao, invalidarCachePlano } from './planos.js';
@@ -96,6 +109,7 @@ if (formNovaVenda) {
         const status = document.getElementById("statusVenda").value;
         const produtoId = inputProdutoId.value || null;
         const contaId = document.getElementById("contaVenda")?.value || null;
+        const dataVenda = inputDataVenda?.value || hojeISO();
 
         const valorNumerico = parseFloat(valor);
 
@@ -126,7 +140,10 @@ if (formNovaVenda) {
                     conta_id: contaId,
                     descricao: descricao,
                     valor: valorNumerico,
-                    status: status
+                    status: status,
+                    // Meio-dia UTC: grava o dia escolhido sem o fuso do
+                    // Brasil rebaixar para o dia anterior na exibição.
+                    data_venda: `${dataVenda}T12:00:00Z`
                 }
             ]);
 

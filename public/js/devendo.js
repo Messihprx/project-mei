@@ -1,5 +1,5 @@
 import { supabase } from './auth.js';
-import { esc, delegate } from './dom-utils.js';
+import { esc, delegate, formatarDataVenda } from './dom-utils.js';
 
 // Devedores da última renderização: o botão de cobrança recebia
 // telefone, nome e valor por dentro de um onclick inline — o nome
@@ -63,7 +63,7 @@ async function carregarDevedores() {
                         <div class="venda-detalhes">
                             <h4>${esc(venda.clientes?.nome || 'Cliente avulso')}</h4>
                             <p>${esc(venda.descricao || 'Sem descrição')}</p>
-                            <span class="venda-data">${new Date(venda.data_venda || venda.created_at).toLocaleDateString('pt-BR')}</span>
+                            <span class="venda-data">${formatarDataVenda(venda.data_venda || venda.created_at)}</span>
                         </div>
                     </div>
                     <div class="venda-financeiro">

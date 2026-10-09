@@ -55,6 +55,32 @@ export function montarCsv(cabecalho, linhas) {
   return head + '\n' + body + '\n';
 }
 
+// ==================== DATA DA VENDA ====================
+//
+// data_venda é timestamptz e chega de três jeitos:
+//   - formulário/novo: data escolhida gravada às 12h UTC;
+//   - legado: now() com a hora real da criação;
+//   - IA: data pura (meia-noite UTC).
+// Meia-noite UTC cairia no dia anterior quando convertida para o
+// fuso do Brasil (toLocaleDateString), então a leitura usa a data
+// gravada (parte UTC) quando a hora é exatamente 00:00:00; com
+// hora real, vale a data local de quem criou (a que o usuário viu).
+export function dataVendaISO(valor) {
+  if (!valor) return '';
+  const s = String(valor);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (s.slice(11, 19) === '00:00:00') return s.slice(0, 10);
+  const d = new Date(valor);
+  if (isNaN(d)) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Data da venda no formato brasileiro (dd/mm/aaaa). */
+export function formatarDataVenda(valor) {
+  const iso = dataVendaISO(valor);
+  return iso ? iso.split('-').reverse().join('/') : '';
+}
+
 // ==================== LEITURA DO STREAM (SSE) ====================
 //
 // A edge function responde em text/event-stream quando pedimos

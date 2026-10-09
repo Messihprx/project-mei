@@ -1070,9 +1070,11 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         return { error: `Já existe venda similar: "${d.descricao}" R$ ${Number(d.valor).toFixed(2)} em ${d.data_venda.slice(0,10)} (${d.status}).` };
       }
 
+      // Grava às 12h UTC: meia-noite UTC faria a exibição em pt-BR
+      // (UTC-3) cair no dia anterior.
       const { data, error } = await supabaseAdmin.from('vendas').insert({
         user_id: userId, descricao: args.descricao, valor: Number(args.valor),
-        status: args.status || 'pago', data_venda: dataVenda,
+        status: args.status || 'pago', data_venda: dataVenda + 'T12:00:00',
         cliente_id: clienteId, produto_id: produtoId, conta_id: contaId || null
       }).select().single();
       if (error) return { error: error.message };
@@ -1128,7 +1130,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         descricao: args.descricao,
         valor: Number(args.valor),
         status: 'pendente',
-        data_venda: dataVenda
+        data_venda: dataVenda + 'T12:00:00'
       }).select('id, cliente_id, descricao, valor, status, data_venda, clientes(nome)').single();
       if (error) throw error;
       return data;
@@ -1345,6 +1347,10 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         .limit(1);
       if (dup.error) throw dup.error;
       if (dup.data?.length) return { error: 'Já existe outra venda com mesma descrição, valor e data.' };
+
+      // dt acima usou a data pura; o banco recebe meia-noite corrigida
+      // para 12h UTC (mesmo motivo do insert em criar_venda).
+      if (patch.data_venda !== undefined) patch.data_venda = String(patch.data_venda) + 'T12:00:00';
 
       const { data, error } = await supabaseAdmin.from('vendas')
         .update(patch).eq('id', venda_id).eq('user_id', userId).select().maybeSingle();

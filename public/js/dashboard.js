@@ -1,6 +1,6 @@
 import { supabase } from './auth.js';
 import { protegerAcao, verificarStatusPlano } from './planos.js';
-import { esc } from './dom-utils.js';
+import { esc, formatarDataVenda } from './dom-utils.js';
 
 const filtroMesInput = document.getElementById("filtroMesDashboard");
 
@@ -118,13 +118,11 @@ async function carregarDashboard() {
     }
 }
 
-// Função auxiliar para formatar datas sem erro de fuso horário
+// Função auxiliar para formatar datas sem erro de fuso horário:
+// formatarDataVenda trata data pura em meia-noite UTC (gastos e
+// vendas da IA chegam assim pelo SQL) sem rebaixar o dia.
 function formatarData(dataStr) {
-    if (!dataStr) return '';
-    if (dataStr.length <= 10 && !dataStr.includes('T')) {
-        return new Date(dataStr + 'T12:00:00').toLocaleDateString('pt-BR');
-    }
-    return new Date(dataStr).toLocaleDateString('pt-BR');
+    return formatarDataVenda(dataStr);
 }
 
 function renderizarMovimentacoes(movs) {
