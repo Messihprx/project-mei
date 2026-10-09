@@ -375,6 +375,17 @@ document.getElementById("btnLimparFiltro")?.addEventListener("click", () => {
 
 filtroMesInput?.addEventListener("change", carregarDashboard);
 
+// Cards velhos ao voltar para a tela: o botão "voltar" (bfcache) e
+// abas que ficaram abertas restauram a página sem refazer a consulta —
+// o usuário editava a venda e o dashboard continuava mostrando os
+// números de antes. Recarrega sempre que a tela volta a ser exibida.
+window.addEventListener('pageshow', (e) => {
+    if (e.persisted) carregarDashboard();
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') carregarDashboard();
+});
+
 // Inicialização
 document.addEventListener("DOMContentLoaded", () => {
     verificarSessao();

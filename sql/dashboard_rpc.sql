@@ -70,9 +70,12 @@ BEGIN
                       ELSE v_ini END;
 
   -- ---------- KPIs do mês ----------
+  -- Recebido = pago/recebido (mesmo critério do painel admin e do
+  -- calcDeltaVenda); A Receber = só pendente. Cancelado não entra
+  -- em nenhum dos dois — antes contava como "A Receber".
   SELECT
-    COALESCE(SUM(valor) FILTER (WHERE status = 'pago'), 0),
-    COALESCE(SUM(valor) FILTER (WHERE status <> 'pago'), 0)
+    COALESCE(SUM(valor) FILTER (WHERE status IN ('pago', 'recebido')), 0),
+    COALESCE(SUM(valor) FILTER (WHERE status = 'pendente'), 0)
   INTO v_entradas, v_pendentes
   FROM public.vendas
   WHERE user_id = v_uid
@@ -83,7 +86,7 @@ BEGIN
   WHERE user_id = v_uid AND data BETWEEN v_ini AND v_fim;
 
   -- ---------- Mês anterior (bloco de comparação) ----------
-  SELECT COALESCE(SUM(valor) FILTER (WHERE status = 'pago'), 0) INTO v_ent_ant
+  SELECT COALESCE(SUM(valor) FILTER (WHERE status IN ('pago', 'recebido')), 0) INTO v_ent_ant
   FROM public.vendas
   WHERE user_id = v_uid
     AND COALESCE(data_venda, created_at)::date BETWEEN v_ini_ant AND v_fim_ant;
@@ -95,7 +98,7 @@ BEGIN
   -- ---------- Saldo geral (histórico completo, no banco) ----------
   SELECT
     COALESCE((SELECT SUM(valor) FROM public.vendas
-               WHERE user_id = v_uid AND status = 'pago'), 0)
+               WHERE user_id = v_uid AND status IN ('pago', 'recebido')), 0)
   - COALESCE((SELECT SUM(valor) FROM public.despesas
                WHERE user_id = v_uid), 0)
   INTO v_saldo;
@@ -108,7 +111,7 @@ BEGIN
     SELECT date_trunc('month', COALESCE(data_venda, created_at))::date AS mes,
            SUM(valor) AS total
       FROM public.vendas
-     WHERE user_id = v_uid AND status = 'pago'
+     WHERE user_id = v_uid AND status IN ('pago', 'recebido')
        AND COALESCE(data_venda, created_at)::date BETWEEN v_ini_serie AND v_fim
      GROUP BY 1
   ),
