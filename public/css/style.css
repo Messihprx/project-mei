@@ -633,6 +633,100 @@ select {
 }
 
 /* ============================================
+   SELECT COM BUSCA (COMBOBOX)
+   ============================================ */
+.select-busca {
+    position: relative;
+    width: 100%;
+}
+
+.select-busca-campo {
+    width: 100%;
+    padding: 0.8rem 2.2rem 0.8rem 1rem;
+    border: 1px solid var(--borda-cor);
+    border-radius: var(--radius-sm);
+    background: rgba(11, 17, 32, .6);
+    color: var(--texto-principal);
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: var(--transition);
+    cursor: text;
+}
+
+.select-busca-campo:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px var(--cor-primaria-soft), inset 0 0 12px rgba(31, 166, 252, .05);
+    background: rgba(11, 17, 32, .8);
+}
+
+.select-busca::after {
+    content: '';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    transform: translateY(-50%);
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat center / 16px;
+}
+
+.select-busca-lista {
+    position: absolute;
+    z-index: 1200;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    background: var(--fundo-card, #111827);
+    border: 1px solid var(--borda-cor);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .45);
+    padding: 0.25rem;
+}
+
+.select-busca-item {
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    color: var(--texto-principal);
+    cursor: pointer;
+    line-height: 1.35;
+}
+
+.select-busca-item.ativo,
+.select-busca-item:hover {
+    background: rgba(31, 166, 252, .14);
+    color: var(--texto-principal);
+}
+
+.select-busca-item-livre {
+    color: var(--texto-secundario);
+    font-style: italic;
+}
+
+.select-busca-match {
+    background: transparent;
+    color: var(--cor-primaria);
+    font-weight: 600;
+}
+
+.select-busca-oculto {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+    pointer-events: none !important;
+}
+
+/* ============================================
    BOTÕES
    ============================================ */
 .btn-primary {
@@ -4266,6 +4360,10 @@ select {
         background: var(--fundo-card-solid) !important;
         border: 1px solid var(--borda-cor) !important;
         color: var(--texto-principal) !important;
+    }
+
+    .input-group .select-busca-campo {
+        padding-right: 2.4rem !important;
     }
 
     .input-group input:focus,

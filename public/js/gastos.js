@@ -2,6 +2,7 @@ import { supabase } from './auth.js';
 import { verificarStatusPlano, invalidarCachePlano } from './planos.js';
 import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais } from './dom-utils.js';
 import { atualizarSaldoConta, garantirOpcaoConta } from './conta-saldo.js';
+import { montarSelectBusca } from './select-busca.js';
 
 let gastosRenderizados = [];
 
@@ -24,10 +25,15 @@ async function popularSelectContasGasto() {
 
         if (error) throw error;
 
-        const options = '<option value="">Sem conta vinculada</option>' +
-            (contas || []).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
+        const options = (contas || []).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
 
-        selects.forEach(sel => { sel.innerHTML = options; });
+        selects.forEach(sel => {
+            sel.innerHTML = '<option value="">Sem conta vinculada</option>' + options;
+            montarSelectBusca(sel, {
+                placeholder: 'Buscar conta...',
+                opcaoVazia: { valor: '', texto: 'Sem conta vinculada' }
+            });
+        });
     } catch (err) {
         console.error("Erro ao carregar contas:", err.message);
     }
@@ -298,8 +304,17 @@ window.abrirEditarGasto = async function(id) {
         document.getElementById("editCatGasto").value = data.categoria;
         // Se a conta vinculada está inativada, injeta a opção no select
         // antes de setar o value — senão o salvar desvinculava o gasto.
-        await garantirOpcaoConta(document.getElementById("editContaGasto"), data.conta_id);
-        document.getElementById("editContaGasto").value = data.conta_id || '';
+        const selConta = document.getElementById("editContaGasto");
+        await garantirOpcaoConta(selConta, data.conta_id);
+        if (selConta?._selectBusca) {
+            const opcoes = [...selConta.querySelectorAll('option')]
+                .map(o => ({ valor: o.value, texto: o.textContent.trim() }))
+                .filter(o => o.valor);
+            selConta._selectBusca.setOpcoes(opcoes);
+            selConta._selectBusca.setValor(data.conta_id || '');
+        } else if (selConta) {
+            selConta.value = data.conta_id || '';
+        }
 
         document.getElementById("modalEditarGasto").style.display = 'flex';
         lucide.createIcons();

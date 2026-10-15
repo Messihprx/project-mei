@@ -1,6 +1,7 @@
 import { supabase } from './auth.js';
 import { esc, delegate } from './dom-utils.js';
 import { atualizarSaldoConta } from './conta-saldo.js';
+import { montarSelectBusca } from './select-busca.js';
 
 const labelsTipo = {
     banco_pj: 'Banco PJ',
@@ -378,9 +379,23 @@ window.abrirModalTransferencia = async function () {
             .from('contas').select('id, nome, saldo_atual')
             .eq('user_id', user.id).eq('ativo', true).order('nome');
 
-        const options = '<option value="">Selecione...</option>' +
-            (contas || []).map(c => `<option value="${c.id}">${esc(c.nome)} (R$ ${parseFloat(c.saldo_atual).toFixed(2)})</option>`).join('');
-        selects.forEach(s => { s.innerHTML = options; });
+        const opcoes = (contas || []).map(c => ({
+            valor: c.id,
+            texto: `${c.nome} (R$ ${parseFloat(c.saldo_atual).toFixed(2)})`
+        }));
+
+        selects.forEach(s => {
+            s.innerHTML = '<option value="">Selecione...</option>' +
+                opcoes.map(o => `<option value="${o.valor}">${esc(o.texto)}</option>`).join('');
+            if (!s._selectBusca) {
+                montarSelectBusca(s, {
+                    placeholder: 'Buscar conta...',
+                    opcaoVazia: { valor: '', texto: 'Selecione...' }
+                });
+            }
+            s._selectBusca.setOpcoes(opcoes);
+            s._selectBusca.setValor('');
+        });
     } catch (err) {
         console.error("Erro ao carregar contas:", err);
     }

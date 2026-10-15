@@ -89,19 +89,15 @@
                 <form id="formNovaVenda">
                     <div class="input-group">
                         <label>Cliente (opcional)</label>
-                        <input type="text" id="clienteVendaInput" placeholder="Digite o nome ou deixe vazio para avulso..." autocomplete="off" list="listaClientesSugestoes">
-                        
-                        <datalist id="listaClientesSugestoes"></datalist>
-                        
+                        <input type="text" id="clienteVendaInput" placeholder="Buscar cliente..." autocomplete="off">
                         <input type="hidden" id="clienteIdSelecionado">
-                        <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Se vazio, será registrado como cliente avulso</small>
+                        <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Digite para buscar. Se vazio, fica sem cliente vinculado</small>
                     </div>
                     <div class="input-group">
                         <label>Produto (opcional)</label>
-                        <input type="text" id="produtoVendaInput" placeholder="Pesquisar produto..." autocomplete="off" list="listaProdutosSugestoes">
-                        <datalist id="listaProdutosSugestoes"></datalist>
+                        <input type="text" id="produtoVendaInput" placeholder="Buscar produto ou digitar nome..." autocomplete="off">
                         <input type="hidden" id="produtoIdSelecionado">
-                        <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Se selecionar, preenche nome e valor automaticamente</small>
+                        <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Ao escolher da lista, preenche nome e valor automaticamente</small>
                     </div>
                     <div class="input-group">
                         <label>Descrição do Serviço/Produto</label>
@@ -109,7 +105,7 @@
                     </div>
                     <div class="input-group">
                         <label>Conta Financeira</label>
-                        <select id="contaVenda" required>
+                        <select id="contaVenda">
                             <option value="" disabled selected>Selecione a conta</option>
                         </select>
                     </div>

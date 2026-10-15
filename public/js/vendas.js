@@ -1,6 +1,7 @@
 import { supabase } from './auth.js';
 import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais, dataVendaISO, formatarDataVenda } from './dom-utils.js';
 import { atualizarSaldoConta, calcDeltaVenda, garantirOpcaoConta, garantirContaPadrao } from './conta-saldo.js';
+import { montarSelectBusca } from './select-busca.js';
 
 // Vendas da última renderização. Antes a descrição era injetada
 // dentro de onclick="...('${venda.descricao}')", então uma venda
@@ -47,10 +48,12 @@ async function popularSelectContasVendas() {
 
         if (error) throw error;
 
-        const options = '<option value="" disabled selected>Selecione a conta</option>' +
-            (contas || []).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
+        const options = (contas || []).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
 
-        selects.forEach(sel => { sel.innerHTML = options; });
+        selects.forEach(sel => {
+            sel.innerHTML = '<option value="" disabled selected>Selecione a conta</option>' + options;
+            montarSelectBusca(sel, { placeholder: 'Buscar conta...' });
+        });
     } catch (err) {
         console.error("Erro ao carregar contas:", err.message);
     }
@@ -219,8 +222,17 @@ window.abrirModalEditarVenda = async (id, servico, valor, status, contaId, dataV
     if (campoData) campoData.value = dataVendaISO(dataVenda || '');
     // Se a conta vinculada está inativada, injeta a opção no select
     // antes de setar o value — senão o salvar desvinculava a venda.
-    await garantirOpcaoConta(document.getElementById("editContaVenda"), contaId);
-    document.getElementById("editContaVenda").value = contaId || '';
+    const selConta = document.getElementById("editContaVenda");
+    await garantirOpcaoConta(selConta, contaId);
+    if (selConta?._selectBusca) {
+        const opcoes = [...selConta.querySelectorAll('option')]
+            .map(o => ({ valor: o.value, texto: o.textContent.trim() }))
+            .filter(o => o.valor);
+        selConta._selectBusca.setOpcoes(opcoes);
+        selConta._selectBusca.setValor(contaId || '');
+    } else if (selConta) {
+        selConta.value = contaId || '';
+    }
     document.getElementById("modalEditarVenda").style.display = "flex";
     if (window.lucide) lucide.createIcons();
 };

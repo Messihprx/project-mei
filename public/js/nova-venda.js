@@ -1,15 +1,45 @@
 import { supabase } from './auth.js';
 import { esc } from './dom-utils.js';
 import { atualizarSaldoConta, calcDeltaVenda, garantirContaPadrao } from './conta-saldo.js';
+import { montarSelectBusca } from './select-busca.js';
 
 let listaDeClientesGlobal = [];
 let listaDeProdutosGlobal = [];
 
-// 1. SUGESTÕES DE CLIENTES
-async function popularSugestoesClientes() {
-    const datalist = document.getElementById("listaClientesSugestoes");
-    if (!datalist) return;
+const inputServico = document.getElementById("servicoVenda");
+const inputValor = document.getElementById("valorVenda");
+const inputProdutoId = document.getElementById("produtoIdSelecionado");
+const inputClienteId = document.getElementById("clienteIdSelecionado");
 
+// 1. CLIENTE — select com busca (só vincula se escolher na lista)
+const comboCliente = montarSelectBusca(document.getElementById("clienteVendaInput"), {
+    placeholder: 'Buscar cliente...',
+    opcaoVazia: { valor: '', texto: 'Sem cliente (avulso)' },
+    permiteLivre: false,
+    aoSelecionar: (valor) => {
+        if (inputClienteId) inputClienteId.value = valor || '';
+    }
+});
+
+// 2. PRODUTO — select com busca; texto livre = produto avulso
+const comboProduto = montarSelectBusca(document.getElementById("produtoVendaInput"), {
+    placeholder: 'Buscar produto ou digitar nome...',
+    permiteLivre: true,
+    aoSelecionar: (valor, item) => {
+        if (inputProdutoId) inputProdutoId.value = valor || '';
+        if (item?.meta) {
+            if (inputServico) inputServico.value = item.meta.nome || '';
+            if (inputValor && item.meta.valor != null) {
+                inputValor.value = parseFloat(item.meta.valor).toFixed(2);
+            }
+        }
+    },
+    aoDigitar: () => {
+        if (inputProdutoId) inputProdutoId.value = '';
+    }
+});
+
+async function popularSugestoesClientes() {
     try {
         const { data: clientes, error } = await supabase
             .from('clientes')
@@ -18,18 +48,17 @@ async function popularSugestoesClientes() {
 
         if (error) throw error;
 
-        listaDeClientesGlobal = clientes;
-        datalist.innerHTML = clientes.map(c => `<option value="${esc(c.nome)}"></option>`).join('');
+        listaDeClientesGlobal = clientes || [];
+        comboCliente.setOpcoes(listaDeClientesGlobal.map(c => ({
+            valor: c.id,
+            texto: c.nome
+        })));
     } catch (err) {
         console.error("Erro ao carregar sugestões:", err.message);
     }
 }
 
-// 2. SUGESTÕES DE PRODUTOS
 async function popularSugestoesProdutos() {
-    const datalist = document.getElementById("listaProdutosSugestoes");
-    if (!datalist) return;
-
     try {
         const { data: produtos, error } = await supabase
             .from('produtos')
@@ -38,42 +67,15 @@ async function popularSugestoesProdutos() {
 
         if (error) throw error;
 
-        listaDeProdutosGlobal = produtos;
-        datalist.innerHTML = produtos.map(p =>
-            `<option value="${p.nome}" data-id="${p.id}" data-valor="${p.valor}" data-desc="${p.descricao || ''}"></option>`
-        ).join('');
+        listaDeProdutosGlobal = produtos || [];
+        comboProduto.setOpcoes(listaDeProdutosGlobal.map(p => ({
+            valor: p.id,
+            texto: p.nome,
+            meta: { nome: p.nome, valor: p.valor }
+        })));
     } catch (err) {
         console.error("Erro ao carregar produtos:", err.message);
     }
-}
-
-// 3. AUTO-PREENCHIMENTO AO SELECIONAR PRODUTO
-const inputProduto = document.getElementById("produtoVendaInput");
-const inputProdutoId = document.getElementById("produtoIdSelecionado");
-const inputServico = document.getElementById("servicoVenda");
-const inputValor = document.getElementById("valorVenda");
-
-if (inputProduto) {
-    inputProduto.addEventListener("input", () => {
-        const nomeDigitado = inputProduto.value.trim();
-        const produto = listaDeProdutosGlobal.find(p => p.nome === nomeDigitado);
-
-        if (produto) {
-            inputProdutoId.value = produto.id;
-            inputServico.value = produto.nome;
-            inputValor.value = parseFloat(produto.valor).toFixed(2);
-        } else {
-            inputProdutoId.value = '';
-        }
-    });
-
-    // Limpar ID se o usuário apagar o campo
-    inputProduto.addEventListener("blur", () => {
-        const nomeDigitado = inputProduto.value.trim();
-        if (!nomeDigitado) {
-            inputProdutoId.value = '';
-        }
-    });
 }
 
 // Data da venda: usa a data local de quem registra (new Date() aqui
@@ -89,7 +91,7 @@ if (inputDataVenda && !inputDataVenda.value) {
     inputDataVenda.value = hojeISO();
 }
 
-// 4. SALVAR VENDA
+// 3. SALVAR VENDA
 const formNovaVenda = document.getElementById("formNovaVenda");
 import { protegerAcao, invalidarCachePlano } from './planos.js';
 
@@ -103,11 +105,11 @@ if (formNovaVenda) {
 
         const btn = formNovaVenda.querySelector('button');
 
-        const nomeDigitado = document.getElementById("clienteVendaInput").value;
-        const descricao = document.getElementById("servicoVenda").value.trim();
+        const descricao = inputServico.value.trim();
         const valor = inputValor.value;
         const status = document.getElementById("statusVenda").value;
         const produtoId = inputProdutoId.value || null;
+        const clienteId = inputClienteId?.value || comboCliente.getValor() || null;
         const contaId = document.getElementById("contaVenda")?.value || null;
         const dataVenda = inputDataVenda?.value || hojeISO();
 
@@ -121,14 +123,6 @@ if (formNovaVenda) {
         if (!contaId) {
             mostrarModal('Conta obrigatória', 'Selecione a conta financeira onde o valor desta venda será registrado.', 'alerta');
             return;
-        }
-
-        let clienteId = null;
-        if (nomeDigitado && nomeDigitado.trim()) {
-            const clienteEncontrado = listaDeClientesGlobal.find(c => c.nome === nomeDigitado);
-            if (clienteEncontrado) {
-                clienteId = clienteEncontrado.id;
-            }
         }
 
         try {
@@ -177,7 +171,7 @@ if (formNovaVenda) {
 popularSugestoesClientes();
 popularSugestoesProdutos();
 
-// 5. POPULAR SELECT DE CONTAS
+// 4. POPULAR SELECT DE CONTAS (com busca, reutilizável)
 async function popularSelectContas() {
     const select = document.getElementById("contaVenda");
     if (!select) return;
@@ -197,11 +191,12 @@ async function popularSelectContas() {
         if (error) throw error;
 
         const lista = contas || [];
-        select.innerHTML = '<option value="" disabled selected>Selecione a conta</option>' +
-            lista.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
-
-        // Com uma conta só, já deixa selecionada — venda rápida sem clique extra
-        if (lista.length === 1) select.value = lista[0].id;
+        select.innerHTML = lista.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+        const combo = montarSelectBusca(select, {
+            placeholder: 'Buscar conta...',
+            autoSelecionarUnica: true
+        });
+        combo.setOpcoes(lista.map(c => ({ valor: c.id, texto: c.nome })));
     } catch (err) {
         console.error("Erro ao carregar contas:", err.message);
     }
