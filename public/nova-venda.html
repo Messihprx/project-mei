@@ -93,15 +93,23 @@
                         <input type="hidden" id="clienteIdSelecionado">
                         <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Digite para buscar. Se vazio, fica sem cliente vinculado</small>
                     </div>
+
                     <div class="input-group">
-                        <label>Produto (opcional)</label>
-                        <input type="text" id="produtoVendaInput" placeholder="Buscar produto ou digitar nome..." autocomplete="off">
-                        <input type="hidden" id="produtoIdSelecionado">
-                        <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Ao escolher da lista, preenche nome e valor automaticamente</small>
+                        <label>Itens da venda</label>
+                        <div class="itens-busca">
+                            <input type="text" id="itemProdutoInput" placeholder="Buscar produto para adicionar..." autocomplete="off">
+                            <button type="button" id="btnAddProduto" class="btn-add-item">Adicionar</button>
+                        </div>
+                        <button type="button" id="btnAddAvulso" class="btn-item-avulso">+ Serviço avulso</button>
+                        <div id="listaItensVenda" class="lista-itens"></div>
+                        <div class="itens-total">Total: <strong id="totalItensVenda">R$ 0,00</strong></div>
+                        <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Adicione 1 ou mais itens (produto ou serviço avulso). O valor da venda é a soma deles.</small>
                     </div>
+
                     <div class="input-group">
-                        <label>Descrição do Serviço/Produto</label>
-                        <input type="text" id="servicoVenda" placeholder="Ex: Manutenção de Ar-condicionado" required>
+                        <label>Título da venda (opcional)</label>
+                        <input type="text" id="servicoVenda" placeholder="Ex: Encomenda da Dona Maria">
+                        <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Se vazio, a descrição vira o resumo dos itens</small>
                     </div>
                     <div class="input-group">
                         <label>Conta Financeira</label>
@@ -114,20 +122,12 @@
                         <input type="date" id="dataVenda" required>
                         <small style="color: var(--texto-secundario); font-size: 0.75rem;">Padrão: hoje. Altere se a venda foi realizada em outro dia.</small>
                     </div>
-                    <div class="input-group input-group-val-status">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                            <div>
-                                <label>Valor (R$)</label>
-                                <input type="number" id="valorVenda" step="0.01" min="0.01" required placeholder="0,00">
-                            </div>
-                            <div>
-                                <label>Status</label>
-                                <select id="statusVenda">
-                                    <option value="pago">Pago ✅</option>
-                                    <option value="pendente">Pendente ⏳</option>
-                                </select>
-                            </div>
-                        </div>
+                    <div class="input-group">
+                        <label>Status</label>
+                        <select id="statusVenda">
+                            <option value="pago">Pago ✅</option>
+                            <option value="pendente">Pendente ⏳</option>
+                        </select>
                     </div>
                     <button type="submit" class="btn-primary" style="margin-top: 1.5rem; width: 100%;">Finalizar Registro</button>
                 </form>

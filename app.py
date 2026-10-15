@@ -122,6 +122,7 @@ def criar_cliente_usuario(access_token):
 @st.cache_data(ttl=120, show_spinner=False)
 def carregar_dados(user_id, is_admin, _cli):
     vendas_q = _cli.from_('vendas').select('*, clientes(nome)')
+    itens_q = _cli.from_('venda_itens').select('venda_id, descricao, quantidade')
     gastos_q = _cli.from_('despesas').select('*')
     perfis_q = _cli.from_('perfis').select('id, nome_completo, email, plano, role, criado_em, expira_em')
 
@@ -129,14 +130,17 @@ def carregar_dados(user_id, is_admin, _cli):
     # aqui evita trazer dado à toa quando o admin usa a mesma função.
     if not is_admin:
         vendas_q = vendas_q.eq('user_id', user_id)
+        itens_q = itens_q.eq('user_id', user_id)
         gastos_q = gastos_q.eq('user_id', user_id)
         perfis_q = perfis_q.eq('id', user_id)
 
     v_res = vendas_q.execute()
+    i_res = itens_q.execute()
     g_res = gastos_q.execute()
     p_res = perfis_q.execute()
 
     df_v = pd.DataFrame(v_res.data) if v_res.data else pd.DataFrame()
+    df_i = pd.DataFrame(i_res.data) if i_res.data else pd.DataFrame()
     df_g = pd.DataFrame(g_res.data) if g_res.data else pd.DataFrame()
     df_p = pd.DataFrame(p_res.data) if p_res.data else pd.DataFrame()
 
@@ -150,11 +154,11 @@ def carregar_dados(user_id, is_admin, _cli):
             for _, r in df_p.iterrows()
         }
 
-    return df_v, df_g, users_map, df_p
+    return df_v, df_g, users_map, df_p, df_i
 
 
 # --- PROCESSAMENTO ---
-def processar_vendas(df, users_map):
+def processar_vendas(df, users_map, df_itens=None):
     if df.empty:
         return df
     df = df.copy()
@@ -165,6 +169,19 @@ def processar_vendas(df, users_map):
     df['usuario'] = df['user_id'].map(users_map).fillna(df['user_id'].str[:8])
     df['cli_nome'] = df['clientes'].apply(lambda x: x['nome'] if isinstance(x, dict) else "Avulso")
     df['status_lower'] = df['status'].str.lower().str.strip()
+
+    # Resumo dos itens ("2x Bolo; 1x Refri") pra coluna Itens do detalhe.
+    # Venda sem item (antes da migração) usa a própria descrição.
+    if df_itens is not None and not df_itens.empty:
+        it = df_itens.copy()
+        it['qtd'] = pd.to_numeric(it['quantidade'], errors='coerce').fillna(1)
+        resumos = it.groupby('venda_id').apply(
+            lambda g: '; '.join(f"{q['qtd']:g}x {q['descricao']}" for _, q in g.iterrows())
+        )
+        df['itens_resumo'] = df['id'].map(resumos)
+    else:
+        df['itens_resumo'] = None
+    df['itens_resumo'] = df['itens_resumo'].fillna(df['descricao'])
     return df
 
 
@@ -275,11 +292,11 @@ if not acesso_ativo:
 # ===================== APP PRINCIPAL =====================
 
 try:
-    df_vendas_raw, df_gastos_raw, users_map, df_perfis_raw = carregar_dados(
+    df_vendas_raw, df_gastos_raw, users_map, df_perfis_raw, df_itens_raw = carregar_dados(
         USER_ID, is_admin, cliente
     )
 
-    df_vendas = processar_vendas(df_vendas_raw, users_map)
+    df_vendas = processar_vendas(df_vendas_raw, users_map, df_itens_raw)
     df_gastos = processar_gastos(df_gastos_raw)
 
     if df_vendas.empty and df_gastos.empty:
@@ -639,8 +656,8 @@ try:
     with tc1:
         with st.expander("📂 Detalhe das Vendas", expanded=False):
             if not fv.empty:
-                tabela_v = fv[['created_at', 'cli_nome', 'descricao', 'valor', 'status']].copy()
-                tabela_v.columns = ['Data', 'Cliente', 'Descrição', 'Valor (R$)', 'Status']
+                tabela_v = fv[['created_at', 'cli_nome', 'descricao', 'itens_resumo', 'valor', 'status']].copy()
+                tabela_v.columns = ['Data', 'Cliente', 'Descrição', 'Itens', 'Valor (R$)', 'Status']
                 tabela_v['Data'] = tabela_v['Data'].dt.strftime('%d/%m/%Y')
                 tabela_v['Valor (R$)'] = tabela_v['Valor (R$)'].apply(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
                 st.dataframe(tabela_v.sort_values('Data', ascending=False), use_container_width=True, hide_index=True)

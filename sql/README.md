@@ -38,6 +38,10 @@ nada.
 | 8 | `ai_providers_extra.sql` | Autenticação livre nos provedores de IA |
 | 9 | `ai_logs.sql` | Registro de falhas da IA |
 | 10 | `consistencia.sql` | Corrige a data das vendas importadas e unifica os limites |
+| 11 | `contas_financeiras.sql` | Tabela `contas`, `conta_id` em vendas/despesas e a RPC `incrementar_saldo` |
+| 12 | `transferencias.sql` | Tabela `transferencias` — histórico de transferências entre contas |
+| 13 | `venda_itens.sql` | Tabela `venda_itens` — venda com vários produtos (item com qtd e preço unit); backfill das vendas antigas |
+| 14 | `dashboard_rpc.sql` | **Reexecute após o item 13** — o donut por produto passa a somar pelos itens |
 
 ## O que cada um resolve, quando não é óbvio
 

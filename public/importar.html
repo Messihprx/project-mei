@@ -343,22 +343,34 @@
                                 cliente = novo;
                             }
 
-                            // Insere venda
-                            const { error: errVenda } = await supabase.from('vendas').insert({
+                            // Insere venda (cada linha do CSV = 1 venda = 1 item)
+                            const descricaoVenda = buscarCol(v, 'Descricao', 'Descrição', 'descricao', 'descrição') || 'Venda';
+                            const valorVenda = parseFloat(valorRaw.replace(',', '.'));
+                            const { data: vendaNova, error: errVenda } = await supabase.from('vendas').insert({
                                 user_id: user.id,
                                 cliente_id: cliente.id,
-                                descricao: buscarCol(v, 'Descricao', 'Descrição', 'descricao', 'descrição') || 'Venda',
-                                valor: parseFloat(valorRaw.replace(',', '.')),
+                                descricao: descricaoVenda,
+                                valor: valorVenda,
                                 status: buscarCol(v, 'Status', 'status').toLowerCase() || 'pago',
                                 // A data da planilha é a data da VENDA, não a de criação
                                 // do registro. Gravando em created_at, o dashboard (que
                                 // agrupa por data_venda) jogava a planilha inteira no mês
                                 // da importação.
                                 data_venda: formatarDataParaBanco(buscarCol(v, 'Data', 'data'))
-                            });
+                            }).select('id').single();
 
-                            if (errVenda) { erros.push(`Erro na venda de "${nomeCliente}": ${errVenda.message}`); }
-                            else { count++; }
+                            if (errVenda) { erros.push(`Erro na venda de "${nomeCliente}": ${errVenda.message}`); continue; }
+
+                            const { error: errItem } = await supabase.from('venda_itens').insert({
+                                user_id: user.id,
+                                venda_id: vendaNova.id,
+                                descricao: descricaoVenda,
+                                quantidade: 1,
+                                valor_unit: valorVenda
+                            });
+                            if (errItem) { erros.push(`Erro no item de "${nomeCliente}": ${errItem.message}`); continue; }
+
+                            count++;
                         } catch (errLinha) {
                             erros.push(`Erro em "${nomeCliente}": ${errLinha.message}`);
                         }

@@ -2,14 +2,13 @@ import { supabase } from './auth.js';
 import { esc } from './dom-utils.js';
 import { atualizarSaldoConta, calcDeltaVenda, garantirContaPadrao } from './conta-saldo.js';
 import { montarSelectBusca } from './select-busca.js';
+import { criarEditorItens, resumoDosItens } from './itens-venda.js';
 
 let listaDeClientesGlobal = [];
 let listaDeProdutosGlobal = [];
 
-const inputServico = document.getElementById("servicoVenda");
-const inputValor = document.getElementById("valorVenda");
-const inputProdutoId = document.getElementById("produtoIdSelecionado");
 const inputClienteId = document.getElementById("clienteIdSelecionado");
+const inputTitulo = document.getElementById("servicoVenda");
 
 // 1. CLIENTE — select com busca (só vincula se escolher na lista)
 const comboCliente = montarSelectBusca(document.getElementById("clienteVendaInput"), {
@@ -21,22 +20,13 @@ const comboCliente = montarSelectBusca(document.getElementById("clienteVendaInpu
     }
 });
 
-// 2. PRODUTO — select com busca; texto livre = produto avulso
-const comboProduto = montarSelectBusca(document.getElementById("produtoVendaInput"), {
-    placeholder: 'Buscar produto ou digitar nome...',
-    permiteLivre: true,
-    aoSelecionar: (valor, item) => {
-        if (inputProdutoId) inputProdutoId.value = valor || '';
-        if (item?.meta) {
-            if (inputServico) inputServico.value = item.meta.nome || '';
-            if (inputValor && item.meta.valor != null) {
-                inputValor.value = parseFloat(item.meta.valor).toFixed(2);
-            }
-        }
-    },
-    aoDigitar: () => {
-        if (inputProdutoId) inputProdutoId.value = '';
-    }
+// 2. ITENS DA VENDA — construtor compartilhado (produtos + avulsos)
+const editorItens = criarEditorItens({
+    listaEl: document.getElementById("listaItensVenda"),
+    totalEl: document.getElementById("totalItensVenda"),
+    inputBusca: document.getElementById("itemProdutoInput"),
+    btnAddProduto: document.getElementById("btnAddProduto"),
+    btnAddAvulso: document.getElementById("btnAddAvulso")
 });
 
 async function popularSugestoesClientes() {
@@ -68,11 +58,7 @@ async function popularSugestoesProdutos() {
         if (error) throw error;
 
         listaDeProdutosGlobal = produtos || [];
-        comboProduto.setOpcoes(listaDeProdutosGlobal.map(p => ({
-            valor: p.id,
-            texto: p.nome,
-            meta: { nome: p.nome, valor: p.valor }
-        })));
+        editorItens.setProdutos(listaDeProdutosGlobal);
     } catch (err) {
         console.error("Erro ao carregar produtos:", err.message);
     }
@@ -103,20 +89,28 @@ if (formNovaVenda) {
 
         if (await protegerAcao("formNovaVenda", "movimentacao")) return;
 
-        const btn = formNovaVenda.querySelector('button');
+        const btn = formNovaVenda.querySelector('button[type="submit"]') || formNovaVenda.querySelector('button');
+        const itens = editorItens.getItens();
 
-        const descricao = inputServico.value.trim();
-        const valor = inputValor.value;
+        if (itens.length === 0) {
+            mostrarModal('Adicione ao menos um item', 'Busque um produto ou use "+ Serviço avulso" para montar a venda.', 'alerta');
+            return;
+        }
+        if (!editorItens.validar()) {
+            mostrarModal('Item incompleto', 'Todos os itens precisam de descrição e quantidade válida.', 'alerta');
+            return;
+        }
+
         const status = document.getElementById("statusVenda").value;
-        const produtoId = inputProdutoId.value || null;
         const clienteId = inputClienteId?.value || comboCliente.getValor() || null;
         const contaId = document.getElementById("contaVenda")?.value || null;
         const dataVenda = inputDataVenda?.value || hojeISO();
-
-        const valorNumerico = parseFloat(valor);
+        const titulo = (inputTitulo?.value || '').trim();
+        const descricao = titulo || resumoDosItens(itens);
+        const valorNumerico = editorItens.total();
 
         if (isNaN(valorNumerico) || valorNumerico <= 0) {
-            mostrarModal('Valor inválido', 'Por favor, insira um valor de venda válido e maior que zero.', 'alerta');
+            mostrarModal('Valor inválido', 'O total da venda deve ser maior que zero.', 'alerta');
             return;
         }
 
@@ -125,17 +119,20 @@ if (formNovaVenda) {
             return;
         }
 
+        // Produto único → mantém vendas.produto_id preenchido (compat legada/donut)
+        const produtoUnico = itens.length === 1 && itens[0].produto_id ? itens[0].produto_id : null;
+
         try {
             btn.disabled = true;
             btn.innerText = "Registrando...";
 
             const { data: { user } } = await supabase.auth.getUser();
 
-            const { error } = await supabase.from('vendas').insert([
+            const { data: vendaCriada, error } = await supabase.from('vendas').insert([
                 {
                     user_id: user.id,
                     cliente_id: clienteId,
-                    produto_id: produtoId,
+                    produto_id: produtoUnico,
                     conta_id: contaId,
                     descricao: descricao,
                     valor: valorNumerico,
@@ -144,14 +141,25 @@ if (formNovaVenda) {
                     // Brasil rebaixar para o dia anterior na exibição.
                     data_venda: `${dataVenda}T12:00:00Z`
                 }
-            ]);
+            ]).select('id').single();
 
             if (error) throw error;
 
-            if (contaId) {
-                const delta = calcDeltaVenda(valorNumerico, status, 'criar');
-                if (delta !== 0) await atualizarSaldoConta(contaId, delta);
-            }
+            const { error: erroItens } = await supabase.from('venda_itens').insert(
+                itens.map(it => ({
+                    user_id: user.id,
+                    venda_id: vendaCriada.id,
+                    produto_id: it.produto_id || null,
+                    descricao: it.descricao.trim(),
+                    quantidade: Number(it.quantidade) || 1,
+                    valor_unit: Number(it.valor_unit) || 0
+                }))
+            );
+            if (erroItens) throw erroItens;
+
+            const delta = calcDeltaVenda(valorNumerico, status, 'criar');
+            if (delta !== 0) await atualizarSaldoConta(contaId, delta);
+
             // A contagem mudou: o aviso de limite não pode continuar
             // mostrando o número anterior a esta operação.
             invalidarCachePlano();

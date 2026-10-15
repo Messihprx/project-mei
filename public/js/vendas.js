@@ -2,32 +2,12 @@ import { supabase } from './auth.js';
 import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais, dataVendaISO, formatarDataVenda } from './dom-utils.js';
 import { atualizarSaldoConta, calcDeltaVenda, garantirOpcaoConta, garantirContaPadrao } from './conta-saldo.js';
 import { montarSelectBusca } from './select-busca.js';
+import { criarEditorItens, resumoDosItens } from './itens-venda.js';
 
 // Vendas da última renderização. Antes a descrição era injetada
 // dentro de onclick="...('${venda.descricao}')", então uma venda
 // como "Pao d'alho" quebrava o botão de editar.
 let vendasRenderizadas = [];
-
-// --- 1. CARREGAR CLIENTES NO SELECT ---
-async function popularSelectClientes() {
-    const select = document.getElementById("clienteVenda");
-    if (!select) return;
-
-    try {
-        const { data: clientes, error } = await supabase
-            .from('clientes')
-            .select('id, nome')
-            .order('nome');
-
-        if (error) throw error;
-
-        select.innerHTML = '<option value="">Selecione um cliente</option>' + 
-            clientes.map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
-
-    } catch (err) {
-        console.error("Erro ao carregar clientes:", err.message);
-    }
-}
 
 // --- 1.5 CARREGAR CONTAS NO SELECT ---
 async function popularSelectContasVendas() {
@@ -76,61 +56,16 @@ async function popularSelectContasFiltro(selectId) {
     }
 }
 
-// --- 2. SALVAR NOVA VENDA ---
-import { protegerAcao, verificarStatusPlano, invalidarCachePlano } from './planos.js';
-const formNovaVenda = document.getElementById("formNovaVenda");
-if (formNovaVenda) {
-    protegerAcao("formNovaVenda", "movimentacao");
-    formNovaVenda.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        if (await protegerAcao("formNovaVenda", "movimentacao")) return;
-
-        const btn = formNovaVenda.querySelector('button');
-        
-        const clienteId = document.getElementById("clienteVenda").value;
-        const descricao = document.getElementById("servicoVenda").value.trim();
-        const valor = document.getElementById("valorVenda").value;
-        const status = document.getElementById("statusVenda").value;
-        const contaId = document.getElementById("contaVenda")?.value || null;
-
-        try {
-            btn.disabled = true;
-            btn.innerText = "Registrando...";
-
-            const { data: { user } } = await supabase.auth.getUser();
-
-            const { error } = await supabase.from('vendas').insert([
-                {
-                    user_id: user.id,
-                    cliente_id: clienteId,
-                    conta_id: contaId,
-                    descricao: descricao,
-                    valor: parseFloat(valor),
-                    status: status
-                }
-            ]);
-
-            if (error) throw error;
-
-            if (contaId) {
-                const delta = calcDeltaVenda(parseFloat(valor), status, 'criar');
-                if (delta !== 0) await atualizarSaldoConta(contaId, delta);
-            }
-            // A contagem mudou: o aviso de limite não pode continuar
-            // mostrando o número anterior a esta operação.
-            invalidarCachePlano();
-
-            mostrarModal('Venda registrada!', 'Sua venda foi registrada com sucesso.', 'sucesso');
-            setTimeout(() => { window.location.href = "vendas.html"; }, 1500);
-
-        } catch (err) {
-            mostrarModal('Erro ao registrar venda', traduzirErro(err.message));
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "Finalizar Registro";
-        }
-    });
+// --- 2. LISTA DE ITENS NO CARD (resumo p/ exibição e busca textual) ---
+function resumoCardItens(venda) {
+    const itens = venda.venda_itens || [];
+    if (itens.length === 0) return '';
+    if (itens.length === 1) {
+        const it = itens[0];
+        const qtd = Number(it.quantidade) || 1;
+        return qtd > 1 ? `${qtd}x ${it.descricao}` : it.descricao;
+    }
+    return `${itens.length} itens · ${resumoDosItens(itens)}`;
 }
 
 // --- 3. FUNÇÃO MESTRE PARA LISTAR VENDAS (COM FILTRO REAL) ---
@@ -147,7 +82,7 @@ async function carregarVendas(limite = limiteVendas) {
     try {
         let query = supabase
             .from('vendas')
-            .select('id, descricao, valor, status, data_venda, cliente_id, clientes(nome), conta_id')
+            .select('id, descricao, valor, status, data_venda, cliente_id, clientes(nome), conta_id, venda_itens(descricao, quantidade, valor_unit, produto_id)')
             .order('data_venda', { ascending: false })
             .limit(limite);
 
@@ -172,7 +107,9 @@ async function carregarVendas(limite = limiteVendas) {
 
         vendasRenderizadas = vendas;
 
-        container.innerHTML = vendas.map(venda => `
+        container.innerHTML = vendas.map(venda => {
+            const resumoItens = resumoCardItens(venda);
+            return `
             <div class="card-venda-premium ${esc(venda.status)}">
                 <div class="venda-frente">
                     <div class="venda-icone">
@@ -181,6 +118,7 @@ async function carregarVendas(limite = limiteVendas) {
                     <div class="venda-detalhes">
                         <h4>${esc(venda.clientes?.nome || 'Cliente avulso')}</h4>
                         <p>${esc(venda.descricao || 'Serviço Geral')}</p>
+                        ${resumoItens && resumoItens !== venda.descricao ? `<p class="venda-itens-resumo">${esc(resumoItens)}</p>` : ''}
                         <span class="venda-data">${formatarDataVenda(venda.data_venda || venda.created_at)}</span>
                     </div>
                 </div>
@@ -198,7 +136,8 @@ async function carregarVendas(limite = limiteVendas) {
                     </div>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
 
         botaoCarregarMais(container, vendas.length, limite, carregarVendas);
 
@@ -210,28 +149,62 @@ async function carregarVendas(limite = limiteVendas) {
     }
 }
 
-// --- 4. FUNÇÕES DE EDIÇÃO E EXCLUSÃO (WINDOW) ---
-window.abrirModalEditarVenda = async (id, servico, valor, status, contaId, dataVenda) => {
-    document.getElementById("editVendaId").value = id;
-    document.getElementById("editServicoVenda").value = servico;
-    document.getElementById("editValorVenda").value = valor;
-    document.getElementById("editStatusVenda").value = status;
+// --- 4. CONSTRUTOR DE ITENS DO MODAL DE EDIÇÃO ---
+const editorItensEdicao = criarEditorItens({
+    listaEl: document.getElementById("editListaItens"),
+    totalEl: document.getElementById("editTotalItens"),
+    inputBusca: document.getElementById("editItemProdutoInput"),
+    btnAddProduto: document.getElementById("btnEditAddProduto"),
+    btnAddAvulso: document.getElementById("btnEditAddAvulso")
+});
+
+let produtosParaEdicao = null;
+async function carregarProdutosParaEdicao() {
+    if (produtosParaEdicao) return produtosParaEdicao;
+    try {
+        const { data } = await supabase.from('produtos').select('id, nome, valor').order('nome');
+        produtosParaEdicao = data || [];
+        editorItensEdicao.setProdutos(produtosParaEdicao);
+    } catch (err) {
+        console.error("Erro ao carregar produtos:", err.message);
+        produtosParaEdicao = [];
+    }
+    return produtosParaEdicao;
+}
+
+// --- 5. FUNÇÕES DE EDIÇÃO E EXCLUSÃO (WINDOW) ---
+window.abrirModalEditarVenda = async (venda) => {
+    document.getElementById("editVendaId").value = venda.id;
+    document.getElementById("editServicoVenda").value = venda.descricao || '';
+    document.getElementById("editStatusVenda").value = venda.status;
     // HTML antigo em cache pode não ter o campo; nesse caso a data
     // da venda fica como está (data_venda ausente no update).
     const campoData = document.getElementById("editDataVenda");
-    if (campoData) campoData.value = dataVendaISO(dataVenda || '');
+    if (campoData) campoData.value = dataVendaISO(venda.data_venda || venda.created_at || '');
+
+    // Itens da venda (busca da lista já traz; fallback: query pontual)
+    await carregarProdutosParaEdicao();
+    let itens = venda.venda_itens;
+    if (!itens || itens.length === 0) {
+        const { data } = await supabase.from('venda_itens')
+            .select('produto_id, descricao, quantidade, valor_unit')
+            .eq('venda_id', venda.id);
+        itens = data || [];
+    }
+    editorItensEdicao.setItens(itens);
+
     // Se a conta vinculada está inativada, injeta a opção no select
     // antes de setar o value — senão o salvar desvinculava a venda.
     const selConta = document.getElementById("editContaVenda");
-    await garantirOpcaoConta(selConta, contaId);
+    await garantirOpcaoConta(selConta, venda.conta_id);
     if (selConta?._selectBusca) {
         const opcoes = [...selConta.querySelectorAll('option')]
             .map(o => ({ valor: o.value, texto: o.textContent.trim() }))
             .filter(o => o.valor);
         selConta._selectBusca.setOpcoes(opcoes);
-        selConta._selectBusca.setValor(contaId || '');
+        selConta._selectBusca.setValor(venda.conta_id || '');
     } else if (selConta) {
-        selConta.value = contaId || '';
+        selConta.value = venda.conta_id || '';
     }
     document.getElementById("modalEditarVenda").style.display = "flex";
     if (window.lucide) lucide.createIcons();
@@ -259,7 +232,9 @@ window.deletarVenda = async (id) => {
     }
 };
 
-// --- 5. SUBMIT DA EDIÇÃO ---
+// --- 6. SUBMIT DA EDIÇÃO ---
+import { protegerAcao, verificarStatusPlano, invalidarCachePlano } from './planos.js';
+
 const formEditarVenda = document.getElementById("formEditarVenda");
 if (formEditarVenda) {
     protegerAcao("formEditarVenda", "movimentacao");
@@ -269,19 +244,30 @@ if (formEditarVenda) {
         if (await protegerAcao("formEditarVenda", "movimentacao")) return;
 
         const id = document.getElementById("editVendaId").value;
-        const btn = formEditarVenda.querySelector('button');
+        const btn = formEditarVenda.querySelector('button[type="submit"]') || formEditarVenda.querySelector('button');
 
         const dataEscolhida = document.getElementById("editDataVenda")?.value;
         const contaId = document.getElementById("editContaVenda").value;
+        const itens = editorItensEdicao.getItens();
 
         if (!contaId) {
             mostrarModal('Conta obrigatória', 'Selecione a conta financeira desta venda.', 'alerta');
             return;
         }
+        if (itens.length === 0 || !editorItensEdicao.validar()) {
+            mostrarModal('Itens incompletos', 'A venda precisa de ao menos um item válido (descrição e quantidade).', 'alerta');
+            return;
+        }
+
+        const titulo = document.getElementById("editServicoVenda").value.trim();
+        const novoValor = editorItensEdicao.total();
+        const descricao = titulo || resumoDosItens(itens);
+        const produtoUnico = itens.length === 1 && itens[0].produto_id ? itens[0].produto_id : null;
 
         const dadosAtualizados = {
-            descricao: document.getElementById("editServicoVenda").value,
-            valor: parseFloat(document.getElementById("editValorVenda").value),
+            descricao,
+            valor: novoValor,
+            produto_id: produtoUnico,
             status: document.getElementById("editStatusVenda").value,
             conta_id: contaId,
             data_venda: dataEscolhida ? `${dataEscolhida}T12:00:00Z` : undefined
@@ -299,6 +285,23 @@ if (formEditarVenda) {
                 .eq('id', id);
 
             if (error) throw error;
+
+            // Substitui os itens (delete + insert; RLS do usuário)
+            const { error: erroDel } = await supabase.from('venda_itens').delete().eq('venda_id', id);
+            if (erroDel) throw erroDel;
+
+            const { data: { user } } = await supabase.auth.getUser();
+            const { error: erroItens } = await supabase.from('venda_itens').insert(
+                itens.map(it => ({
+                    user_id: user.id,
+                    venda_id: id,
+                    produto_id: it.produto_id || null,
+                    descricao: it.descricao.trim(),
+                    quantidade: Number(it.quantidade) || 1,
+                    valor_unit: Number(it.valor_unit) || 0
+                }))
+            );
+            if (erroItens) throw erroItens;
 
             if (vendaAntiga) {
                 const delta = calcDeltaVenda(dadosAtualizados.valor, dadosAtualizados.status, 'editar', vendaAntiga.valor, vendaAntiga.status);
@@ -323,14 +326,14 @@ if (formEditarVenda) {
 }
 
 
-// --- 6. INICIALIZAÇÃO ---
+// --- 7. INICIALIZAÇÃO ---
 document.addEventListener("DOMContentLoaded", () => {
     // Delegação no lugar dos onclick inline
     delegate(document.getElementById('listaVendas'), 'button[data-acao]', 'click', (e, botao) => {
         const venda = vendasRenderizadas.find(v => v.id === botao.dataset.id);
         if (!venda) return;
         if (botao.dataset.acao === 'editar') {
-            window.abrirModalEditarVenda(venda.id, venda.descricao, venda.valor, venda.status, venda.conta_id || '', venda.data_venda || venda.created_at);
+            window.abrirModalEditarVenda(venda);
         } else if (botao.dataset.acao === 'excluir') {
             window.deletarVenda(venda.id);
         }
@@ -359,7 +362,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     carregarVendas();
-    popularSelectClientes();
     popularSelectContasVendas();
 
     // Filtro por conta
@@ -369,7 +371,7 @@ document.addEventListener("DOMContentLoaded", () => {
         filtroContaVendas.addEventListener("change", () => carregarVendas(TAMANHO_PAGINA));
     }
 
-    // --- 7. EXPORTAÇÃO PARA CSV (PREMIUM) ---
+    // --- 8. EXPORTAÇÃO PARA CSV (PREMIUM) ---
     const btnExport = document.getElementById("btnExportarVendas");
     if (btnExport) {
         btnExport.addEventListener("click", async () => {
@@ -392,7 +394,7 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 const { data: vendas, error } = await supabase
                     .from('vendas')
-                    .select('*, clientes(nome)')
+                    .select('*, clientes(nome), venda_itens(descricao, quantidade, valor_unit)')
                     .gte('data_venda', dataInicio)
                     .lte('data_venda', dataFim)
                     .order('data_venda', { ascending: false });
@@ -410,11 +412,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 //  - montarCsv neutraliza células que o Excel leria como
                 //    fórmula (= + - @).
                 const csv = montarCsv(
-                    ["Data", "Cliente", "Servico", "Valor", "Status"],
+                    ["Data", "Cliente", "Servico", "Itens", "Valor", "Status"],
                     vendas.map(v => [
                         formatarDataVenda(v.data_venda || v.created_at),
                         v.clientes ? v.clientes.nome : 'N/A',
                         v.descricao || '',
+                        (v.venda_itens || [])
+                            .map(it => `${Number(it.quantidade) || 1}x ${it.descricao} (${Number(it.valor_unit || 0).toFixed(2).replace('.', ',')})`)
+                            .join('; '),
                         Number(v.valor || 0).toFixed(2).replace('.', ','),
                         v.status || ''
                     ])

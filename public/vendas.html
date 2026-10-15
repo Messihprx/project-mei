@@ -126,7 +126,18 @@
                 
                 <div class="input-group">
                     <label>Serviço/Produto</label>
-                    <input type="text" id="editServicoVenda" required>
+                    <input type="text" id="editServicoVenda">
+                </div>
+
+                <div class="input-group">
+                    <label>Itens da venda</label>
+                    <div class="itens-busca">
+                        <input type="text" id="editItemProdutoInput" placeholder="Buscar produto para adicionar..." autocomplete="off">
+                        <button type="button" id="btnEditAddProduto" class="btn-add-item">Adicionar</button>
+                    </div>
+                    <button type="button" id="btnEditAddAvulso" class="btn-item-avulso">+ Serviço avulso</button>
+                    <div id="editListaItens" class="lista-itens"></div>
+                    <div class="itens-total">Total: <strong id="editTotalItens">R$ 0,00</strong></div>
                 </div>
 
                 <div class="input-group">
@@ -138,21 +149,16 @@
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div class="input-group">
-                        <label>Valor (R$)</label>
-                        <input type="number" id="editValorVenda" step="0.01" min="0.01" required>
-                    </div>
-                    <div class="input-group">
                         <label>Status</label>
                         <select id="editStatusVenda">
                             <option value="pago">Pago</option>
                             <option value="pendente">Pendente</option>
                         </select>
                     </div>
-                </div>
-
-                <div class="input-group">
-                    <label>Data da Venda</label>
-                    <input type="date" id="editDataVenda" required>
+                    <div class="input-group">
+                        <label>Data da Venda</label>
+                        <input type="date" id="editDataVenda" required>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn-primary" style="margin-top: 1.2rem;">Salvar Alterações</button>

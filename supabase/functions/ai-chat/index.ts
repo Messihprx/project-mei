@@ -58,8 +58,13 @@ const SYSTEM_PROMPT = `Você é o FinMei, assistente financeiro inteligente do F
 - Validação: nome deve ter pelo menos 2 caracteres, sem números; telefone no formato DDD + 9-10 dígitos
 
 ### Cadastro de Venda (criar_venda)
-- OBRIGATÓRIO: descrição, valor e data
-- OPCIONAL: cliente (use cliente_nome — o sistema busca pelo nome; se não encontrar, cria automaticamente como cliente avulso e avisa), produto, conta
+- OBRIGATÓRIO: descrição (título da venda), valor e data
+- COM VÁRIOS PRODUTOS: use o parâmetro "itens" — uma lista com um ou mais itens
+  - Cada item: "descricao", "valor" (unitário), "quantidade" (padrão 1) e "produto_id" opcional
+  - Use buscar_produtos antes pra achar o produto_id de cada item; se não achar, deixe sem produto_id
+  - O "valor" da venda deve ser a SOMA dos itens (quantidade × valor unitário) — o sistema recalcula por segurança
+- COM UM ÚNICO PRODUTO: pode usar "produto_id" avulso (sem itens) — vira 1 item automaticamente
+- OPCIONAL: cliente (use cliente_nome — o sistema busca pelo nome; se não encontrar, cria automaticamente como cliente avulso e avisa), conta
 - Status padrão: "pago" (se não informado)
 - FLUXO COM CLIENTE: se o usuário informar um nome de cliente, use cliente_nome
   - 1 resultado → vincula automaticamente
@@ -68,7 +73,7 @@ const SYSTEM_PROMPT = `Você é o FinMei, assistente financeiro inteligente do F
 - FLUXO COM PRODUTO: PRIMEIRO use buscar_produtos para verificar se o produto existe
   - 1 resultado → vincule automaticamente (use produto_id, valor e descrição do produto; mas se o usuário deu valor explícito diferente, use o valor do usuário)
   - Múltiplos resultados → mostre nomes e preços, peça para o usuário escolher
-  - Nenhum resultado → crie a venda sem vínculo (sem produto_id)
+  - Nenhum resultado → crie o item sem vínculo (sem produto_id)
   - Nunca invente um produto_id
 - FLUXO COM CONTA: Se o usuário mencionar uma conta, use buscar_contas para encontrar e vincular (conta_id). Se não mencionar, a venda entra automaticamente na primeira conta ativa (ou no Caixa do Negócio).
 
@@ -114,6 +119,7 @@ const SYSTEM_PROMPT = `Você é o FinMei, assistente financeiro inteligente do F
 ### Vendas
 - Cadastro, edição e exclusão de vendas
 - Status: "pago" (recebido) ou "pendente" (a receber)
+- Uma venda pode conter VÁRIOS itens (produtos/serviços) com quantidade e preço unitário; o valor da venda é a soma deles
 - Cada venda pode estar vinculada a um cliente e/ou a um produto
 - Filtros: busca por texto e filtro por mês
 - Opção de exportar para CSV (premium)
@@ -136,8 +142,8 @@ const SYSTEM_PROMPT = `Você é o FinMei, assistente financeiro inteligente do F
 - Catálogo de produtos/serviços com nome, descrição, valor e foto (opcional)
 - Fotos são comprimidas automaticamente antes de upload
 - Busca por nome em tempo real
-- Quando um produto é selecionado numa nova venda, nome e valor são preenchidos automaticamente
-- Vínculo optional: uma venda pode ou não estar ligada a um produto
+- Quando um produto é adicionado como item de venda, nome e valor são usados no item
+- Vínculo opcional: um item de venda pode ou não estar ligado a um produto cadastrado
 
 ### Devedores
 - Lista de vendas com status "pendente" (pagamentos pendentes)
@@ -313,17 +319,31 @@ const TOOLS = [
     type: "function",
     function: {
       name: "criar_venda",
-      description: "Cria uma nova venda para o usuário. Só chame quando descrição, valor e data estiverem informados. Se faltar algum, pergunte ao usuário e aguarde. Se o usuário mencionou um produto, use buscar_produtos antes para tentar vincular (produto_id). Se o produto não for encontrado, crie sem vínculo. Se o usuário informar um nome de cliente, use cliente_nome (o sistema busca ou cria automaticamente como avulso). Se mencionou uma conta, use buscar_contas para vincular (conta_id).",
+      description: "Cria uma nova venda para o usuário. Só chame quando descrição (título), valor e data estiverem informados. Se faltar algum, pergunte ao usuário e aguarde. Para vendas com VÁRIOS produtos, use o parâmetro itens (cada um com descricao, valor unitário, quantidade e produto_id opcional) — o valor da venda passa a ser a soma dos itens. Se o usuário mencionou um produto, use buscar_produtos antes para tentar vincular (produto_id). Se o produto não for encontrado, crie sem vínculo. Se o usuário informar um nome de cliente, use cliente_nome (o sistema busca ou cria automaticamente como avulso). Se mencionou uma conta, use buscar_contas para vincular (conta_id).",
       parameters: {
         type: "object",
         properties: {
-          descricao: { type: "string", description: "Descrição da venda" },
-          valor: { type: "number", description: "Valor da venda em reais" },
+          descricao: { type: "string", description: "Descrição/título da venda" },
+          valor: { type: "number", description: "Valor total da venda em reais (com itens: soma dos itens)" },
           status: { type: "string", description: "Status: pago, pendente, cancelado" },
           data_venda: { type: "string", description: "Data da venda (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
           cliente_nome: { type: "string", description: "Nome do cliente. Se informado, o sistema busca automaticamente; se não encontrar, cria como cliente avulso." },
           cliente_id: { type: "string", description: "ID do cliente (opcional, use apenas se já tiver o ID)" },
-          produto_id: { type: "string", description: "ID do produto para vincular à venda (opcional). Use o retornado por buscar_produtos." },
+          produto_id: { type: "string", description: "ID de UM produto para vincular à venda (opcional, caminho simples de 1 item). Use o retornado por buscar_produtos." },
+          itens: {
+            type: "array",
+            description: "Lista de itens da venda (vários produtos/serviços). Cada item: descricao, valor (unitário), quantidade (padrão 1) e produto_id opcional.",
+            items: {
+              type: "object",
+              properties: {
+                produto_id: { type: "string", description: "ID do produto (opcional, use buscar_produtos)" },
+                descricao: { type: "string", description: "Nome/descrição do item" },
+                quantidade: { type: "number", description: "Quantidade (padrão 1)" },
+                valor: { type: "number", description: "Valor unitário em reais" }
+              },
+              required: ["descricao", "valor"]
+            }
+          },
           conta_id: { type: "string", description: "ID da conta financeira para vincular (opcional). Use o retornado por buscar_contas." }
         },
         required: ["descricao", "valor", "data_venda"]
@@ -463,16 +483,30 @@ const TOOLS = [
     type: "function",
     function: {
       name: "editar_venda",
-      description: "Edita uma venda existente. Só chame com venda_id válido e pelo menos um campo de alteração (descrição, valor, status, data ou conta). Se faltar, pergunte ao usuário e aguarde.",
+      description: "Edita uma venda existente. Só chame com venda_id válido e pelo menos um campo de alteração (descrição, valor, status, data, conta ou itens). Se faltar, pergunte ao usuário e aguarde. Para trocar os produtos/quantidades, envie a lista completa em `itens` — o valor total é recalculado como a soma deles.",
       parameters: {
         type: "object",
         properties: {
           venda_id: { type: "string", description: "ID da venda" },
-          descricao: { type: "string", description: "Nova descrição" },
-          valor: { type: "number", description: "Novo valor" },
+          descricao: { type: "string", description: "Nova descrição/título" },
+          valor: { type: "number", description: "Novo valor total (em vendas com itens, prefira reenviar `itens`)" },
           status: { type: "string", description: "Novo status: pago, pendente, cancelado" },
           data_venda: { type: "string", description: "Nova data (YYYY-MM-DD, dd/mm/aaaa, dd/mm, 'hoje', 'amanhã', 'ontem')" },
-          conta_id: { type: "string", description: "ID da conta financeira (opcional). Use o retornado por buscar_contas." }
+          conta_id: { type: "string", description: "ID da conta financeira (opcional). Use o retornado por buscar_contas." },
+          itens: {
+            type: "array",
+            description: "Nova lista COMPLETA de itens da venda (substitui os atuais). Cada item: descricao, valor unitário, quantidade (padrão 1) e produto_id opcional. O valor total da venda passa a ser a soma.",
+            items: {
+              type: "object",
+              properties: {
+                produto_id: { type: "string", description: "ID do produto (opcional)" },
+                descricao: { type: "string", description: "Nome/descrição do item" },
+                quantidade: { type: "number", description: "Quantidade (padrão 1)" },
+                valor: { type: "number", description: "Valor unitário em reais" }
+              },
+              required: ["descricao", "valor"]
+            }
+          }
         },
         required: ["venda_id"]
       }
@@ -729,6 +763,68 @@ function normalizarCategoriaGasto(valor: unknown): string | null {
   return CATEGORIA_ALIAS[chave] || null;
 }
 
+// --- Itens de venda (múltiplos produtos por venda) ---
+type ItemVenda = { produto_id: string | null; descricao: string; quantidade: number; valor_unit: number };
+
+// Normaliza a lista `itens` vinda da tool (criar_venda / editar_venda).
+// Retorna os itens prontos + total arredondado, ou mensagem de erro.
+function normalizarItensVenda(bruto: unknown): { itens: ItemVenda[]; total: number } | { erro: string } {
+  if (!Array.isArray(bruto) || bruto.length === 0) return { erro: 'A lista de itens está vazia.' };
+  if (bruto.length > 50) return { erro: 'Máximo de 50 itens por venda.' };
+  const itens: ItemVenda[] = [];
+  for (const raw of bruto as Array<Record<string, unknown>>) {
+    const descricao = textoValido(raw?.descricao) ? String(raw.descricao).trim() : '';
+    if (!descricao) return { erro: 'Todo item da venda precisa de descrição.' };
+    if (!numeroValido(raw?.valor) || Number(raw.valor) <= 0) {
+      return { erro: `Valor unitário inválido no item "${descricao}".` };
+    }
+    const qtd = raw?.quantidade === undefined || raw?.quantidade === null ? 1 : Number(raw.quantidade);
+    if (!Number.isFinite(qtd) || qtd <= 0) {
+      return { erro: `Quantidade inválida no item "${descricao}".` };
+    }
+    let produtoId: string | null = null;
+    if (raw?.produto_id) {
+      if (!idValido(raw.produto_id)) return { erro: `produto_id inválido no item "${descricao}".` };
+      produtoId = String(raw.produto_id);
+    }
+    itens.push({ produto_id: produtoId, descricao, quantidade: qtd, valor_unit: Number(raw.valor) });
+  }
+  const total = Math.round(itens.reduce((s, it) => s + it.quantidade * it.valor_unit, 0) * 100) / 100;
+  if (total <= 0) return { erro: 'O total da venda deve ser maior que zero.' };
+  return { itens, total };
+}
+
+// Confere (via service_role) que todos os produto_id dos itens existem
+// para este usuário. Retorna mensagem de erro ou null.
+async function validarProdutosItens(itens: ItemVenda[], userId: string): Promise<string | null> {
+  for (const it of itens) {
+    if (!it.produto_id) continue;
+    const { data: produto, error } = await supabaseAdmin.from('produtos')
+      .select('id').eq('id', it.produto_id).eq('user_id', userId).maybeSingle();
+    if (error) throw error;
+    if (!produto) return `Produto não encontrado para o item "${it.descricao}". Busque o produto antes de vincular.`;
+  }
+  return null;
+}
+
+// Grava as linhas de venda_itens de uma venda (substitui os atuais).
+async function gravarItensVenda(vendaId: string, userId: string, itens: ItemVenda[]) {
+  const { error: erroDel } = await supabaseAdmin.from('venda_itens')
+    .delete().eq('venda_id', vendaId);
+  if (erroDel) throw erroDel;
+  const { error } = await supabaseAdmin.from('venda_itens').insert(
+    itens.map(it => ({
+      user_id: userId,
+      venda_id: vendaId,
+      produto_id: it.produto_id,
+      descricao: it.descricao,
+      quantidade: it.quantidade,
+      valor_unit: it.valor_unit
+    }))
+  );
+  if (error) throw error;
+}
+
 // Limite opcional das buscas: aceita o que o modelo mandar (inclusive
 // texto), com teto de 200 para não derrubar a resposta da API.
 function limiteBusca(valor: unknown, padrao?: number): number | undefined {
@@ -828,7 +924,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
 
   switch (name) {
     case "buscar_vendas": {
-      let q = supabaseAdmin.from('vendas').select('*, clientes(nome)').eq('user_id', userId);
+      let q = supabaseAdmin.from('vendas').select('*, clientes(nome), venda_itens(descricao, quantidade, valor_unit, produto_id)').eq('user_id', userId);
       if (args.data_inicio) {
         const di = parseData(args.data_inicio);
         if (di) q = q.gte('data_venda', di);
@@ -988,10 +1084,28 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       };
     }
     case "criar_venda": {
-      if (!textoValido(args.descricao) || !numeroValido(args.valor) || !args.data_venda) {
+      // Com `itens`, o valor é recalculado como a soma (total = soma dos itens).
+      let itensVenda: ItemVenda[] | null = null;
+      let valorTotal = 0;
+
+      if (args.itens !== undefined && args.itens !== null) {
+        const norm = normalizarItensVenda(args.itens);
+        if ('erro' in norm) return { error: norm.erro };
+        itensVenda = norm.itens;
+        valorTotal = norm.total;
+        const erroProduto = await validarProdutosItens(itensVenda, userId);
+        if (erroProduto) return { error: erroProduto };
+      } else {
+        if (!numeroValido(args.valor)) {
+          return { error: 'Venda exige descrição, valor e data.' };
+        }
+        valorTotal = Number(args.valor);
+        if (valorTotal <= 0) return { error: 'O valor da venda deve ser maior que zero.' };
+      }
+
+      if (!textoValido(args.descricao) || !args.data_venda) {
         return { error: 'Venda exige descrição, valor e data.' };
       }
-      if (Number(args.valor) <= 0) return { error: 'O valor da venda deve ser maior que zero.' };
       const dataVenda = parseData(args.data_venda);
       if (!dataVenda) return { error: 'Data inválida. Use YYYY-MM-DD, dd/mm/aaaa, "hoje", "amanhã" ou "ontem".' };
       if (args.status && !['pago', 'pendente', 'cancelado', 'recebido'].includes(String(args.status))) {
@@ -1036,6 +1150,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         clienteId = cliente.id;
       }
 
+      // Caminho legado (produto_id único sem `itens`): vira 1 item
       let produtoId = null;
       if (args.produto_id) {
         if (!idValido(args.produto_id)) return { error: 'O ID do produto é inválido.' };
@@ -1044,6 +1159,15 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         if (produtoError) throw produtoError;
         if (!produto) return { error: 'Produto não encontrado. Busque o produto antes de vincular à venda.' };
         produtoId = produto.id;
+      }
+
+      if (!itensVenda) {
+        itensVenda = [{
+          produto_id: produtoId,
+          descricao: String(args.descricao).trim(),
+          quantidade: 1,
+          valor_unit: valorTotal
+        }];
       }
 
       let contaId = null;
@@ -1075,7 +1199,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         .select('id, descricao, valor, data_venda, status')
         .eq('user_id', userId)
         .ilike('descricao', `%${args.descricao}%`)
-        .eq('valor', Number(args.valor))
+        .eq('valor', valorTotal)
         .gte('data_venda', dataVenda)
         .lte('data_venda', dataVenda + 'T23:59:59')
         .limit(1);
@@ -1085,21 +1209,30 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         return { error: `Já existe venda similar: "${d.descricao}" R$ ${Number(d.valor).toFixed(2)} em ${d.data_venda.slice(0,10)} (${d.status}).` };
       }
 
+      // Produto único preenchido só quando a venda inteira é 1 produto
+      // (mantém o donut legado e a compatibilidade com colunas antigas).
+      const produtoUnico = itensVenda.length === 1 && itensVenda[0].produto_id
+        ? itensVenda[0].produto_id
+        : (itensVenda.length > 1 ? null : produtoId);
+
       // Grava às 12h UTC: meia-noite UTC faria a exibição em pt-BR
       // (UTC-3) cair no dia anterior.
       const { data, error } = await supabaseAdmin.from('vendas').insert({
-        user_id: userId, descricao: args.descricao, valor: Number(args.valor),
+        user_id: userId, descricao: args.descricao, valor: valorTotal,
         status: args.status || 'pago', data_venda: dataVenda + 'T12:00:00',
-        cliente_id: clienteId, produto_id: produtoId, conta_id: contaId || null
+        cliente_id: clienteId, produto_id: produtoUnico, conta_id: contaId || null
       }).select().single();
       if (error) return { error: error.message };
 
+      await gravarItensVenda(data.id, userId, itensVenda);
+
       if (contaId) {
-        const delta = calcDeltaVenda(Number(args.valor), args.status || 'pago', 'criar');
+        const delta = calcDeltaVenda(valorTotal, args.status || 'pago', 'criar');
         if (delta !== 0) await atualizarSaldoConta(supabaseAdmin, contaId, delta);
       }
 
       data._cliente_avulso = clienteAvulso;
+      data._itens = itensVenda.length;
       return data;
     }
     case "criar_devedor": {
@@ -1148,6 +1281,10 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         data_venda: dataVenda + 'T12:00:00'
       }).select('id, cliente_id, descricao, valor, status, data_venda, clientes(nome)').single();
       if (error) throw error;
+      await gravarItensVenda(data.id, userId, [{
+        produto_id: null, descricao: String(args.descricao).trim(),
+        quantidade: 1, valor_unit: Number(args.valor)
+      }]);
       return data;
     }
     case "criar_gasto": {
@@ -1330,7 +1467,7 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       return data;
     }
     case "editar_venda": {
-      const { venda_id, ...updates } = args;
+      const { venda_id, itens: itensNovos, ...updates } = args;
       if (!idValido(venda_id)) return { error: 'O ID da venda é obrigatório e inválido.' };
       const { data: vendaAtual, error: findError } = await supabaseAdmin.from('vendas')
         .select('id, descricao, valor, data_venda, cliente_id, status, conta_id').eq('id', venda_id).eq('user_id', userId).maybeSingle();
@@ -1341,6 +1478,23 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
       const patch: Record<string, unknown> = {};
       for (const k of allowed) if (updates[k] !== undefined) patch[k] = updates[k];
       if (updates.conta_id !== undefined) patch.conta_id = updates.conta_id;
+
+      // Lista completa de itens substitui os atuais e recalcula o total.
+      let itensNormalizados: ItemVenda[] | null = null;
+      if (itensNovos !== undefined) {
+        if (itensNovos === null) return { error: 'A lista de itens não pode ser nula.' };
+        const norm = normalizarItensVenda(itensNovos);
+        if ('erro' in norm) return { error: norm.erro };
+        itensNormalizados = norm.itens;
+        const erroProduto = await validarProdutosItens(itensNormalizados, userId);
+        if (erroProduto) return { error: erroProduto };
+        patch.valor = norm.total;
+        // Produto único no cabeçalho acompanha a lista de itens.
+        patch.produto_id = itensNormalizados.length === 1 && itensNormalizados[0].produto_id
+          ? itensNormalizados[0].produto_id
+          : null;
+      }
+
       if (!Object.keys(patch).length) return { error: 'Informe pelo menos um campo da venda para alterar.' };
       if (patch.descricao !== undefined && !textoValido(patch.descricao)) return { error: 'A descrição não pode ficar vazia.' };
       if (patch.valor !== undefined && Number(patch.valor) <= 0) return { error: 'O valor da venda deve ser maior que zero.' };
@@ -1371,6 +1525,11 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         .update(patch).eq('id', venda_id).eq('user_id', userId).select().maybeSingle();
       if (error) throw error;
       if (!data) return { error: 'Venda não encontrada ou sem permissão para alterar.' };
+
+      if (itensNormalizados) {
+        await gravarItensVenda(venda_id, userId, itensNormalizados);
+        data._itens = itensNormalizados.length;
+      }
 
       const novaStatus = String(patch.status || vendaAtual.status);
       const novoValor = Number(patch.valor || vendaAtual.valor);
@@ -2492,7 +2651,7 @@ function gerarRespostaTools(toolResults: any[]): string {
         responses.push(r.mensagem || 'Cliente excluído.');
         break;
       case 'criar_venda':
-        responses.push(`Venda "${r.descricao}" cadastrada: ${brl(r.valor)} (${r.status || 'pago'}).${r._cliente_avulso ? ' ⚠️ Cliente não encontrado — foi criado como cliente avulso.' : ''}`);
+        responses.push(`Venda "${r.descricao}" cadastrada: ${brl(r.valor)} (${r.status || 'pago'})${r._itens > 1 ? ` em ${r._itens} itens` : ''}.${r._cliente_avulso ? ' ⚠️ Cliente não encontrado — foi criado como cliente avulso.' : ''}`);
         break;
       case 'criar_produto':
         responses.push(`Produto "${r.nome}" cadastrado: ${brl(r.valor)}. Adicione a foto pelo site se quiser.`);
@@ -2562,7 +2721,7 @@ function gerarRespostaTools(toolResults: any[]): string {
         responses.push(`Devedor "${r.clientes?.nome || 'cliente'}" cadastrado: ${brl(r.valor)}.`);
         break;
       case 'editar_venda':
-        responses.push(`Venda "${r.descricao}" atualizada.`);
+        responses.push(`Venda "${r.descricao}" atualizada${r._itens ? ` — novo total: ${brl(r.valor)} (${r._itens} ${r._itens === 1 ? 'item' : 'itens'})` : ''}.`);
         break;
       case 'excluir_venda':
         responses.push(r.mensagem || 'Venda excluída.');
@@ -2932,10 +3091,14 @@ async function testarTools(supabase: any, userId: string, incluirEscrita: boolea
 
   const venda: any = await rodar('criar_venda', {
     descricao: `${MARCA} venda`,
-    valor: 1,
+    valor: 3,
     data_venda: HOJE(),
     status: 'pago',
     conta_id: contaA?.id,
+    itens: [
+      { descricao: `${MARCA} item A`, quantidade: 2, valor: 1 },
+      { descricao: `${MARCA} item B`, quantidade: 1, valor: 1 },
+    ],
   });
 
   const devedor: any = cliente?.id ? await rodar('criar_devedor', {
@@ -2966,6 +3129,10 @@ async function testarTools(supabase: any, userId: string, incluirEscrita: boolea
   if (produto?.id) await rodar('editar_produto', { produto_id: produto.id, valor: 2 });
   if (cliente?.id) await rodar('editar_cliente', { cliente_id: cliente.id, observacao: 'edição de diagnóstico' });
   if (venda?.id) await rodar('editar_venda', { venda_id: venda.id, valor: 2 });
+  if (venda?.id) await rodar('editar_venda', {
+    venda_id: venda.id,
+    itens: [{ descricao: `${MARCA} item único`, quantidade: 1, valor: 2 }],
+  }, 'editar_venda (com itens)');
   if (gasto?.id) await rodar('editar_gasto', { gasto_id: gasto.id, valor: 2 });
   if (contaA?.id) await rodar('editar_conta', { conta_id: contaA.id, instituicao: 'Banco de teste' });
 
@@ -3306,7 +3473,7 @@ serve(async (req) => {
       supabaseAdmin.from('clientes').select('id, nome').eq('user_id', user.id).eq('ativo', true),
       supabaseAdmin.from('vendas').select('valor, status').eq('user_id', user.id).gte('data_venda', inicioMesAnt).lte('data_venda', fimMesAnt + 'T23:59:59'),
       supabaseAdmin.from('despesas').select('valor').eq('user_id', user.id).gte('data', inicioMesAnt).lte('data', fimMesAnt),
-      supabaseAdmin.from('vendas').select('descricao, valor, status, data_venda, clientes(nome)').eq('user_id', user.id).order('data_venda', { ascending: false }).limit(5),
+      supabaseAdmin.from('vendas').select('descricao, valor, status, data_venda, clientes(nome), venda_itens(descricao, quantidade)').eq('user_id', user.id).order('data_venda', { ascending: false }).limit(5),
       supabaseAdmin.from('vendas').select('descricao, valor, clientes(nome)').eq('user_id', user.id).eq('status', 'pendente').order('data_venda', { ascending: false }).limit(5),
       supabaseAdmin.from('perfis').select('nome_completo, empresa').eq('id', user.id).single(),
       supabaseAdmin.from('produtos').select('id, nome, valor').eq('user_id', user.id).order('nome'),
@@ -3358,7 +3525,13 @@ ${blocoLimites}
 - A receber (pendentes): R$${totalPendentes.toFixed(2)} (${pendentes.length} vendas)
 - Ticket médio: R$${vendasPagas.length ? (totalVendasMes / vendasPagas.length).toFixed(2) : '0.00'}
 - Top categorias de gasto: ${Object.entries((gastosMes.data || []).reduce((acc: any, g: any) => { const c = g.categoria || 'Outros'; acc[c] = (acc[c] || 0) + Number(g.valor); return acc; }, {})).sort((a: any, b: any) => b[1] - a[1]).slice(0, 3).map(([c, v]) => `${c}: R$${Number(v).toFixed(2)}`).join(', ') || 'Nenhum'}
-- Últimas vendas: ${(ultimasVendas.data || []).map((v: any) => `${v.descricao} R$${Number(v.valor).toFixed(2)} (${v.status})${v.clientes?.nome ? ' - ' + v.clientes.nome : ''}`).join('; ') || 'Nenhuma'}
+- Últimas vendas: ${(ultimasVendas.data || []).map((v: any) => {
+      const itens = Array.isArray(v.venda_itens) ? v.venda_itens : [];
+      const resumoItens = itens.length > 1
+        ? ` [${itens.map((i: any) => `${Number(i.quantidade)}x ${i.descricao}`).join('; ')}]`
+        : '';
+      return `${v.descricao} R$${Number(v.valor).toFixed(2)} (${v.status})${resumoItens}${v.clientes?.nome ? ' - ' + v.clientes.nome : ''}`;
+    }).join('; ') || 'Nenhuma'}
 - Devedores: ${(devedores.data || []).map((v: any) => `${v.clientes?.nome || 'Anônimo'}: R$${Number(v.valor).toFixed(2)} - ${v.descricao}`).join('; ') || 'Nenhum'}
 - Produtos cadastrados: ${(produtosRes.data || []).map((p: any) => `${p.nome} (R$ ${Number(p.valor).toFixed(2)}, id: ${p.id})`).join('; ') || 'Nenhum'}
 Use esses dados pra dar respostas inteligentes e contextualizadas. Não repita os dados brutos, analise e aconselhe.`;

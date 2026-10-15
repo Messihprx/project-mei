@@ -38,6 +38,8 @@ Rode no **Supabase → SQL Editor**, **nesta ordem**:
 | 10 | `sql/consistencia.sql` | Corrige a data das vendas importadas e unifica os limites entre tela e banco |
 | 11 | `sql/contas_financeiras.sql` | Tabela `contas`, `conta_id` em vendas/despesas e a RPC `incrementar_saldo` (páginas de Contas e as tools de contas da IA) |
 | 12 | `sql/transferencias.sql` | Tabela `transferencias` — histórico de transferências entre contas (RF111/RF115), gravado pelo site e pela IA |
+| 13 | `sql/venda_itens.sql` | Tabela `venda_itens` — uma venda com vários produtos (item com qtd e preço unit); faz backfill das vendas antigas |
+| 14 | `sql/dashboard_rpc.sql` | **Reexecute após o item 13** — o donut de vendas por produto passa a somar pelos itens |
 
 > Os scripts assumem que `sql/admin_supabase.sql` (função `is_admin()`) já foi
 > executado. Se ainda não foi, rode-o antes do item 1.

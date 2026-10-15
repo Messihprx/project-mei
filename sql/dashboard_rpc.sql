@@ -158,22 +158,38 @@ BEGIN
       LIMIT 5
     ) t;
 
-  -- ---------- Donut: vendas por produto (cai na descrição) ----------
+  -- ---------- Donut: vendas por produto ----------
+  -- Soma pelos itens (venda pode ter vários produtos). Vendas legadas
+  -- ainda sem linha em venda_itens caem no fallback produto_id/descricao.
   SELECT COALESCE(json_agg(
            json_build_object('label', label, 'valor', total)
            ORDER BY total DESC
          ), '[]'::json)
     INTO v_donut
     FROM (
-      SELECT COALESCE(p.nome, v.descricao, 'Sem descrição') AS label,
-             SUM(v.valor) AS total
-        FROM public.vendas v
-        LEFT JOIN public.produtos p ON p.id = v.produto_id
-       WHERE v.user_id = v_uid
-         AND COALESCE(v.data_venda, v.created_at)::date BETWEEN v_ini AND v_fim
-       GROUP BY 1
-       ORDER BY 2 DESC
-       LIMIT 8
+      SELECT label, SUM(total) AS total
+      FROM (
+        SELECT COALESCE(p.nome, i.descricao, v.descricao, 'Sem descrição') AS label,
+               (i.quantidade * i.valor_unit) AS total
+          FROM public.venda_itens i
+          JOIN public.vendas v ON v.id = i.venda_id
+          LEFT JOIN public.produtos p ON p.id = i.produto_id
+         WHERE v.user_id = v_uid
+           AND COALESCE(v.data_venda, v.created_at)::date BETWEEN v_ini AND v_fim
+        UNION ALL
+        SELECT COALESCE(p.nome, v.descricao, 'Sem descrição') AS label,
+               v.valor AS total
+          FROM public.vendas v
+          LEFT JOIN public.produtos p ON p.id = v.produto_id
+         WHERE v.user_id = v_uid
+           AND COALESCE(v.data_venda, v.created_at)::date BETWEEN v_ini AND v_fim
+           AND NOT EXISTS (
+             SELECT 1 FROM public.venda_itens i2 WHERE i2.venda_id = v.id
+           )
+      ) t
+      GROUP BY label
+      ORDER BY 2 DESC
+      LIMIT 8
     ) d;
 
   RETURN json_build_object(
