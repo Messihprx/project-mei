@@ -1,6 +1,6 @@
 import { supabase } from './auth.js';
 import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais, dataVendaISO, formatarDataVenda } from './dom-utils.js';
-import { atualizarSaldoConta, calcDeltaVenda, garantirOpcaoConta } from './conta-saldo.js';
+import { atualizarSaldoConta, calcDeltaVenda, garantirOpcaoConta, garantirContaPadrao } from './conta-saldo.js';
 
 // Vendas da última renderização. Antes a descrição era injetada
 // dentro de onclick="...('${venda.descricao}')", então uma venda
@@ -34,6 +34,9 @@ async function popularSelectContasVendas() {
     if (selects.length === 0) return;
 
     try {
+        // Venda exige conta; garante o "Caixa do Negócio" se não houver nenhuma ativa
+        await garantirContaPadrao();
+
         const { data: { user } } = await supabase.auth.getUser();
         const { data: contas, error } = await supabase
             .from('contas')
@@ -44,7 +47,7 @@ async function popularSelectContasVendas() {
 
         if (error) throw error;
 
-        const options = '<option value="">Sem conta vinculada</option>' +
+        const options = '<option value="" disabled selected>Selecione a conta</option>' +
             (contas || []).map(c => `<option value="${esc(c.id)}">${esc(c.nome)}</option>`).join('');
 
         selects.forEach(sel => { sel.innerHTML = options; });
@@ -257,11 +260,18 @@ if (formEditarVenda) {
         const btn = formEditarVenda.querySelector('button');
 
         const dataEscolhida = document.getElementById("editDataVenda")?.value;
+        const contaId = document.getElementById("editContaVenda").value;
+
+        if (!contaId) {
+            mostrarModal('Conta obrigatória', 'Selecione a conta financeira desta venda.', 'alerta');
+            return;
+        }
+
         const dadosAtualizados = {
             descricao: document.getElementById("editServicoVenda").value,
             valor: parseFloat(document.getElementById("editValorVenda").value),
             status: document.getElementById("editStatusVenda").value,
-            conta_id: document.getElementById("editContaVenda").value || null,
+            conta_id: contaId,
             data_venda: dataEscolhida ? `${dataEscolhida}T12:00:00Z` : undefined
         };
 

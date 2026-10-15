@@ -1,6 +1,6 @@
 import { supabase } from './auth.js';
 import { esc } from './dom-utils.js';
-import { atualizarSaldoConta, calcDeltaVenda } from './conta-saldo.js';
+import { atualizarSaldoConta, calcDeltaVenda, garantirContaPadrao } from './conta-saldo.js';
 
 let listaDeClientesGlobal = [];
 let listaDeProdutosGlobal = [];
@@ -118,6 +118,11 @@ if (formNovaVenda) {
             return;
         }
 
+        if (!contaId) {
+            mostrarModal('Conta obrigatória', 'Selecione a conta financeira onde o valor desta venda será registrado.', 'alerta');
+            return;
+        }
+
         let clienteId = null;
         if (nomeDigitado && nomeDigitado.trim()) {
             const clienteEncontrado = listaDeClientesGlobal.find(c => c.nome === nomeDigitado);
@@ -178,6 +183,9 @@ async function popularSelectContas() {
     if (!select) return;
 
     try {
+        // Sem nenhuma conta ativa, cria o "Caixa do Negócio" antes de listar
+        await garantirContaPadrao();
+
         const { data: { user } } = await supabase.auth.getUser();
         const { data: contas, error } = await supabase
             .from('contas')
@@ -188,8 +196,12 @@ async function popularSelectContas() {
 
         if (error) throw error;
 
-        select.innerHTML = '<option value="">Sem conta vinculada</option>' +
-            (contas || []).map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+        const lista = contas || [];
+        select.innerHTML = '<option value="" disabled selected>Selecione a conta</option>' +
+            lista.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+
+        // Com uma conta só, já deixa selecionada — venda rápida sem clique extra
+        if (lista.length === 1) select.value = lista[0].id;
     } catch (err) {
         console.error("Erro ao carregar contas:", err.message);
     }

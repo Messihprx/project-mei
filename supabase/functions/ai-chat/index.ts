@@ -70,7 +70,7 @@ const SYSTEM_PROMPT = `Você é o FinMei, assistente financeiro inteligente do F
   - Múltiplos resultados → mostre nomes e preços, peça para o usuário escolher
   - Nenhum resultado → crie a venda sem vínculo (sem produto_id)
   - Nunca invente um produto_id
-- FLUXO COM CONTA: Se o usuário mencionar uma conta, use buscar_contas para encontrar e vincular (conta_id). Se não mencionar, a venda fica sem conta vinculada.
+- FLUXO COM CONTA: Se o usuário mencionar uma conta, use buscar_contas para encontrar e vincular (conta_id). Se não mencionar, a venda entra automaticamente na primeira conta ativa (ou no Caixa do Negócio).
 
 ### Cadastro de Gasto (criar_gasto)
 - OBRIGATÓRIO: descrição, valor, data e categoria
@@ -1054,6 +1054,21 @@ async function executeTool(name: string, args: Record<string, unknown>, supabase
         if (contaError) throw contaError;
         if (!conta) return { error: 'Conta não encontrada ou inativa. Busque a conta antes de vincular.' };
         contaId = conta.id;
+      } else {
+        // Venda sempre entra em uma conta: usa a primeira ativa ou cria o
+        // "Caixa do Negócio" (mesma regra do formulário da tela).
+        const { data: primeirasContas } = await supabaseAdmin.from('contas')
+          .select('id').eq('user_id', userId).eq('ativo', true).order('nome').limit(1);
+        if (primeirasContas?.length) {
+          contaId = primeirasContas[0].id;
+        } else {
+          const { data: novaConta, error: erroConta } = await supabaseAdmin.from('contas').insert({
+            user_id: userId, nome: 'Caixa do Negócio', tipo: 'caixa', finalidade: 'negocio',
+            saldo_inicial: 0, saldo_atual: 0
+          }).select('id').single();
+          if (erroConta) return { error: `Erro ao criar conta padrão: ${erroConta.message}` };
+          contaId = novaConta.id;
+        }
       }
 
       const dup = await supabaseAdmin.from('vendas')
