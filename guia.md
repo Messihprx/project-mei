@@ -204,8 +204,14 @@ endereços:
 
 | | Local | Netlify |
 |---|---|---|
-| Login | `/public/login.html` | `/login.html` |
+| Login | `/public/login` | `/login` |
 | Escopo do app | `/public/` | `/` |
+
+As rotas não terminam em `.html`: o [netlify.toml](netlify.toml) reescreve
+`/login` para `/login.html`, e o [serve.json](serve.json) liga o `cleanUrls`
+no servidor local (`npx serve .`). O Live Server do VS Code não faz essa
+reescrita, mas o service worker tenta o `.html` equivalente quando a rota
+limpa retorna 404.
 
 Nada disso está fixo no código: os redirects do login com Google, da
 confirmação de e-mail e da recuperação de senha são resolvidos **relativos à
@@ -217,12 +223,14 @@ Só falta um ajuste, e ele é no **Supabase**, não no código:
 
 > **Authentication → URL Configuration → Redirect URLs**
 >
-> Cadastre os dois padrões:
+> Cadastre os padrões:
 > ```
+> http://127.0.0.1:3000/public/**
 > http://localhost:5500/public/**
 > https://SEU-SITE.netlify.app/**
 > ```
-> (troque a porta pela do seu servidor local)
+> (troque/adicione a porta pela do seu servidor local — `npx serve .` usa
+> a 3000 por padrão)
 
 O Supabase só aceita redirecionar para endereços que estejam nessa lista. Sem o
 padrão local, o login com Google e os links de e-mail funcionam publicados mas

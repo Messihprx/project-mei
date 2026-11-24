@@ -59,7 +59,7 @@ async function popularSelectContasFiltroGastos() {
 document.addEventListener("DOMContentLoaded", async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-        window.location.href = "login.html";
+        window.location.href = "login";
         return;
     }
 
@@ -140,7 +140,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const status = await verificarStatusPlano();
             if (!status.premium) {
                 mostrarModal('Recurso Premium', 'A exportação de relatórios de despesas é um recurso exclusivo para assinantes Premium.', 'alerta');
-                setTimeout(() => { window.location.href = "planos.html"; }, 2000);
+                setTimeout(() => { window.location.href = "planos"; }, 2000);
                 return;
             }
 

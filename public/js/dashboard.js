@@ -3,13 +3,66 @@ import { protegerAcao, verificarStatusPlano } from './planos.js';
 import { esc, formatarDataVenda } from './dom-utils.js';
 
 const filtroMesInput = document.getElementById("filtroMesDashboard");
+const filtroPeriodoSelect = document.getElementById("filtroTipoPeriodo");
+const filtroAnoInput = document.getElementById("filtroAnoDashboard");
+const campoFiltroMes = document.getElementById("campoFiltroMes");
+const campoFiltroAno = document.getElementById("campoFiltroAno");
+let dashboardRequestId = 0;
+
+function mesAtualLocal() {
+    const agora = new Date();
+    return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function atualizarControlesPeriodo() {
+    const modo = filtroPeriodoSelect?.value || 'month';
+    if (campoFiltroMes) campoFiltroMes.hidden = modo !== 'month';
+    if (campoFiltroAno) campoFiltroAno.hidden = modo !== 'year';
+
+    const sufixo = modo === 'year' ? 'Ano' : modo === 'all' ? 'Todo período' : 'Mês';
+    const rotulos = [
+        ['labelRecebidoDashboard', `Recebido (${sufixo})`],
+        ['labelPendenteDashboard', `A Receber (${sufixo})`],
+        ['labelDespesasDashboard', `Despesas (${sufixo})`],
+        ['labelLucroDashboard', `Lucro Líquido (${sufixo})`]
+    ];
+    rotulos.forEach(([id, texto]) => {
+        const elemento = document.getElementById(id);
+        if (elemento) elemento.textContent = texto;
+    });
+
+    const badge = document.getElementById('badgePeriodo');
+    const badgeTexto = document.getElementById('textoBadgePeriodo');
+    if (badge && badgeTexto) {
+        let texto = '';
+        if (modo === 'month') {
+            const [ano, mes] = String(filtroMesInput?.value || '').split('-');
+            const nome = mes ? MESES_PT[Number(mes) - 1] : '';
+            texto = nome ? `${nome.charAt(0).toUpperCase() + nome.slice(1)} de ${ano}` : 'Mês atual';
+        } else if (modo === 'year') {
+            texto = filtroAnoInput?.value ? `Ano ${filtroAnoInput.value}` : 'Ano atual';
+        } else {
+            texto = 'Todo o período';
+        }
+        badgeTexto.textContent = texto;
+    }
+
+    const tituloComparacao = document.getElementById('tituloComparacao');
+    if (tituloComparacao) {
+        tituloComparacao.textContent = modo === 'year'
+            ? 'Comparação com o Ano Anterior'
+            : modo === 'all'
+                ? 'Resumo de Todo o Histórico'
+                : 'Comparação com o Mês Anterior';
+    }
+}
 
 // --- NOVO: PROTEÇÃO DE ROTA (EVITA O FLASH) ---
 async function verificarSessao() {
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
-        window.location.href = "login.html";
+        window.location.href = "login";
         return;
     } 
 
@@ -18,10 +71,9 @@ async function verificarSessao() {
     document.body.classList.add("auth-ready");
 
     // Agora sim, carrega o resto sem pressa
-    if (filtroMesInput && !filtroMesInput.value) {
-        const agora = new Date();
-        filtroMesInput.value = agora.toISOString().substring(0, 7);
-    }
+    if (filtroMesInput && !filtroMesInput.value) filtroMesInput.value = mesAtualLocal();
+    if (filtroAnoInput && !filtroAnoInput.value) filtroAnoInput.value = String(new Date().getFullYear());
+    atualizarControlesPeriodo();
     
     carregarDadosUsuario();
     carregarDashboard();
@@ -55,13 +107,24 @@ async function carregarDadosUsuario() {
 // então o "Saldo Geral" ficava errado em silêncio assim que o usuário
 // passava desse volume. Agora o Postgres agrega e devolve pronto.
 async function carregarDashboard() {
-    if (!filtroMesInput) return;
-    const mesSel = filtroMesInput.value;
-    if (!mesSel) return;
+    if (!filtroMesInput || !filtroPeriodoSelect) return;
+    const modo = filtroPeriodoSelect.value;
+    const periodoSelecionado = modo === 'all'
+        ? 'all'
+        : modo === 'year'
+            ? filtroAnoInput?.value
+            : filtroMesInput.value;
+    if (!periodoSelecionado) return;
+    if (modo === 'year' && (!filtroAnoInput?.validity.valid || !/^\d{4}$/.test(periodoSelecionado))) {
+        filtroAnoInput?.reportValidity();
+        return;
+    }
+    const requestId = ++dashboardRequestId;
 
     try {
-        const { data: resumo, error } = await supabase.rpc('dashboard_resumo', { p_mes: mesSel });
+        const { data: resumo, error } = await supabase.rpc('dashboard_resumo', { p_mes: periodoSelecionado });
         if (error) throw error;
+        if (requestId !== dashboardRequestId) return;
         if (!resumo || resumo.erro) return;
 
         const mes = resumo.mes || {};
@@ -107,11 +170,12 @@ async function carregarDashboard() {
         } catch (e) {
             console.error("Erro ao calcular saldo consolidado:", e);
         }
+        if (requestId !== dashboardRequestId) return;
 
         renderizarMovimentacoes(resumo.ultimas_movimentacoes || []);
         atualizarListaHistorica(serie);
-        renderizarGraficos(serie, resumo.donut || []);
-        renderizarComparacao(mes, resumo.mes_anterior || {});
+        renderizarGraficos(serie, resumo.donut || [], modo);
+        renderizarComparacao(mes, resumo.mes_anterior || {}, modo);
 
     } catch (err) {
         console.error("Erro ao processar dashboard:", err);
@@ -130,7 +194,7 @@ function renderizarMovimentacoes(movs) {
     if (!lista) return;
 
     if (!movs.length) {
-        lista.innerHTML = '<p style="text-align:center; color:var(--texto-faint); padding: 1rem;">Nenhuma movimentação no mês.</p>';
+        lista.innerHTML = '<p style="text-align:center; color:var(--texto-faint); padding: 1rem;">Nenhuma movimentação no período.</p>';
         return;
     }
 
@@ -163,9 +227,12 @@ function atualizarListaHistorica(serie) {
 
     container.innerHTML = serie.slice().reverse().map(item => {
         const lucro = Number(item.lucro || 0);
+        const rotulo = /^\d{4}-\d{2}$/.test(String(item.mes))
+            ? rotuloMesExtenso(item.mes)
+            : (item.label || item.mes);
         return `
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--borda-cor); padding: 0.8rem 0;">
-                <span style="color: var(--texto-secundario); text-transform: capitalize; font-size: 0.85rem;">${esc(rotuloMesExtenso(item.mes))}</span>
+                <span style="color: var(--texto-secundario); text-transform: capitalize; font-size: 0.85rem;">${esc(rotulo)}</span>
                 <span style="color: ${lucro >= 0 ? 'var(--cor-sucesso)' : 'var(--cor-erro)'}; font-weight: 700; font-size: 0.9rem;">
                     R$ ${lucro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
@@ -188,16 +255,16 @@ function getCssVar(name) {
 
 // Os gráficos agora recebem a série já agregada pelo Postgres, em vez
 // de reagrupar milhares de linhas no navegador a cada troca de mês.
-function renderizarGraficos(serie, donut) {
+function renderizarGraficos(serie, donut, modo) {
     destroyCharts();
 
     const textoCor = getCssVar('--texto-faint') || '#8a9aa9';
     const gridCor = getCssVar('--borda-cor') || '#26364e';
     const surfaceCor = getCssVar('--fundo-card') || '#162031';
-    const accentCor = getCssVar('--cor-primaria') || '#1fa6fc';
-    const posCor = getCssVar('--cor-sucesso') || '#00e575';
-    const negCor = getCssVar('--cor-erro') || '#ff3b30';
-    const warnCor = getCssVar('--cor-alerta') || '#ff9100';
+    const accentCor = getCssVar('--cor-primaria') || '#3b82f6';
+    const posCor = getCssVar('--cor-sucesso') || '#10b981';
+    const negCor = getCssVar('--cor-erro') || '#f43f5e';
+    const warnCor = getCssVar('--cor-alerta') || '#f59e0b';
 
     const baseOpts = {
         responsive: true,
@@ -213,7 +280,7 @@ function renderizarGraficos(serie, donut) {
         }
     };
 
-    const ultimos = serie.slice(-6);
+    const ultimos = modo === 'month' ? serie.slice(-6) : serie;
     const mesesLabels = ultimos.map(s => s.label);
 
     // --- Receitas x Despesas (barras mensais) ---
@@ -273,7 +340,7 @@ function renderizarGraficos(serie, donut) {
     // --- Donut de vendas por produto ---
     const ctxDonut = document.getElementById('chDonut');
     if (ctxDonut && donut.length) {
-        const palette = [accentCor, '#8b5cf6', posCor, warnCor, '#ec4899', '#64748b', '#14b8a6', '#f97316'];
+        const palette = [accentCor, '#8b5cf6', posCor, warnCor, '#ec4899', '#6b7a90', '#14b8a6', '#f97316'];
         charts['chDonut'] = new Chart(ctxDonut, {
             type: 'doughnut',
             data: {
@@ -300,10 +367,17 @@ function renderizarGraficos(serie, donut) {
     }
 }
 
-function renderizarComparacao(mes, mesAnterior) {
+function renderizarComparacao(mes, mesAnterior, modo) {
     const insightEl = document.getElementById('insightComparacao');
     const gridEl = document.getElementById('comparacaoGrid');
     if (!insightEl || !gridEl) return;
+
+    if (modo === 'all') {
+        insightEl.innerHTML = '<i data-lucide="info"></i><div>Os valores consideram todo o histórico de vendas e despesas registradas.</div>';
+        gridEl.innerHTML = '';
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
 
     const entAtual = Number(mes.entradas || 0);
     const lucroAtual = Number(mes.lucro || 0);
@@ -315,11 +389,12 @@ function renderizarComparacao(mes, mesAnterior) {
         const nome = MESES_PT[Number(m) - 1];
         return nome ? nome.charAt(0).toUpperCase() + nome.slice(1) : (ref || '');
     };
-    const mesAtualLabel = rotulo(mes.referencia);
-    const mesAntLabel = rotulo(mesAnterior.referencia);
+    const mesAtualLabel = modo === 'year' ? String(mes.referencia || '') : rotulo(mes.referencia);
+    const mesAntLabel = modo === 'year' ? String(mesAnterior.referencia || '') : rotulo(mesAnterior.referencia);
 
     if (lucroAnt === 0 && lucroAtual === 0) {
-        insightEl.innerHTML = '<i data-lucide="info"></i><div>Dados insuficientes para comparação entre meses.</div>';
+        const unidade = modo === 'year' ? 'anos' : 'meses';
+        insightEl.innerHTML = `<i data-lucide="info"></i><div>Dados insuficientes para comparação entre ${unidade}.</div>`;
         if (window.lucide) lucide.createIcons();
         gridEl.innerHTML = '';
         return;
@@ -368,12 +443,24 @@ function renderizarComparacao(mes, mesAnterior) {
 
 // Ligar o botão de resetar mês
 document.getElementById("btnLimparFiltro")?.addEventListener("click", () => {
-    const agora = new Date();
-    filtroMesInput.value = agora.toISOString().substring(0, 7);
+    if (filtroPeriodoSelect) filtroPeriodoSelect.value = 'month';
+    filtroMesInput.value = mesAtualLocal();
+    atualizarControlesPeriodo();
     carregarDashboard();
 });
 
-filtroMesInput?.addEventListener("change", carregarDashboard);
+filtroPeriodoSelect?.addEventListener("change", () => {
+    atualizarControlesPeriodo();
+    carregarDashboard();
+});
+filtroMesInput?.addEventListener("change", () => {
+    atualizarControlesPeriodo();
+    carregarDashboard();
+});
+filtroAnoInput?.addEventListener("change", () => {
+    atualizarControlesPeriodo();
+    carregarDashboard();
+});
 
 // Cards velhos ao voltar para a tela: o botão "voltar" (bfcache) e
 // abas que ficaram abertas restauram a página sem refazer a consulta —
@@ -395,14 +482,14 @@ window.abrirRelatorioAnalitico = async function() {
     const statusObj = await verificarStatusPlano();
     if (!statusObj.premium) {
         mostrarModal('Recurso Premium', 'O módulo de Relatórios de BI Avançados está disponível apenas para assinantes Premium. Faça o upgrade agora!', 'alerta');
-        setTimeout(() => { window.location.href = "planos.html"; }, 2000);
+        setTimeout(() => { window.location.href = "planos"; }, 2000);
         return;
     }
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
         mostrarModal('Faça login', 'Por favor, faça login para acessar seus relatórios.');
-        setTimeout(() => { window.location.href = "login.html"; }, 2000);
+        setTimeout(() => { window.location.href = "login"; }, 2000);
         return;
     }
 

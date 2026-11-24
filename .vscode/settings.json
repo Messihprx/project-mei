@@ -10,5 +10,6 @@
         },
         "npx supabase": true
     },
-    "liveServer.settings.port": 3001
+    "liveServer.settings.port": 3001,
+    "python.terminal.useEnvFile": true
 }

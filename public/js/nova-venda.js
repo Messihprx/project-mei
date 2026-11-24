@@ -165,7 +165,7 @@ if (formNovaVenda) {
             invalidarCachePlano();
 
             mostrarModal('Venda registrada!', 'Sua venda foi registrada com sucesso.', 'sucesso');
-            setTimeout(() => { window.location.href = "vendas.html"; }, 1500);
+            setTimeout(() => { window.location.href = "vendas"; }, 1500);
 
         } catch (err) {
             mostrarModal('Erro ao registrar venda', traduzirErro(err.message));

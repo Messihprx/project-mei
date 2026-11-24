@@ -16,15 +16,15 @@
 const BASE = new URL('./', self.location.href);
 const paraUrl = (caminho) => new URL(caminho, BASE).href;
 
-const VERSAO = 'finmei-v3';
+const VERSAO = 'finmei-v5';
 const CACHE_CASCA = `casca-${VERSAO}`;
-const OFFLINE_URL = paraUrl('offline.html');
+const OFFLINE_URL = paraUrl('offline');
 const ADMIN_URL = paraUrl('admin/');
 
 // Arquivos da casca. Se algum falhar, a instalação não é abortada:
 // um 404 aqui não pode impedir o app de funcionar.
 const CASCA = [
-  'offline.html',
+  'offline',
   'css/style.css',
   'manifest.json',
   'icon_mei.ico',
@@ -53,6 +53,11 @@ function podeCachear(url) {
   if (url.origin !== self.location.origin) return false;
   if (!url.href.startsWith(BASE.href)) return false;      // fora do escopo do app
   if (url.href.startsWith(ADMIN_URL)) return false;       // painel admin fora do cache
+
+  // O código de autenticação sempre vem da rede. Uma versão antiga em
+  // cache poderia esconder a página ou não liberar o auth-guard.
+  if (/\/(auth|auth-guard)\.js$/.test(url.pathname)) return false;
+
   return /\.(css|js|png|jpg|jpeg|svg|ico|webp|woff2?)$/i.test(url.pathname);
 }
 
@@ -72,7 +77,19 @@ self.addEventListener('fetch', (evento) => {
   if (req.mode === 'navigate') {
     evento.respondWith((async () => {
       try {
-        return await fetch(req);
+        const resp = await fetch(req);
+        if (resp.status !== 404) return resp;
+
+        // Servidor sem clean URLs (Live Server, por exemplo): a rota
+        // chega sem .html e não existe como arquivo. Tenta o .html
+        // equivalente mantendo a URL limpa no navegador.
+        const url = new URL(req.url);
+        if (!url.pathname.endsWith('/') && !/\.[a-z0-9]+$/i.test(url.pathname)) {
+          url.pathname += '.html';
+          const alternativo = await fetch(url);
+          if (alternativo.ok) return alternativo;
+        }
+        return resp;
       } catch {
         const cache = await caches.open(CACHE_CASCA);
         return (await cache.match(OFFLINE_URL)) || new Response(

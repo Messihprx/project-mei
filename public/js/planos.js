@@ -174,8 +174,8 @@ export async function assinarPlanoPremium(emailDoUsuario) {
 
 export async function injetarBannerPlano() {
     // Não injeta em páginas não-protegidas
-    const paginasPublicas = ["login.html", "cadastro.html", "recuperar.html", "redefinir-senha.html", "planos.html"];
-    const paginaAtual = window.location.pathname.split("/").pop() || "index.html";
+    const paginasPublicas = ["login", "cadastro", "recuperar", "redefinir-senha", "planos"];
+    const paginaAtual = (window.location.pathname.split("/").pop() || "index").split(".")[0];
     if (paginasPublicas.includes(paginaAtual)) return;
 
     const status = await verificarStatusPlano();
@@ -203,7 +203,7 @@ export async function injetarBannerPlano() {
         }
 
         // Card bonitinho na tela principal (Dashboard)
-        if (paginaAtual === "index.html") {
+        if (paginaAtual === "index") {
             const contentWrapper = document.querySelector('.content-wrapper');
             if (contentWrapper && !document.getElementById('card-status-premium')) {
                 const card = document.createElement('div');
@@ -236,7 +236,7 @@ export async function injetarBannerPlano() {
                     </div>
                     <div style="text-align: right;">
                         ${cancelada
-                            ? `<a href="planos.html" class="btn-upgrade" style="font-size:0.75rem;">Reativar</a>`
+                            ? `<a href="planos" class="btn-upgrade" style="font-size:0.75rem;">Reativar</a>`
                             : `<span style="font-size: 0.7rem; color: var(--cor-primaria); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Status: Ativo</span>`}
                     </div>
                 `;
@@ -254,7 +254,7 @@ export async function injetarBannerPlano() {
                 
                 banner.innerHTML = `
                     <span class="notice-banner-text"><i data-lucide="alert-circle" style="width: 18px; position:relative; top:3px;"></i> Sua assinatura Premium expira em ${status.diasRestantesPremium} dia(s).</span>
-                    <a href="planos.html" class="btn-upgrade">Renovar Agora</a>
+                    <a href="planos" class="btn-upgrade">Renovar Agora</a>
                 `;
                 mainContent.prepend(banner);
             }
@@ -348,7 +348,7 @@ export async function injetarBannerPlano() {
                 Seu período gratuito expirou
             </span>
             <span class="trial-divider"></span>
-            <a href="planos.html" class="trial-btn">Assinar Premium</a>
+            <a href="planos" class="trial-btn">Assinar Premium</a>
         `;
     } else {
         const dias = status.diasRestantes;
@@ -365,7 +365,7 @@ export async function injetarBannerPlano() {
                 Teste gratuito — <span style="font-weight:800">${dias} dia${dias !== 1 ? 's' : ''}</span> restante${dias !== 1 ? 's' : ''}
             </span>
             <span class="trial-divider"></span>
-            <a href="planos.html" class="trial-btn">Ver planos</a>
+            <a href="planos" class="trial-btn">Ver planos</a>
         `;
     }
 
@@ -381,10 +381,10 @@ window.abrirImportacao = async function() {
     const status = await verificarStatusPlano();
     if (!status.premium) {
         mostrarModal('Recurso Premium', 'O módulo de importação em massa de dados via CSV é exclusivo para assinantes Premium. Faça o upgrade agora!', 'alerta');
-        setTimeout(() => { window.location.href = "planos.html"; }, 2000);
+        setTimeout(() => { window.location.href = "planos"; }, 2000);
         return;
     }
-    window.location.href = "importar.html";
+    window.location.href = "importar";
 };
 
 export async function protegerAcao(formId, tipoOperacao = 'none') {
@@ -399,7 +399,7 @@ export async function protegerAcao(formId, tipoOperacao = 'none') {
     // 1. Bloqueio por Teste Expirado (se não for premium)
     if (status.expirado) {
         bloqueio = true;
-        mensagemBloqueio = `<i data-lucide="lock" style="width: 18px; position:relative; top:3px;"></i> <b>Ação Bloqueada:</b> Seu período gratuito finalizou. <a href="planos.html" style="color: #ef4444; text-decoration: underline;">Faça o upgrade agora</a> para continuar utilizando.`;
+        mensagemBloqueio = `<i data-lucide="lock" style="width: 18px; position:relative; top:3px;"></i> <b>Ação Bloqueada:</b> Seu período gratuito finalizou. <a href="planos" style="color: #ef4444; text-decoration: underline;">Faça o upgrade agora</a> para continuar utilizando.`;
     }
     // 2. Bloqueio por limite de entidades do plano
     //    Os números vêm de plano_limites (editável no painel admin) via
@@ -427,7 +427,7 @@ export async function protegerAcao(formId, tipoOperacao = 'none') {
 
                 if (usado >= max) {
                     bloqueio = true;
-                    mensagemBloqueio = `<i data-lucide="${item.icone}" style="width: 18px; position:relative; top:3px;"></i> <b>Limite Atingido:</b> O plano gratuito permite até ${max} ${item.rotulo}. <a href="planos.html" style="color: #ef4444; text-decoration: underline;">Seja Premium</a> para uso ilimitado!`;
+                    mensagemBloqueio = `<i data-lucide="${item.icone}" style="width: 18px; position:relative; top:3px;"></i> <b>Limite Atingido:</b> O plano gratuito permite até ${max} ${item.rotulo}. <a href="planos" style="color: #ef4444; text-decoration: underline;">Seja Premium</a> para uso ilimitado!`;
                 } else {
                     resmsg = `<b>Uso do Plano Gratuito:</b> ${usado} de ${max} ${item.rotulo}.`;
                 }

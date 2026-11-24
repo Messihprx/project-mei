@@ -7,7 +7,7 @@
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
     <link rel="stylesheet" href="css/style.css">
     <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
-    <meta name="theme-color" content="#0b1120">
+    <meta name="theme-color" content="#080c16">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <script>
@@ -54,7 +54,7 @@
             <button type="button" class="btn-login" onclick="verificarConfirmacao()" style="margin-top: 1rem;">Já confirmei meu e-mail</button>
 
             <p class="cadastro-link">
-                Não recebeu? <a href="cadastro.html">Tente novamente</a> · <a href="login.html">Voltar para o login</a>
+                Não recebeu? <a href="cadastro">Tente novamente</a> · <a href="login">Voltar para o login</a>
             </p>
         </div>
     </div>
@@ -69,7 +69,7 @@
             if (session) {
                 statusTexto.textContent = 'E-mail confirmado! Entrando...';
                 statusTexto.style.color = 'var(--cor-sucesso)';
-                setTimeout(() => { window.location.href = "index.html"; }, 800);
+                setTimeout(() => { window.location.href = "./"; }, 800);
                 return true;
             }
 
@@ -80,7 +80,7 @@
                     if (confirmado) {
                         statusTexto.textContent = 'E-mail confirmado! Entrando...';
                         statusTexto.style.color = 'var(--cor-sucesso)';
-                        setTimeout(() => { window.location.href = "login.html?confirmado=1"; }, 1200);
+                        setTimeout(() => { window.location.href = "login?confirmado=1"; }, 1200);
                         return true;
                     }
                 } catch (err) {

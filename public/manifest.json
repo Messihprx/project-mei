@@ -2,12 +2,12 @@
   "name": "FinMEI — Gestão Financeira para MEI",
   "short_name": "FinMEI",
   "description": "Controle de vendas, gastos, clientes e fluxo de caixa para microempreendedores.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0b1120",
-  "theme_color": "#0b1120",
+  "background_color": "#080c16",
+  "theme_color": "#080c16",
   "lang": "pt-BR",
   "categories": [
     "business",
@@ -37,15 +37,15 @@
   "shortcuts": [
     {
       "name": "Nova venda",
-      "url": "./nova-venda.html"
+      "url": "./nova-venda"
     },
     {
       "name": "Novo gasto",
-      "url": "./gastos.html"
+      "url": "./gastos"
     },
     {
       "name": "Assistente IA",
-      "url": "./ia.html"
+      "url": "./ia"
     }
   ]
 }

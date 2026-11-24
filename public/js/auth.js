@@ -18,11 +18,51 @@ export { supabase };
 //
 // Resolver relativo à página atual acerta nos dois casos, sem
 // configuração e sem precisar mexer no código ao publicar:
-//   .../public/login.html  ->  .../public/pagina.html
-//   .../login.html         ->  .../pagina.html
+//   .../public/login  ->  .../public/pagina
+//   .../login         ->  .../pagina
 export function urlDoApp(pagina) {
     return new URL(pagina, window.location.href).href;
 }
+
+// ------------------------------------------------------------------
+// TEMA CLARO / ESCURO (salvo em localStorage)
+// ------------------------------------------------------------------
+const TEMA_KEY = 'finmei_tema';
+const iconeTemaEl = document.getElementById('iconeTema');
+const textoTemaEl = document.getElementById('textoTema');
+
+function aplicarTema(tema) {
+    if (tema === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem(TEMA_KEY, 'light');
+        if (iconeTemaEl) iconeTemaEl.setAttribute('data-lucide', 'moon');
+        if (textoTemaEl) textoTemaEl.textContent = 'Modo escuro';
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem(TEMA_KEY, 'dark');
+        if (iconeTemaEl) iconeTemaEl.setAttribute('data-lucide', 'sun');
+        if (textoTemaEl) textoTemaEl.textContent = 'Modo claro';
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function toggleTema() {
+    const estaNoClaro = document.documentElement.getAttribute('data-theme') === 'light';
+    aplicarTema(estaNoClaro ? 'dark' : 'light');
+}
+
+// Aplica o tema salvo ao carregar a página
+const temaSalvo = localStorage.getItem(TEMA_KEY);
+if (temaSalvo === 'light') {
+    aplicarTema('light');
+} else if (!temaSalvo) {
+    // sem preferência: mantém escuro (padrão) e registra
+    localStorage.setItem(TEMA_KEY, 'dark');
+}
+
+// Expõe globalmente para o onclick do dropdown
+window.toggleTema = toggleTema;
+window.aplicarTema = aplicarTema;
 
 
 // --- FUNÇÕES DE VALIDAÇÃO ---
@@ -173,27 +213,37 @@ const isPaginaProtegida = !paginasPublicas.includes(paginaAtual);
 const temHashTokens = window.location.hash.includes('access_token');
 
 let initialSessionChecked = false;
+let paginaInicializada = false;
 
 function inicializarPagina(session) {
+    // O evento INITIAL_SESSION e a verificação manual podem chegar os
+    // dois com a mesma sessão; inicializa a tela uma única vez.
+    if (paginaInicializada) return;
+    paginaInicializada = true;
+
     injetarBannerPlano();
     inicializarMenuMobileGlobal();
 }
 
 function handleAuthRedirect(session) {
     if (session && isPaginaProtegida) {
+        // Sessão confirmada: libera a página escondida pelo auth-guard.js.
+        if (window.liberarPagina) window.liberarPagina();
         inicializarPagina(session);
     } else if (session && (paginaAtual === "login" || paginaAtual === "cadastro" || paginaAtual === "confirmar-email")) {
-        window.location.href = "index.html";
+        window.location.href = "./";
     } else if (!session && isPaginaProtegida && !temHashTokens && initialSessionChecked) {
-        window.location.href = "login.html";
+        // Sem sessão: a página continua escondida até sair daqui, para
+        // não piscar conteúdo protegido antes de ir para o login.
+        window.location.href = "login";
     }
 }
 
 // Escuta mudanças de autenticação PRIMEIRO (captura o retorno do Google)
 supabase.auth.onAuthStateChange((event, session) => {
     if (event === "PASSWORD_RECOVERY") {
-        if (window.location.pathname.includes("login.html") || window.location.pathname.includes("index.html")) {
-            window.location.href = "redefinir-senha.html";
+        if (paginaAtual === "login" || paginaAtual === "index") {
+            window.location.href = "redefinir-senha";
         }
         return;
     }
@@ -217,6 +267,14 @@ supabase.auth.onAuthStateChange((event, session) => {
     const { data: { session } } = await supabase.auth.getSession();
 
     initialSessionChecked = true;
+
+    // Veio com tokens na URL, mas o Supabase não conseguiu validar.
+    // Sem isso a página protegida ficaria escondida até o fallback.
+    if (!session && temHashTokens && isPaginaProtegida) {
+        window.location.href = "login";
+        return;
+    }
+
     handleAuthRedirect(session);
 })();
 
@@ -347,7 +405,7 @@ if (formCadastro) {
                 password: senha,
                 options: { 
                     data: { nome: nome },
-                    emailRedirectTo: urlDoApp('confirmar-email.html')
+                    emailRedirectTo: urlDoApp('confirmar-email')
                 }
             });
 
@@ -397,7 +455,7 @@ if (formCadastro) {
 
             // Sucesso
             localStorage.setItem('emailConfirmacao', email);
-            window.location.href = "confirmar-email.html";
+            window.location.href = "confirmar-email";
 
         } catch (err) {
             mostrarErro('formCadastro', 'Erro inesperado. Tente novamente mais tarde.');
@@ -442,7 +500,7 @@ if (formLogin) {
         if (error) {
             mostrarModal('Não foi possível entrar', traduzirErro(error.message));
         } else {
-            window.location.href = "index.html";
+            window.location.href = "./";
         }
     });
 }
@@ -452,7 +510,7 @@ const loginGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { 
-            redirectTo: urlDoApp('index.html'),
+            redirectTo: urlDoApp('./'),
             queryParams: {
                 access_type: 'offline',
                 prompt: 'select_account',
@@ -469,7 +527,7 @@ window.loginGoogle = loginGoogle;
 window.logout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) console.error("Erro ao sair:", error.message);
-    window.location.href = "login.html";
+    window.location.href = "login";
 };
 
 window.togglePassword = (id) => {
@@ -505,13 +563,13 @@ if (formRecuperar) {
 
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
                 // Para onde o usuário vai depois de clicar no e-mail (crie esta página depois)
-                redirectTo: urlDoApp('redefinir-senha.html'),
+                redirectTo: urlDoApp('redefinir-senha'),
             });
 
             if (error) throw error;
 
             mostrarModal('E-mail enviado!', 'Enviamos um link de redefinição para o seu e-mail. Verifique sua caixa de entrada (e o spam).', 'sucesso');
-            setTimeout(() => { window.location.href = "login.html"; }, 2500);
+            setTimeout(() => { window.location.href = "login"; }, 2500);
         } catch (err) {
             mostrarModal('Erro ao enviar', traduzirErro(err.message));
         } finally {
@@ -521,7 +579,7 @@ if (formRecuperar) {
     });
 }
 
-// 7. ATUALIZAR SENHA (Página redefinir-senha.html)
+// 7. ATUALIZAR SENHA (Página redefinir-senha)
 const formNovaSenha = document.getElementById("formNovaSenha");
 if (formNovaSenha) {
     formNovaSenha.addEventListener("submit", async (e) => {
@@ -551,7 +609,7 @@ if (formNovaSenha) {
             if (error) throw error;
 
             mostrarModal('Senha atualizada!', 'Sua senha foi alterada com sucesso. Você será redirecionado para o login.', 'sucesso');
-            setTimeout(() => { window.location.href = "login.html"; }, 2500);
+            setTimeout(() => { window.location.href = "login"; }, 2500);
         } catch (err) {
             mostrarModal('Erro ao atualizar', traduzirErro(err.message));
         } finally {

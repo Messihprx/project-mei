@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/auth-guard.js"></script>
     <title>Importar Dados | FinMEI fluxo inteligente</title>
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
     <link rel="stylesheet" href="css/style.css">
     <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <meta name="theme-color" content="#0b1120">
+    <meta name="theme-color" content="#080c16">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <script>
@@ -26,7 +27,7 @@
 
     <div class="container-importacao" style="max-width: 600px; margin: 2rem auto; padding: 0 1rem;">
         <header style="margin-bottom: 2rem;">
-            <a href="index.html" style="text-decoration: none; color: var(--cor-primaria); font-weight: 600; display: flex; align-items: center; gap: 5px;">
+            <a href="./" style="text-decoration: none; color: var(--cor-primaria); font-weight: 600; display: flex; align-items: center; gap: 5px;">
                 <i data-lucide="arrow-left"></i> Voltar ao Dashboard
             </a>
             <h2 style="margin-top: 1rem;">Importação Geral</h2>
@@ -37,7 +38,7 @@
             
             <div class="card" style="padding: 1.5rem;">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.8rem;">
-                    <span style="background: linear-gradient(135deg, var(--cor-primaria), #0b6fd1); color: white; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.75rem; box-shadow: 0 2px 8px rgba(31,166,252,.3);">1</span>
+                    <span style="background: linear-gradient(135deg, var(--cor-primaria), #1d4ed8); color: white; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.75rem; box-shadow: 0 2px 8px rgba(59,130,246,.3);">1</span>
                     <h4 style="margin:0; font-size: 0.95rem; font-weight: 600;">Clientes</h4>
                 </div>
                 <p style="font-size: 0.8rem; color: var(--texto-secundario); margin-bottom: 0.8rem;">Importe primeiro os clientes para que as vendas possam ser vinculadas a eles.</p>
@@ -50,7 +51,7 @@
 
             <div class="card" style="padding: 1.5rem;">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.8rem;">
-                    <span style="background: linear-gradient(135deg, var(--cor-primaria), #0b6fd1); color: white; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.75rem; box-shadow: 0 2px 8px rgba(31,166,252,.3);">2</span>
+                    <span style="background: linear-gradient(135deg, var(--cor-primaria), #1d4ed8); color: white; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.75rem; box-shadow: 0 2px 8px rgba(59,130,246,.3);">2</span>
                     <h4 style="margin:0; font-size: 0.95rem; font-weight: 600;">Gastos (Despesas)</h4>
                 </div>
                 <input type="file" id="csvGastos" accept=".csv,.txt" style="display: none;">
@@ -62,7 +63,7 @@
 
             <div class="card" style="padding: 1.5rem;">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 0.8rem;">
-                    <span style="background: linear-gradient(135deg, var(--cor-primaria), #0b6fd1); color: white; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.75rem; box-shadow: 0 2px 8px rgba(31,166,252,.3);">3</span>
+                    <span style="background: linear-gradient(135deg, var(--cor-primaria), #1d4ed8); color: white; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 0.75rem; box-shadow: 0 2px 8px rgba(59,130,246,.3);">3</span>
                     <h4 style="margin:0; font-size: 0.95rem; font-weight: 600;">Vendas</h4>
                 </div>
                 <p style="font-size: 0.8rem; color: var(--texto-secundario); margin-bottom: 0.8rem;">As vendas serão conectadas aos clientes pelo nome automaticamente.</p>
@@ -179,7 +180,7 @@
             const status = await verificarStatusPlano();
             if (!status.premium) {
                 mostrarModal('Recurso Premium', 'O módulo de importação de dados em massa é exclusivo para assinantes Premium. Faça o upgrade agora!', 'alerta');
-                setTimeout(() => { window.location.href = "planos.html"; }, 2000);
+                setTimeout(() => { window.location.href = "planos"; }, 2000);
             }
         })();
 

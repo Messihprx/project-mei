@@ -10,36 +10,40 @@
     // publica a pasta public como raiz do site (é o caso do Netlify, ver
     // netlify.toml), ele nem chega a ser servido.
     //
-    // Mesmo assim ele se vira sozinho nos dois casos: tenta public/ e,
-    // se não existir, cai para o mesmo diretório. Assim não é preciso
-    // editar nada ao publicar.
+    // Mesmo assim ele se vira sozinho nos dois casos: tenta a rota limpa
+    // (servidores com clean URLs) e, se não existir, o .html (Live Server
+    // e afins). Assim não é preciso editar nada ao publicar.
     (function () {
-      var comPublic = 'public/login.html';
-      var semPublic = 'login.html';
+      var candidatos = ['public/login', 'public/login.html', 'login', 'login.html'];
 
       // Sem fetch (file:// em navegador antigo) fica no padrão local
       if (typeof fetch !== 'function') {
-        location.replace(comPublic);
+        location.replace('public/login.html');
         return;
       }
 
-      fetch(comPublic, { method: 'HEAD' })
-        .then(function (r) {
-          location.replace(r.ok ? comPublic : semPublic);
-        })
-        .catch(function () {
-          // file:// bloqueia o fetch: mantém o caminho local, que é o
-          // único cenário em que este arquivo é aberto direto do disco.
-          location.replace(comPublic);
-        });
+      function tentar(i) {
+        if (i >= candidatos.length) {
+          location.replace('public/login.html');
+          return;
+        }
+        fetch(candidatos[i], { method: 'HEAD' })
+          .then(function (r) {
+            if (r.ok) location.replace(candidatos[i]);
+            else tentar(i + 1);
+          })
+          .catch(function () { tentar(i + 1); });
+      }
+
+      tentar(0);
     })();
   </script>
 </head>
 
 <body>
   <noscript>
-    <p>Abra <a href="public/login.html">public/login.html</a> (projeto local)
-      ou <a href="login.html">login.html</a> (site publicado).</p>
+    <p>Abra <a href="public/login">public/login</a> (projeto local)
+      ou <a href="login">login</a> (site publicado).</p>
   </noscript>
 </body>
 

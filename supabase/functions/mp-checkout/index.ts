@@ -70,9 +70,9 @@ serve(async (req) => {
     // Busca config do gateway no banco de dados
     let accessToken = Deno.env.get("MP_ACCESS_TOKEN");
     let webhookUrl = "https://grszaitpgnyrbxktxauc.supabase.co/functions/v1/mp-webhook";
-    let successUrl = base + "checkout_sucesso.html";
-    let failureUrl = base + "checkout_erro.html";
-    let pendingUrl = base + "checkout_pendente.html";
+    let successUrl = base + "checkout_sucesso";
+    let failureUrl = base + "checkout_erro";
+    let pendingUrl = base + "checkout_pendente";
     let price = 15.90;
     let maxInstallments = 12;
     let planDescription = "Assinatura Premium FinMEI";

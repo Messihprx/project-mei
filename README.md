@@ -44,7 +44,7 @@ pessoa não descobrir o bloqueio depois de digitar tudo.
 
 ```
 public/              o site. É a raiz publicada no Netlify
-  *.html             uma página por tela
+  *.html             uma página por tela (servida sem .html, ver netlify.toml)
   js/                um módulo por tela + utilitários compartilhados
   css/style.css      design system (tokens em :root)
   admin/             painel administrativo, isolado do resto
@@ -57,6 +57,9 @@ email-templates/     HTML dos e-mails, colado no painel do Supabase
 app.py               app de BI em Streamlit (deploy separado)
 estrutura.sql        referência do schema atual (não é para rodar)
 guia.md              como configurar e publicar
+netlify.toml         rotas limpas (sem .html) e headers
+serve.json           cleanUrls para o servidor local
+.env                 credenciais do banco (fora do git)
 ```
 
 ### Os módulos JavaScript
@@ -83,34 +86,56 @@ módulo ES, então as funções precisam ser globais.
 
 ## Rodando local
 
-Não há build. Sirva a pasta do projeto com qualquer servidor estático:
+Não há build. Sirva a pasta do projeto com um servidor que entenda rotas
+limpas (sem `.html`):
 
 ```bash
-npx serve .          # ou a extensão Live Server do VS Code
+npx serve .
 ```
 
-Abra `http://127.0.0.1:5500` (ou a porta que aparecer). O `index.html` da raiz
-detecta sozinho onde está e redireciona para `public/login.html`.
+O [serve.json](serve.json) já liga o `cleanUrls`. Abra
+`http://127.0.0.1:3000` (ou a porta que aparecer). O `index.html` da raiz
+detecta sozinho onde está e redireciona para `public/login`.
+
+> O **Live Server** do VS Code não reescreve rotas sem `.html`. O service
+> worker cobre a navegação depois de ativado, mas o jeito mais previsível
+> de testar localmente é `npx serve .` (já com `cleanUrls`).
 
 **Um passo obrigatório no Supabase**, senão o login com Google e os links de
 e-mail falham só na sua máquina:
 
 > Authentication → URL Configuration → Redirect URLs
 > ```
+> http://127.0.0.1:3000/public/**
 > http://127.0.0.1:5500/public/**
 > https://SEU-SITE.netlify.app/**
 > ```
 
 ### Por que funciona local e publicado sem trocar nada
 
-No Netlify a pasta `public/` vira a raiz do site (`/login.html`); local ela é
-uma subpasta (`/public/login.html`). Nenhum caminho está fixo no código:
+No Netlify a pasta `public/` vira a raiz do site (`/login`); local ela é
+uma subpasta (`/public/login`). Nenhum caminho está fixo no código:
 
 - os redirects de auth usam `urlDoApp()`, que resolve relativo à página atual
 - o `manifest.json` usa caminhos relativos a ele mesmo
 - o `sw.js` deriva o escopo do próprio endereço
 - as URLs de retorno do pagamento vêm do site que fez a chamada, validadas
   contra o header `Origin`
+
+### Credenciais do banco (`.env`)
+
+O arquivo `.env` (fora do git, já listado no `.gitignore`) guarda as
+credenciais para consultar e alterar o banco diretamente. Preencha:
+
+```dotenv
+SUPABASE_URL=https://SEU_PROJECT_ID.supabase.co
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+DATABASE_URL=postgresql://postgres:SENHA@db.SEU_PROJECT_ID.supabase.co:5432/postgres
+```
+
+`DATABASE_URL` é a conexão direta do Postgres (Project Settings → Database →
+Connection string → URI) e serve para rodar SQL/DDL sem passar pela API.
 
 ---
 
@@ -161,7 +186,7 @@ registrado no log da função.
 
 ## Painel administrativo
 
-Em `/admin/admin-login.html`, restrito a `perfis.role = 'admin'`.
+Em `/admin/admin-login`, restrito a `perfis.role = 'admin'`.
 
 | Aba | Para quê |
 |---|---|

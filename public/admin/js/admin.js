@@ -24,20 +24,20 @@ function saveSession(s) {
 function logout() {
   localStorage.removeItem(SESSION_KEY);
   supabase?.auth.signOut();
-  location.href = 'admin-login.html';
+  location.href = 'admin-login';
 }
 
 // Protege o painel e exige usuário administrador.
 async function requireAdmin() {
   if (!supabase) {
-    location.href = 'admin-login.html';
+    location.href = 'admin-login';
     return false;
   }
 
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
-    location.href = 'admin-login.html';
+    location.href = 'admin-login';
     return false;
   }
 
@@ -116,7 +116,7 @@ async function doLogin() {
     };
 
     saveSession(SESSION);
-    location.href = 'admin.html';
+    location.href = 'admin';
   } catch (e) {
     msg.className = 'form-msg err';
     msg.textContent = e.message || 'Credenciais inválidas.';
@@ -2040,7 +2040,7 @@ async function renderGateway() {
             </div>
           </div>
 
-          <div style="margin-top:8px;padding:12px;background:var(--accent-soft);border:1px solid rgba(31,166,252,.18);border-radius:8px;font-size:12px;color:var(--accent-strong)">
+          <div style="margin-top:8px;padding:12px;background:var(--accent-soft);border:1px solid rgba(59,130,246,.18);border-radius:8px;font-size:12px;color:var(--accent-strong)">
             <strong>Como obter as credenciais:</strong><br>
             1. Acesse <a href="https://www.mercadopago.com.br/developers/pt/docs" target="_blank" style="text-decoration:underline">mercadopago.com.br/developers</a><br>
             2. Vá em <b>Credenciais</b> → copie o <b>Access Token</b> (produção)
@@ -2125,19 +2125,19 @@ async function renderGateway() {
           <div class="field">
             <label>URL de sucesso (após pagamento)</label>
             <input id="gwSuccessUrl" type="url" value="${esc(config?.success_url ?? '')}"
-              placeholder="https://seudominio.com/checkout_sucesso.html">
+              placeholder="https://seudominio.com/checkout_sucesso">
           </div>
 
           <div class="field">
             <label>URL de erro (falha no pagamento)</label>
             <input id="gwFailureUrl" type="url" value="${esc(config?.failure_url ?? '')}"
-              placeholder="https://seudominio.com/checkout_erro.html">
+              placeholder="https://seudominio.com/checkout_erro">
           </div>
 
           <div class="field">
             <label>URL pendente (pagamento aguardando)</label>
             <input id="gwPendingUrl" type="url" value="${esc(config?.pending_url ?? '')}"
-              placeholder="https://seudominio.com/checkout_pendente.html">
+              placeholder="https://seudominio.com/checkout_pendente">
           </div>
         </div>
 
@@ -2693,7 +2693,7 @@ async function renderAIProvedores() {
           </div>
         </div>
 
-        <div style="margin-top:12px;padding:12px;background:var(--accent-soft);border:1px solid rgba(31,166,252,.18);border-radius:8px;font-size:12px;color:var(--accent-strong)">
+        <div style="margin-top:12px;padding:12px;background:var(--accent-soft);border:1px solid rgba(59,130,246,.18);border-radius:8px;font-size:12px;color:var(--accent-strong)">
           <strong>Fallback automático:</strong> Se um provedor falhar, o sistema tenta o próximo na fila (ordenado por prioridade). Provedores com API compatível com OpenAI usam o tipo "openai-compatible".
         </div>
       </div>
@@ -2840,7 +2840,7 @@ async function init() {
 // Se já estiver autenticado como admin, vai direto para o painel.
 async function checkSession() {
   // Executa somente na página de login.
-  if (!location.pathname.endsWith('admin-login.html')) return;
+  if (!location.pathname.endsWith('admin-login')) return;
 
   if (!supabase) return;
 
@@ -2855,7 +2855,7 @@ async function checkSession() {
       .single();
 
     if (profile?.role === 'admin') {
-      location.href = 'admin.html';
+      location.href = 'admin';
     }
   } catch (e) {}
 }

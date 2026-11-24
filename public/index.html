@@ -3,7 +3,17 @@
 
 <head>
     <meta charset="UTF-8">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('finmei_tema') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { /* localStorage indisponível */ }
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/auth-guard.js"></script>
     <title>FinMEI | Gestão Financeira e Fluxo de Caixa para MEI</title>
 
     <meta name="description"
@@ -20,7 +30,7 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <meta name="theme-color" content="#0b1120">
+    <meta name="theme-color" content="#080c16">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <script>
@@ -48,41 +58,41 @@
         </div>
 
         <nav class="sidebar-nav">
-            <a href="index.html" class="nav-item active">
+            <a href="./" class="nav-item active">
                 <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
             </a>
-            <a href="vendas.html" class="nav-item">
+            <a href="vendas" class="nav-item">
                 <i data-lucide="shopping-cart"></i> <span>Vendas</span>
             </a>
-            <a href="gastos.html" class="nav-item">
+            <a href="gastos" class="nav-item">
                 <i data-lucide="trending-down"></i> <span>Gastos</span>
             </a>
-            <a href="contas.html" class="nav-item">
+            <a href="contas" class="nav-item">
                 <i data-lucide="wallet"></i> <span>Contas</span>
             </a>
-            <a href="clientes.html" class="nav-item">
+            <a href="clientes" class="nav-item">
                 <i data-lucide="users"></i> <span>Clientes</span>
             </a>
-            <a href="devendo.html" class="nav-item">
+            <a href="devendo" class="nav-item">
                 <i data-lucide="alert-circle"></i> <span>Devedores</span>
             </a>
-            <a href="produtos.html" class="nav-item">
+            <a href="produtos" class="nav-item">
                 <i data-lucide="package"></i> <span>Produtos</span>
             </a>
 
             <div class="sidebar-divider">ASSISTENTE</div>
-            <a href="ia.html" class="nav-item">
+            <a href="ia" class="nav-item">
                 <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
             </a>
 
             <div class="sidebar-divider">ATALHOS</div>
-            <a href="nova-venda.html" class="nav-item">
+            <a href="nova-venda" class="nav-item">
                 <i data-lucide="plus-circle"></i> <span>Nova Venda</span>
             </a>
-            <a href="novo-cliente.html" class="nav-item">
+            <a href="novo-cliente" class="nav-item">
                 <i data-lucide="user-plus"></i> <span>Novo Cliente</span>
             </a>
-            <a href="planos.html" class="nav-item">
+            <a href="planos" class="nav-item">
                 <i data-lucide="star"></i> <span>Ver Planos</span>
             </a>
 
@@ -91,9 +101,6 @@
             </button>
             <a href="#" onclick="abrirImportacao()" class="nav-item nav-item-mobile-custom">
                 <i data-lucide="database-backup"></i> <span>Importar dados</span>
-            </a>
-            <a href="#" onclick="logout()" class="nav-item-logout-mobile-item">
-                <i data-lucide="log-out"></i> <span>Sair</span>
             </a>
         </nav>
 
@@ -111,9 +118,9 @@
                 <p>Gerencie suas finanças em tempo real</p>
             </div>
             <div class="top-actions">
-                <a href="nova-venda.html" class="top-action-primary"><i data-lucide="plus"></i><span>Nova
+                <a href="nova-venda" class="top-action-primary"><i data-lucide="plus"></i><span>Nova
                         venda</span></a>
-                <a href="novo-cliente.html" class="top-action-secondary"><i data-lucide="user-plus"></i><span>Novo
+                <a href="novo-cliente" class="top-action-secondary"><i data-lucide="user-plus"></i><span>Novo
                         cliente</span></a>
                 <div class="user-info">
                     <div class="profile-dropdown">
@@ -130,45 +137,58 @@
                             <i data-lucide="bar-chart-2"></i> <span>Relatórios Avançados</span>
                         </a>
                         <div class="dropdown-divider"></div>
+                        <button id="btnToggleTema" class="dropdown-item" onclick="toggleTema()" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;padding:8px 12px;color:inherit;cursor:pointer;font:inherit;">
+                            <i id="iconeTema" data-lucide="sun"></i>
+                            <span id="textoTema">Modo escuro</span>
+                        </button>
                         <a href="#" onclick="logout()" class="dropdown-item logout">
                             <i data-lucide="log-out"></i> <span>Sair</span>
                         </a>
                     </div>
                     </div>
                 </div>
+            </div>
         </header>
 
         <section class="content-wrapper">
-            <div class="card-buscar dashboard-filtros-mobile dashboard-filtros-pc" style="margin-bottom: 1.5rem;">
-                <div class="filtro-mes-dashboard" style="display: flex; align-items: center; gap: 12px;">
-                    <div class="icon-venda pago"
-                        style="width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <i data-lucide="calendar" style="width: 18px;"></i>
-                    </div>
-                    <div>
-                        <label for="filtroMesDashboard"
-                            style="font-size: 0.72rem; color: var(--texto-faint); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Mês
-                            de Análise</label>
-                        <input type="month" id="filtroMesDashboard" class="input-mes input-mes-dashboard"
-                            style="border: none; padding: 0; background: transparent; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-top: 0;">
+            <div class="dashboard-toolbar dashboard-filtros-mobile">
+                <div class="toolbar-title">
+                    <span class="toolbar-icon"><i data-lucide="calendar"></i></span>
+                    <div class="period-filter-controls">
+                        <div class="period-filter-field">
+                            <label for="filtroTipoPeriodo">Período</label>
+                            <select id="filtroTipoPeriodo" class="dashboard-filter-select">
+                                <option value="month">Mês</option>
+                                <option value="year">Ano</option>
+                                <option value="all">Todo o período</option>
+                            </select>
+                        </div>
+                        <div id="campoFiltroMes" class="period-filter-field">
+                            <label for="filtroMesDashboard">Mês de análise</label>
+                            <input type="month" id="filtroMesDashboard" class="input-mes input-mes-dashboard">
+                        </div>
+                        <div id="campoFiltroAno" class="period-filter-field" hidden>
+                            <label for="filtroAnoDashboard">Ano de análise</label>
+                            <input type="number" id="filtroAnoDashboard" class="dashboard-filter-select"
+                                min="1900" max="2100" step="1" inputmode="numeric" required>
+                        </div>
                     </div>
                 </div>
-                <button id="btnLimparFiltro" class="btn-secondary"
-                    style="font-size: 0.78rem; padding: 0.45rem 0.9rem; white-space: nowrap;">
-                    Mês Atual
-                </button>
+                <span id="badgePeriodo" class="period-badge"><span class="badge-dot"></span><span id="textoBadgePeriodo">Mês atual</span></span>
+                <button id="btnLimparFiltro" class="btn-secondary">Mês atual</button>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 1rem;">
-                <i data-lucide="bar-chart-3" style="color: var(--cor-primaria); width: 18px;"></i>
-                <h4 style="color: var(--texto-principal); font-weight: 600; font-size: 0.95rem;">Desempenho no Período
-                </h4>
+            <div class="section-head">
+                <div class="section-title">
+                    <i data-lucide="bar-chart-3"></i>
+                    <h4>Desempenho no período</h4>
+                </div>
             </div>
 
             <div class="resumo-cards">
                 <div class="metric-card pos">
                     <span class="metric-label">
-                        <i data-lucide="trending-up"></i> Recebido (Mês)
+                        <i data-lucide="trending-up"></i> <span id="labelRecebidoDashboard">Recebido (Mês)</span>
                     </span>
                     <h2 id="totalEntradas" class="metric-value">R$ 0,00</h2>
                     <div class="metric-foot">Vendas já pagas</div>
@@ -176,7 +196,7 @@
 
                 <div class="metric-card warn">
                     <span class="metric-label">
-                        <i data-lucide="clock"></i> A Receber
+                        <i data-lucide="clock"></i> <span id="labelPendenteDashboard">A Receber (Mês)</span>
                     </span>
                     <h2 id="totalSaidas" class="metric-value">R$ 0,00</h2>
                     <div class="metric-foot">Vendas aguardando pgto</div>
@@ -184,7 +204,7 @@
 
                 <div class="metric-card neg">
                     <span class="metric-label">
-                        <i data-lucide="trending-down"></i> Despesas (Mês)
+                        <i data-lucide="trending-down"></i> <span id="labelDespesasDashboard">Despesas (Mês)</span>
                     </span>
                     <h2 id="totalGastosDashboard" class="metric-value">R$ 0,00</h2>
                     <div class="metric-foot">Gastos operacionais</div>
@@ -192,26 +212,27 @@
 
                 <div class="metric-card acc">
                     <span class="metric-label">
-                        <i data-lucide="target"></i> Lucro Líquido (Mês)
+                        <i data-lucide="target"></i> <span id="labelLucroDashboard">Lucro Líquido (Mês)</span>
                     </span>
                     <h2 id="lucroReal" class="metric-value">R$ 0,00</h2>
                     <div class="metric-foot">Recebido - Gastos</div>
                 </div>
             </div>
 
-            <div class="card highlight">
-                <div>
-                    <span class="metric-label" style="letter-spacing: 2px;">Saldo Geral Disponível</span>
-                    <p style="font-size: 0.78rem; color: var(--texto-faint); margin-top: 4px;">Patrimônio acumulado
-                        (Entradas Totais - Gastos Totais)</p>
+            <div class="saldo-grid">
+                <div class="card highlight">
+                    <div>
+                        <span class="metric-label">Saldo geral disponível</span>
+                        <p class="saldo-card-desc">Patrimônio acumulado (entradas totais - gastos totais)</p>
+                    </div>
+                    <h1 id="saldoGeralTotal" class="big">R$ 0,00</h1>
                 </div>
-                <h1 id="saldoGeralTotal" class="big">R$ 0,00</h1>
-            </div>
 
-            <div class="card" style="background: linear-gradient(135deg, var(--cor-primaria-soft), transparent); border: 1px solid var(--cor-primaria); text-align: center; padding: 1.2rem 1.5rem; margin-bottom: 30px;">
-                <span class="metric-label" style="letter-spacing: 2px;">SALDO CONSOLIDADO (Contas do Negócio)</span>
-                <p style="font-size: 0.78rem; color: var(--texto-faint); margin-top: 4px;">Soma dos saldos das contas classificadas como Negócio ou Misto</p>
-                <h2 id="saldoConsolidadoDashboard" style="font-size: 1.4rem; color: var(--cor-sucesso); margin: 0.3rem 0 0; font-family: 'Manrope', sans-serif;">R$ 0,00</h2>
+                <div class="card saldo-card">
+                    <span class="metric-label">Saldo consolidado</span>
+                    <p class="saldo-card-desc">Soma das contas classificadas como Negócio ou Misto</p>
+                    <h2 id="saldoConsolidadoDashboard" class="saldo-card-value">R$ 0,00</h2>
+                </div>
             </div>
 
             <!-- GRÁFICOS -->
@@ -246,7 +267,7 @@
                 </div>
 
                 <div class="card">
-                    <div class="chart-title" style="margin-bottom: 14px;">Comparação com o Mês Anterior</div>
+                    <div class="chart-title" id="tituloComparacao" style="margin-bottom: 14px;">Comparação com o Mês Anterior</div>
                     <div class="insight" id="insightComparacao" style="margin-bottom: 14px;">
                         <i data-lucide="info"></i>
                         <div>Carregando comparação...</div>
@@ -256,13 +277,13 @@
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 1.5rem;">
+            <div class="dashboard-bottom">
                 <section class="recentes" style="min-height: 400px;">
                     <div class="fluxo-cabecalho fluxo-cabecalho-mobile"
                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
                         <h3 class="titulo-fluxo chart-title" style="border: none; padding: 0;">Fluxo de Caixa
                             Recente</h3>
-                        <a href="vendas.html" class="link-ver-vendas"
+                        <a href="vendas" class="link-ver-vendas"
                             style="font-size: 0.75rem; color: var(--cor-primaria); text-decoration: none; font-weight: 600; display: block; text-align: center; width: 100%;">Ver
                             vendas</a>
                     </div>
@@ -271,7 +292,7 @@
                 </section>
 
                 <section class="recentes" style="min-height: 400px;">
-                    <h3 class="chart-title" style="border: none; padding: 0; margin-bottom: 1.5rem;">Histórico Mensal
+                    <h3 class="chart-title" id="tituloHistoricoPeriodo" style="border: none; padding: 0; margin-bottom: 1.5rem;">Histórico no tempo
                     </h3>
                     <div id="listaLucroMensal">
                     </div>

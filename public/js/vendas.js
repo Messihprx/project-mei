@@ -378,7 +378,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const status = await verificarStatusPlano();
             if (!status.premium) {
                 mostrarModal('Recurso Premium', 'A exportação de relatórios detalhados é um recurso exclusivo para assinantes Premium.', 'alerta');
-                setTimeout(() => { window.location.href = "planos.html"; }, 2000);
+                setTimeout(() => { window.location.href = "planos"; }, 2000);
                 return;
             }
 

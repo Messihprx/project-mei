@@ -81,7 +81,7 @@ serve(async (req) => {
       || "https://project-finmei-ub.netlify.app/";
     const backUrl = config?.back_url_assinatura
       || config?.success_url
-      || (baseAssinatura + "checkout_sucesso.html");
+      || (baseAssinatura + "checkout_sucesso");
 
     const mpFetch = (caminho: string, init: RequestInit = {}) =>
       fetch(`${MP_API}${caminho}`, {

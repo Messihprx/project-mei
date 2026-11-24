@@ -305,7 +305,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const status = await verificarStatusPlano();
             if (!status.premium) {
                 mostrarModal('Recurso Premium', 'A exportação de contatos é um recurso exclusivo para assinantes Premium.', 'alerta');
-                setTimeout(() => { window.location.href = "planos.html"; }, 2000);
+                setTimeout(() => { window.location.href = "planos"; }, 2000);
                 return;
             }
 

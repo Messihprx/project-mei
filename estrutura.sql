@@ -239,7 +239,7 @@ meu_uso_plano()                       json     uso + limites do usuário logado
 limites_publicos()                    json     limites por plano (aberta ao anon)
 
 -- Dashboard ---------------------------------------------------
-dashboard_resumo(p_mes)               json     KPIs, série mensal, donut, comparação
+dashboard_resumo(p_mes)               json     KPIs por mês/ano/histórico, série, donut, comparação
 
 -- IA -----------------------------------------------------------
 limpar_ai_logs(p_dias)                bigint   faxina do log (admin)

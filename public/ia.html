@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/auth-guard.js"></script>
     <title>FinMEI | Assistente IA</title>
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
     <link rel="stylesheet" href="css/style.css">
@@ -42,12 +43,12 @@
             width: 38px;
             height: 38px;
             border-radius: 11px;
-            background: linear-gradient(135deg, var(--cor-primaria), #6c5ce7);
+            background: linear-gradient(135deg, var(--cor-primaria), #8b5cf6);
             display: flex;
             align-items: center;
             justify-content: center;
             color: #fff;
-            box-shadow: 0 2px 10px rgba(31,166,252,.2);
+            box-shadow: 0 2px 10px rgba(59,130,246,.2);
         }
         .chat-header-left h2 {
             font-size: 16px;
@@ -79,8 +80,8 @@
             flex-direction: column;
             gap: 16px;
             background:
-                radial-gradient(ellipse at 20% 80%,rgba(31,166,252,.03) 0%,transparent 50%),
-                radial-gradient(ellipse at 80% 20%,rgba(108,92,231,.03) 0%,transparent 50%),
+                radial-gradient(ellipse at 20% 80%,rgba(59,130,246,.03) 0%,transparent 50%),
+                radial-gradient(ellipse at 80% 20%,rgba(139,92,246,.03) 0%,transparent 50%),
                 var(--fundo-cor);
         }
         .chat-messages::-webkit-scrollbar { width: 5px; }
@@ -117,7 +118,7 @@
             color: var(--cor-primaria);
         }
         .msg.assistant .msg-avatar {
-            background: linear-gradient(135deg, var(--cor-primaria), #6c5ce7);
+            background: linear-gradient(135deg, var(--cor-primaria), #8b5cf6);
             color: #fff;
         }
 
@@ -129,10 +130,10 @@
             word-break: break-word;
         }
         .msg.user .msg-bubble {
-            background: linear-gradient(135deg, var(--cor-primaria), #6c5ce7);
+            background: linear-gradient(135deg, var(--cor-primaria), #8b5cf6);
             color: #fff;
             border-bottom-right-radius: 6px;
-            box-shadow: 0 2px 12px rgba(31,166,252,.2);
+            box-shadow: 0 2px 12px rgba(59,130,246,.2);
         }
         .msg.assistant .msg-bubble {
             background: rgba(30,48,69,.7);
@@ -147,7 +148,7 @@
         .msg-bubble ul, .msg-bubble ol { margin: 6px 0; padding-left: 20px; }
         .msg-bubble li { margin-bottom: 4px; }
         .msg-bubble code {
-            background: rgba(31,166,252,.1);
+            background: rgba(59,130,246,.1);
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 13px;
@@ -185,13 +186,13 @@
             width: 72px;
             height: 72px;
             border-radius: 20px;
-            background: linear-gradient(135deg, var(--cor-primaria), #6c5ce7);
+            background: linear-gradient(135deg, var(--cor-primaria), #8b5cf6);
             display: flex;
             align-items: center;
             justify-content: center;
             color: #fff;
             margin-bottom: 20px;
-            box-shadow: 0 8px 32px rgba(31,166,252,.25);
+            box-shadow: 0 8px 32px rgba(59,130,246,.25);
         }
         .chat-welcome h2 {
             font-size: 22px;
@@ -236,7 +237,7 @@
             letter-spacing: 1px;
         }
         .chat-sessions-new {
-            background: linear-gradient(135deg, var(--cor-primaria), #6c5ce7);
+            background: linear-gradient(135deg, var(--cor-primaria), #8b5cf6);
             color: #fff;
             border: none;
             border-radius: 10px;
@@ -245,7 +246,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
-            box-shadow: 0 2px 10px rgba(31,166,252,.2);
+            box-shadow: 0 2px 10px rgba(59,130,246,.2);
         }
         .chat-sessions-new:hover { filter: brightness(1.1); transform: translateY(-1px); }
         .chat-sessions-list {
@@ -277,10 +278,10 @@
             border-color: rgba(148,163,184,.08);
         }
         .chat-session-item.active {
-            background: rgba(31,166,252,.08);
+            background: rgba(59,130,246,.08);
             color: var(--cor-primaria);
             font-weight: 600;
-            border-color: rgba(31,166,252,.15);
+            border-color: rgba(59,130,246,.15);
         }
         .chat-session-title {
             overflow: hidden;
@@ -311,7 +312,7 @@
             justify-content: center;
         }
         .chat-session-item:hover .chat-session-rename { opacity: 1; }
-        .chat-session-rename:hover { color: var(--cor-primaria); background: rgba(31,166,252,.1); }
+        .chat-session-rename:hover { color: var(--cor-primaria); background: rgba(59,130,246,.1); }
         .chat-session-rename svg { width: 13px; height: 13px; }
         .chat-session-delete {
             background: none;
@@ -347,10 +348,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid rgba(255,59,48,.24);
+            border: 1px solid rgba(244,63,94,.24);
             border-radius: 14px;
             color: #ff746b;
-            background: rgba(255,59,48,.12);
+            background: rgba(244,63,94,.12);
         }
         .delete-session-icon svg { width: 22px; height: 22px; }
         .delete-session-content h3 { margin: 0 0 8px; color: var(--texto-principal); font-size: 18px; }
@@ -425,8 +426,8 @@
             transition: all 0.2s;
         }
         .chat-suggestions button:hover {
-            background: rgba(31,166,252,.06);
-            border-color: rgba(31,166,252,.3);
+            background: rgba(59,130,246,.06);
+            border-color: rgba(59,130,246,.3);
             color: var(--cor-primaria);
         }
 
@@ -459,8 +460,8 @@
             transition: all 0.2s;
         }
         .chat-input-wrap textarea:focus {
-            border-color: rgba(31,166,252,.4);
-            box-shadow: 0 0 0 3px rgba(31,166,252,.08);
+            border-color: rgba(59,130,246,.4);
+            box-shadow: 0 0 0 3px rgba(59,130,246,.08);
             background: rgba(30,48,69,.7);
         }
         .chat-input-wrap textarea::placeholder {
@@ -470,7 +471,7 @@
             width: 44px;
             height: 44px;
             border-radius: 14px;
-            background: linear-gradient(135deg, var(--cor-primaria), #6c5ce7);
+            background: linear-gradient(135deg, var(--cor-primaria), #8b5cf6);
             border: none;
             color: #fff;
             cursor: pointer;
@@ -479,9 +480,9 @@
             justify-content: center;
             flex-shrink: 0;
             transition: all 0.2s;
-            box-shadow: 0 2px 12px rgba(31,166,252,.2);
+            box-shadow: 0 2px 12px rgba(59,130,246,.2);
         }
-        .chat-send-btn:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(31,166,252,.3); }
+        .chat-send-btn:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(59,130,246,.3); }
         .chat-send-btn:active { transform: translateY(0); }
         .chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
         .chat-send-btn svg { width: 20px; height: 20px; }
@@ -496,6 +497,53 @@
             border-radius: 12px;
             margin: 0 auto 10px;
             max-width: 800px;
+        }
+
+        html[data-theme="light"] .chat-header,
+        html[data-theme="light"] .chat-sessions-panel,
+        html[data-theme="light"] .chat-input-area {
+            background: #ffffff;
+            border-color: #e2e8f0;
+        }
+        html[data-theme="light"] .chat-usage,
+        html[data-theme="light"] .chat-suggestions button,
+        html[data-theme="light"] .chat-session-item:hover,
+        html[data-theme="light"] .chat-input-wrap textarea,
+        html[data-theme="light"] .chat-input-wrap textarea:focus {
+            background: #f1f5f9;
+            border-color: #dbe4ef;
+            color: var(--texto-principal);
+        }
+        html[data-theme="light"] .msg.assistant .msg-bubble {
+            background: #ffffff;
+            border-color: #dbe4ef;
+        }
+        html[data-theme="light"] .msg-bubble strong {
+            color: var(--cor-primaria-hover);
+        }
+        html[data-theme="light"] .chat-limit-msg {
+            color: #92400e;
+            background: #fffbeb;
+            border-color: #fde68a;
+        }
+        html[data-theme="light"] .chat-usage {
+            color: var(--texto-secundario);
+        }
+        html[data-theme="light"] .chat-usage strong,
+        html[data-theme="light"] .chat-suggestions button:hover {
+            color: var(--cor-primaria-hover);
+        }
+        html[data-theme="light"] .chat-input-wrap textarea::placeholder {
+            color: var(--texto-faint);
+        }
+        html[data-theme="light"] .delete-session-content {
+            background: #ffffff;
+            border-color: #dbe4ef;
+            box-shadow: 0 20px 60px rgba(15, 23, 42, .18);
+        }
+        html[data-theme="light"] .chat-sessions-panel.mobile-open {
+            background: #ffffff;
+            box-shadow: 4px 0 24px rgba(15, 23, 42, .18);
         }
 
         @media (max-width: 768px) {
@@ -518,7 +566,7 @@
             .sessions-overlay.active { display: block; }
         }
     </style>
-    <meta name="theme-color" content="#0b1120">
+    <meta name="theme-color" content="#080c16">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <script>
@@ -544,50 +592,46 @@
         </div>
 
         <nav class="sidebar-nav">
-            <a href="index.html" class="nav-item">
+            <a href="./" class="nav-item">
                 <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
             </a>
-            <a href="vendas.html" class="nav-item">
+            <a href="vendas" class="nav-item">
                 <i data-lucide="shopping-cart"></i> <span>Vendas</span>
             </a>
-            <a href="gastos.html" class="nav-item">
+            <a href="gastos" class="nav-item">
                 <i data-lucide="trending-down"></i> <span>Gastos</span>
             </a>
-            <a href="contas.html" class="nav-item">
+            <a href="contas" class="nav-item">
                 <i data-lucide="wallet"></i> <span>Contas</span>
             </a>
-            <a href="clientes.html" class="nav-item">
+            <a href="clientes" class="nav-item">
                 <i data-lucide="users"></i> <span>Clientes</span>
             </a>
-            <a href="devendo.html" class="nav-item">
+            <a href="devendo" class="nav-item">
                 <i data-lucide="alert-circle"></i> <span>Devedores</span>
             </a>
-            <a href="produtos.html" class="nav-item">
+            <a href="produtos" class="nav-item">
                 <i data-lucide="package"></i> <span>Produtos</span>
             </a>
 
             <div class="sidebar-divider">ASSISTENTE</div>
-            <a href="ia.html" class="nav-item active">
+            <a href="ia" class="nav-item active">
                 <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
             </a>
 
             <div class="sidebar-divider">ATALHOS</div>
-            <a href="nova-venda.html" class="nav-item">
+            <a href="nova-venda" class="nav-item">
                 <i data-lucide="plus-circle"></i> <span>Nova Venda</span>
             </a>
-            <a href="novo-cliente.html" class="nav-item">
+            <a href="novo-cliente" class="nav-item">
                 <i data-lucide="user-plus"></i> <span>Novo Cliente</span>
             </a>
-            <a href="planos.html" class="nav-item">
+            <a href="planos" class="nav-item">
                 <i data-lucide="star"></i> <span>Ver Planos</span>
             </a>
         </nav>
 
-        <div class="sidebar-footer">
-            <button onclick="logout()" class="btn-logout">
-                <i data-lucide="log-out"></i> <span>Sair</span>
-            </button>
-        </div>
+
     </aside>
 
     <main class="main-content">
@@ -667,7 +711,7 @@
         <h3 style="margin:0 0 16px;font-size:16px;color:var(--texto-principal)">Renomear conversa</h3>
         <form id="renameForm">
           <input type="text" id="renameInput" maxlength="50" placeholder="Nome da conversa"
-            style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(148,163,184,.15);background:rgba(15,23,42,.6);color:var(--texto-principal);font-size:14px;outline:none;box-sizing:border-box"
+            style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--borda-sutil);background:var(--fundo-card-solid);color:var(--texto-principal);font-size:14px;outline:none;box-sizing:border-box"
           >
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
             <button type="button" id="renameCancel" style="padding:8px 16px;border-radius:8px;border:1px solid rgba(148,163,184,.15);background:transparent;color:var(--texto-secundario);cursor:pointer;font-size:13px">Cancelar</button>

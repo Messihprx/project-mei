@@ -7,15 +7,15 @@ const FAB_HTML = `
   #aiFab{
     position:fixed;bottom:28px;right:28px;width:54px;height:54px;
     border-radius:16px;
-    background:linear-gradient(135deg,#1fa6fc 0%,#6c5ce7 50%,#a855f7 100%);
+    background:linear-gradient(135deg,#3b82f6 0%,#8b5cf6 50%,#a78bfa 100%);
     color:#fff;border:none;cursor:pointer;
-    box-shadow:0 4px 24px rgba(31,166,252,.35),0 0 0 0 rgba(31,166,252,.2);
+    box-shadow:0 4px 24px rgba(59,130,246,.35),0 0 0 0 rgba(59,130,246,.2);
     z-index:70;display:flex;align-items:center;justify-content:center;
     transition:all .25s cubic-bezier(.4,0,.2,1);
   }
   #aiFab:hover{
     transform:translateY(-3px) scale(1.05);
-    box-shadow:0 8px 32px rgba(31,166,252,.45),0 0 0 6px rgba(31,166,252,.1);
+    box-shadow:0 8px 32px rgba(59,130,246,.45),0 0 0 6px rgba(59,130,246,.1);
   }
   #aiFab:active{transform:translateY(-1px) scale(1.02)}
   #aiFab.hidden{display:none}
@@ -23,14 +23,14 @@ const FAB_HTML = `
   #aiFab:hover svg{transform:rotate(-8deg) scale(1.05)}
   #aiFab.pulse{animation:fabPulse 2s ease-in-out infinite}
   @keyframes fabPulse{
-    0%,100%{box-shadow:0 4px 24px rgba(31,166,252,.35),0 0 0 0 rgba(31,166,252,.2)}
-    50%{box-shadow:0 4px 24px rgba(31,166,252,.35),0 0 0 10px rgba(31,166,252,0)}
+    0%,100%{box-shadow:0 4px 24px rgba(59,130,246,.35),0 0 0 0 rgba(59,130,246,.2)}
+    50%{box-shadow:0 4px 24px rgba(59,130,246,.35),0 0 0 10px rgba(59,130,246,0)}
   }
 
   /* ========== PANEL ========== */
   #aiPanel{
     position:fixed;bottom:96px;right:28px;width:390px;height:580px;
-    background:#0d1525;
+    background:#0a101d;
     border:1px solid rgba(148,163,184,.1);
     border-radius:20px;
     box-shadow:0 24px 80px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.03) inset;
@@ -47,33 +47,33 @@ const FAB_HTML = `
   #aiPanelHead{
     display:flex;align-items:center;justify-content:space-between;
     padding:16px 20px;
-    background:linear-gradient(135deg,rgba(31,166,252,.06) 0%,rgba(108,92,231,.06) 100%);
+    background:linear-gradient(135deg,rgba(59,130,246,.06) 0%,rgba(139,92,246,.06) 100%);
     border-bottom:1px solid rgba(148,163,184,.08);
     flex-shrink:0;
   }
   #aiPanelHead .ai-header-left{display:flex;align-items:center;gap:10px}
   #aiPanelHead .ai-header-icon{
     width:34px;height:34px;border-radius:10px;
-    background:linear-gradient(135deg,#1fa6fc,#6c5ce7);
+    background:linear-gradient(135deg,#3b82f6,#8b5cf6);
     display:flex;align-items:center;justify-content:center;
     color:#fff;flex-shrink:0;
   }
   #aiPanelHead .ai-header-icon svg{width:16px;height:16px}
   #aiPanelHead .ai-header-text span{
-    font-size:14px;font-weight:700;color:#f1f5f9;display:block;line-height:1.2
+    font-size:14px;font-weight:700;color:#e6edf7;display:block;line-height:1.2
   }
   #aiPanelHead .ai-header-text small{
-    font-size:11px;color:#64748b
+    font-size:11px;color:#6b7a90
   }
   #aiPanelHead .ai-header-actions{display:flex;gap:2px}
   #aiPanelHead .ai-header-actions button{
-    background:none;border:none;color:#64748b;
+    background:none;border:none;color:#6b7a90;
     width:30px;height:30px;border-radius:8px;cursor:pointer;
     display:flex;align-items:center;justify-content:center;
     transition:all .15s;
   }
   #aiPanelHead .ai-header-actions button:hover{
-    background:rgba(255,255,255,.06);color:#f1f5f9
+    background:rgba(255,255,255,.06);color:#e6edf7
   }
   #aiPanelHead .ai-header-actions button svg{width:16px;height:16px}
 
@@ -82,7 +82,7 @@ const FAB_HTML = `
     padding:10px 20px;
     background:rgba(15,23,42,.5);
     border-bottom:1px solid rgba(148,163,184,.06);
-    font-size:11.5px;color:#64748b;
+    font-size:11.5px;color:#6b7a90;
     display:flex;align-items:center;gap:6px;
     flex-shrink:0;
   }
@@ -91,8 +91,8 @@ const FAB_HTML = `
     background:#22c55e;flex-shrink:0;
   }
   #aiLimitsBar .limit-dot.warn{background:#f59e0b}
-  #aiLimitsBar .limit-dot.danger{background:#ef4444}
-  #aiLimitsBar b{color:#e2e8f0;font-weight:600}
+  #aiLimitsBar .limit-dot.danger{background:#f43f5e}
+  #aiLimitsBar b{color:#dbe5f2;font-weight:600}
   #aiLimitsBar .limit-divider{
     width:1px;height:12px;background:rgba(148,163,184,.15);margin:0 4px
   }
@@ -105,7 +105,7 @@ const FAB_HTML = `
     overflow-x:auto;overflow-y:hidden;
     scrollbar-width:none;
     flex-shrink:0;
-    background:rgba(13,21,37,.3);
+    background:rgba(10,16,29,.3);
   }
   #aiSessionsBar::-webkit-scrollbar{display:none}
   .ai-session-chip{
@@ -113,8 +113,8 @@ const FAB_HTML = `
     padding:6px 14px;border-radius:10px;
     font-size:11.5px;font-weight:500;
     cursor:pointer;
-    background:rgba(30,48,69,.6);
-    color:#94a3b8;
+    background:rgba(19,28,46,.6);
+    color:#9aa8bd;
     border:1px solid rgba(148,163,184,.08);
     transition:all .15s;
     max-width:130px;
@@ -123,13 +123,13 @@ const FAB_HTML = `
   }
   .ai-session-chip:hover{
     border-color:rgba(148,163,184,.2);
-    color:#e2e8f0;
-    background:rgba(30,48,69,.9);
+    color:#dbe5f2;
+    background:rgba(19,28,46,.9);
   }
   .ai-session-chip.active{
-    background:linear-gradient(135deg,rgba(31,166,252,.15),rgba(108,92,231,.12));
-    color:#1fa6fc;
-    border-color:rgba(31,166,252,.3);
+    background:linear-gradient(135deg,rgba(59,130,246,.15),rgba(139,92,246,.12));
+    color:#3b82f6;
+    border-color:rgba(59,130,246,.3);
     font-weight:600;
   }
   .ai-session-chip .chip-close{
@@ -140,7 +140,7 @@ const FAB_HTML = `
     cursor:pointer;
   }
   .ai-session-chip:hover .chip-close{opacity:.6}
-  .ai-session-chip .chip-close:hover{opacity:1;background:rgba(239,68,68,.2);color:#ef4444}
+  .ai-session-chip .chip-close:hover{opacity:1;background:rgba(244,63,94,.2);color:#f43f5e}
   .ai-session-chip .chip-close svg{width:10px;height:10px}
   .ai-session-chip .chip-label{
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
@@ -149,17 +149,17 @@ const FAB_HTML = `
   .ai-session-chip .chip-rename{
     width:16px;height:16px;border-radius:4px;
     display:none;align-items:center;justify-content:center;
-    background:none;border:none;color:#94a3b8;padding:0;cursor:pointer;
+    background:none;border:none;color:#9aa8bd;padding:0;cursor:pointer;
     flex-shrink:0;transition:all .15s;
   }
   .ai-session-chip:hover .chip-rename{display:flex}
-  .ai-session-chip .chip-rename:hover{color:#1fa6fc;background:rgba(31,166,252,.15)}
+  .ai-session-chip .chip-rename:hover{color:#3b82f6;background:rgba(59,130,246,.15)}
   .ai-session-chip .chip-rename svg{width:10px;height:10px}
   .ai-session-new{
     border-style:dashed;border-color:rgba(148,163,184,.15);
-    color:#64748b;font-weight:600;
+    color:#6b7a90;font-weight:600;
   }
-  .ai-session-new:hover{border-color:rgba(31,166,252,.4);color:#1fa6fc}
+  .ai-session-new:hover{border-color:rgba(59,130,246,.4);color:#3b82f6}
 
   /* ========== MESSAGES ========== */
   #aiChatMessages{
@@ -167,9 +167,9 @@ const FAB_HTML = `
     padding:20px;
     display:flex;flex-direction:column;gap:12px;
     background:
-      radial-gradient(ellipse at 20% 80%,rgba(31,166,252,.03) 0%,transparent 50%),
-      radial-gradient(ellipse at 80% 20%,rgba(108,92,231,.03) 0%,transparent 50%),
-      #0d1525;
+      radial-gradient(ellipse at 20% 80%,rgba(59,130,246,.03) 0%,transparent 50%),
+      radial-gradient(ellipse at 80% 20%,rgba(139,92,246,.03) 0%,transparent 50%),
+      #0a101d;
   }
   #aiChatMessages::-webkit-scrollbar{width:5px}
   #aiChatMessages::-webkit-scrollbar-track{background:transparent}
@@ -190,23 +190,23 @@ const FAB_HTML = `
   }
   .ai-msg.user{
     align-self:flex-end;
-    background:linear-gradient(135deg,#1fa6fc,#0b6fd1);
+    background:linear-gradient(135deg,#3b82f6,#1d4ed8);
     color:#fff;
     border-bottom-right-radius:6px;
-    box-shadow:0 2px 12px rgba(31,166,252,.2);
+    box-shadow:0 2px 12px rgba(59,130,246,.2);
   }
   .ai-msg.assistant{
     align-self:flex-start;
-    background:rgba(30,48,69,.7);
-    color:#e2e8f0;
+    background:rgba(19,28,46,.7);
+    color:#dbe5f2;
     border-bottom-left-radius:6px;
     border:1px solid rgba(148,163,184,.08);
   }
   .ai-msg.error{
     align-self:center;
-    background:rgba(239,68,68,.1);
-    color:#f87171;font-size:12px;
-    border:1px solid rgba(239,68,68,.15);
+    background:rgba(244,63,94,.1);
+    color:#fda4af;font-size:12px;
+    border:1px solid rgba(244,63,94,.15);
   }
 
   /* Welcome */
@@ -217,18 +217,18 @@ const FAB_HTML = `
   }
   .ai-welcome-icon{
     width:60px;height:60px;border-radius:16px;
-    background:linear-gradient(135deg,#1fa6fc,#6c5ce7);
+    background:linear-gradient(135deg,#3b82f6,#8b5cf6);
     display:flex;align-items:center;justify-content:center;
     color:#fff;margin-bottom:16px;
-    box-shadow:0 8px 32px rgba(31,166,252,.25);
+    box-shadow:0 8px 32px rgba(59,130,246,.25);
   }
   .ai-welcome-icon svg{width:28px;height:28px}
   .ai-welcome h3{
-    font-size:17px;font-weight:700;color:#f1f5f9;
+    font-size:17px;font-weight:700;color:#e6edf7;
     margin-bottom:6px;
   }
   .ai-welcome p{
-    font-size:13px;color:#64748b;max-width:280px;
+    font-size:13px;color:#6b7a90;max-width:280px;
     line-height:1.6;margin-bottom:20px;
   }
   .ai-welcome-chips{
@@ -237,22 +237,22 @@ const FAB_HTML = `
   .ai-welcome-chip{
     padding:8px 14px;border-radius:10px;
     font-size:12px;cursor:pointer;
-    background:rgba(30,48,69,.5);
-    color:#94a3b8;
+    background:rgba(19,28,46,.5);
+    color:#9aa8bd;
     border:1px solid rgba(148,163,184,.08);
     transition:all .15s;
   }
   .ai-welcome-chip:hover{
-    border-color:rgba(31,166,252,.3);
-    color:#1fa6fc;
-    background:rgba(31,166,252,.06);
+    border-color:rgba(59,130,246,.3);
+    color:#3b82f6;
+    background:rgba(59,130,246,.06);
   }
 
   /* Typing */
   .ai-typing{display:flex;gap:4px;padding:4px 0}
   .ai-typing span{
     width:6px;height:6px;border-radius:50%;
-    background:#64748b;
+    background:#6b7a90;
     animation:aiDot 1.2s infinite;
   }
   .ai-typing span:nth-child(2){animation-delay:.2s}
@@ -267,36 +267,36 @@ const FAB_HTML = `
     display:flex;gap:8px;
     padding:14px 20px;
     border-top:1px solid rgba(148,163,184,.06);
-    background:rgba(13,21,37,.6);
+    background:rgba(10,16,29,.6);
     flex-shrink:0;
   }
   #aiChatInput input{
     flex:1;
-    background:rgba(30,48,69,.5);
+    background:rgba(19,28,46,.5);
     border:1px solid rgba(148,163,184,.1);
     border-radius:12px;
     padding:11px 16px;
-    color:#f1f5f9;font-size:13px;font-family:inherit;
+    color:#e6edf7;font-size:13px;font-family:inherit;
     transition:all .2s;
   }
   #aiChatInput input:focus{
     outline:none;
-    border-color:rgba(31,166,252,.4);
-    box-shadow:0 0 0 3px rgba(31,166,252,.08);
-    background:rgba(30,48,69,.7);
+    border-color:rgba(59,130,246,.4);
+    box-shadow:0 0 0 3px rgba(59,130,246,.08);
+    background:rgba(19,28,46,.7);
   }
-  #aiChatInput input::placeholder{color:#475569}
+  #aiChatInput input::placeholder{color:#6b7a90}
   #aiChatInput button{
-    background:linear-gradient(135deg,#1fa6fc,#6c5ce7);
+    background:linear-gradient(135deg,#3b82f6,#8b5cf6);
     color:#fff;border:none;border-radius:12px;
     padding:11px 18px;font-size:13px;font-weight:600;
     cursor:pointer;white-space:nowrap;
     transition:all .2s;
-    box-shadow:0 2px 12px rgba(31,166,252,.2);
+    box-shadow:0 2px 12px rgba(59,130,246,.2);
   }
   #aiChatInput button:hover{
     transform:translateY(-1px);
-    box-shadow:0 4px 16px rgba(31,166,252,.3);
+    box-shadow:0 4px 16px rgba(59,130,246,.3);
   }
   #aiChatInput button:active{transform:translateY(0)}
   #aiChatInput button:disabled{opacity:.4;cursor:not-allowed;transform:none}
@@ -305,7 +305,7 @@ const FAB_HTML = `
   .ai-empty{
     flex:1;display:flex;flex-direction:column;
     align-items:center;justify-content:center;
-    color:#475569;font-size:12px;gap:8px;
+    color:#6b7a90;font-size:12px;gap:8px;
   }
   .ai-empty svg{width:28px;height:28px;opacity:.3}
 
@@ -358,14 +358,14 @@ const FAB_HTML = `
 
 <!-- Modal Renomear Sessão -->
 <div id="aiRenameModal" style="display:none;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;background:rgba(0,0,0,.5);backdrop-filter:blur(4px)">
-  <div style="background:#0f172a;border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:24px;width:90%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
-    <h3 style="margin:0 0 16px;font-size:15px;color:#e2e8f0;font-weight:600">Renomear conversa</h3>
+  <div style="background:#0f1626;border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:24px;width:90%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <h3 style="margin:0 0 16px;font-size:15px;color:#dbe5f2;font-weight:600">Renomear conversa</h3>
     <form id="aiRenameForm">
       <input type="text" id="aiRenameInput" maxlength="50" placeholder="Nome da conversa"
-        style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(148,163,184,.15);background:rgba(15,23,42,.6);color:#e2e8f0;font-size:13px;outline:none;box-sizing:border-box">
+        style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(148,163,184,.15);background:rgba(15,23,42,.6);color:#dbe5f2;font-size:13px;outline:none;box-sizing:border-box">
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
-        <button type="button" id="aiRenameCancel" style="padding:8px 16px;border-radius:8px;border:1px solid rgba(148,163,184,.15);background:transparent;color:#94a3b8;cursor:pointer;font-size:12px">Cancelar</button>
-        <button type="submit" style="padding:8px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#1fa6fc,#6c5ce7);color:#fff;cursor:pointer;font-size:12px;font-weight:600">Salvar</button>
+        <button type="button" id="aiRenameCancel" style="padding:8px 16px;border-radius:8px;border:1px solid rgba(148,163,184,.15);background:transparent;color:#9aa8bd;cursor:pointer;font-size:12px">Cancelar</button>
+        <button type="submit" style="padding:8px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;cursor:pointer;font-size:12px;font-weight:600">Salvar</button>
       </div>
     </form>
   </div>

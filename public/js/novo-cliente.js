@@ -161,7 +161,7 @@ if (formNovoCliente) {
             // mostrando o número anterior a esta operação.
             invalidarCachePlano();
 
-            window.location.href = "clientes.html";
+            window.location.href = "clientes";
 
         } catch (err) {
             mostrarErro('formNovoCliente', 'Erro ao cadastrar: ' + err.message);
