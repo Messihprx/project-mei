@@ -85,22 +85,12 @@
                 <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
             </a>
 
-            <div class="sidebar-divider">ATALHOS</div>
-            <a href="nova-venda" class="nav-item">
-                <i data-lucide="plus-circle"></i> <span>Nova Venda</span>
-            </a>
-            <a href="novo-cliente" class="nav-item">
-                <i data-lucide="user-plus"></i> <span>Novo Cliente</span>
+            <div class="sidebar-divider">CONTA</div>
+            <a href="perfil" class="nav-item">
+                <i data-lucide="user-round"></i> <span>Meu perfil</span>
             </a>
             <a href="planos" class="nav-item">
                 <i data-lucide="star"></i> <span>Ver Planos</span>
-            </a>
-
-            <button onclick="abrirRelatorioAnalitico()" class="btn-bi nav-item-mobile-custom">
-                <i data-lucide="bar-chart-2"></i> <span>Relatórios BI</span>
-            </button>
-            <a href="#" onclick="abrirImportacao()" class="nav-item nav-item-mobile-custom">
-                <i data-lucide="database-backup"></i> <span>Importar dados</span>
             </a>
         </nav>
 
@@ -126,10 +116,13 @@
                     <div class="profile-dropdown">
                         <button class="profile-toggle" onclick="toggleProfileDropdown(event)">
                             <img id="fotoUsuario" src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                                alt="Perfil">
+                                referrerpolicy="no-referrer" alt="Perfil">
                         </button>
                         <div class="dropdown-menu" id="profileDropdown">
                         <div class="dropdown-header">Minha Conta</div>
+                        <a href="perfil" class="dropdown-item">
+                            <i data-lucide="user-round"></i> <span>Meu perfil</span>
+                        </a>
                         <a href="#" onclick="abrirImportacao()" class="dropdown-item">
                             <i data-lucide="database-backup"></i> <span>Importar dados</span>
                         </a>
@@ -137,9 +130,9 @@
                             <i data-lucide="bar-chart-2"></i> <span>Relatórios Avançados</span>
                         </a>
                         <div class="dropdown-divider"></div>
-                        <button id="btnToggleTema" class="dropdown-item" onclick="toggleTema()" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;padding:8px 12px;color:inherit;cursor:pointer;font:inherit;">
+                        <button id="btnToggleTema" class="dropdown-item" onclick="toggleTema()">
                             <i id="iconeTema" data-lucide="sun"></i>
-                            <span id="textoTema">Modo escuro</span>
+                            <span id="textoTema">Modo claro</span>
                         </button>
                         <a href="#" onclick="logout()" class="dropdown-item logout">
                             <i data-lucide="log-out"></i> <span>Sair</span>

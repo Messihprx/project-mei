@@ -127,6 +127,9 @@ async function carregarVendas(limite = limiteVendas) {
                     <span class="venda-badge">${esc((venda.status || "").toUpperCase())}</span>
                     
                     <div style="display:flex; gap:8px; justify-content: flex-end; margin-top:10px;">
+                        <button data-acao="comprovante" data-id="${esc(venda.id)}" class="btn-acao" style="color: var(--cor-sucesso);" title="Gerar comprovante">
+                            <i data-lucide="receipt"></i>
+                        </button>
                         <button data-acao="editar" data-id="${esc(venda.id)}" class="btn-acao" style="color: var(--cor-primaria);" title="Editar">
                             <i data-lucide="edit-3"></i>
                         </button>
@@ -232,6 +235,70 @@ window.deletarVenda = async (id) => {
     }
 };
 
+window.gerarComprovante = (venda) => {
+    const itens = venda.venda_itens || [];
+    const itensHtml = itens.length
+        ? itens.map(it => `<tr>
+            <td>${esc(it.descricao || '-')}</td>
+            <td style="text-align:center;">${Number(it.quantidade) || 1}</td>
+            <td style="text-align:right;">R$ ${Number(it.valor_unit || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            <td style="text-align:right;">R$ ${(Number(it.quantidade || 1) * Number(it.valor_unit || 0)).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+        </tr>`).join('')
+        : `<tr><td colspan="4">${esc(venda.descricao || 'Serviço geral')}</td></tr>`;
+
+    const html = `<!DOCTYPE html>
+<html lang="pt-br"><head><meta charset="UTF-8"><title>Comprovante de Pagamento</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#f1f5f9;padding:32px 16px;color:#0f172a;}
+  .box{max-width:560px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.08);overflow:hidden;}
+  .header{background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;padding:28px 32px;text-align:center;}
+  .header .logo{font-size:1.6rem;font-weight:800;letter-spacing:-.5px;}
+  .header .sub{opacity:.85;font-size:.85rem;margin-top:4px;}
+  .body{padding:28px 32px;}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed #e2e8f0;}
+  .row:last-child{border-bottom:none;}
+  .label{color:#64748b;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+  .value{font-weight:600;font-size:.95rem;}
+  .badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:.75rem;font-weight:700;}
+  .pago{background:#dcfce7;color:#16a34a;}
+  .pendente{background:#fee2e2;color:#dc2626;}
+  table{width:100%;border-collapse:collapse;margin:16px 0;}
+  th{background:#f8fafc;padding:10px 8px;text-align:left;font-size:.75rem;text-transform:uppercase;letter-spacing:.5px;color:#64748b;border-bottom:2px solid #e2e8f0;}
+  td{padding:10px 8px;font-size:.85rem;border-bottom:1px solid #f1f5f9;}
+  tr:last-child td{border-bottom:none;}
+  .tot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:2px solid #e2e8f0;}
+  .tot span:first-child{font-size:.9rem;color:#64748b;font-weight:600;}
+  .tot span:last-child{font-size:1.4rem;font-weight:800;color:#3b82f6;}
+  .footer{background:#f8fafc;padding:16px 32px;text-align:center;font-size:.7rem;color:#94a3b8;}
+  .footer strong{color:#64748b;}
+  @media print{body{background:#fff;padding:0;}.box{box-shadow:none;border-radius:0;}}
+</style></head><body>
+<div class="box">
+  <div class="header">
+    <div class="logo">finMEI</div>
+    <div class="sub">Comprovante de Pagamento</div>
+  </div>
+  <div class="body">
+    <div class="row"><span class="label">Cliente</span><span class="value">${esc(venda.clientes?.nome || 'Cliente avulso')}</span></div>
+    <div class="row"><span class="label">Data da venda</span><span class="value">${esc(formatarDataVenda(venda.data_venda || venda.created_at))}</span></div>
+    <div class="row"><span class="label">Status</span><span class="badge ${esc(venda.status)}">${esc((venda.status || '').toUpperCase())}</span></div>
+    <table>
+      <thead><tr><th>Descrição</th><th style="text-align:center;">Qtd</th><th style="text-align:right;">Unit.</th><th style="text-align:right;">Subtotal</th></tr></thead>
+      <tbody>${itensHtml}</tbody>
+    </table>
+    <div class="tot"><span>Total</span><span>R$ ${parseFloat(venda.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
+  </div>
+  <div class="footer">Gerado pelo <strong>FinMEI</strong> em ${new Date().toLocaleDateString('pt-BR')} · Documento sem valor fiscal</div>
+</div>
+<script>window.onload=()=>{window.print();};</script>
+</body></html>`;
+
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(html); w.document.close(); }
+    else { mostrarModal('Bloqueado', 'Permita pop-ups para gerar o comprovante.', 'alerta'); }
+};
+
 // --- 6. SUBMIT DA EDIÇÃO ---
 import { protegerAcao, verificarStatusPlano, invalidarCachePlano } from './planos.js';
 
@@ -332,7 +399,9 @@ document.addEventListener("DOMContentLoaded", () => {
     delegate(document.getElementById('listaVendas'), 'button[data-acao]', 'click', (e, botao) => {
         const venda = vendasRenderizadas.find(v => v.id === botao.dataset.id);
         if (!venda) return;
-        if (botao.dataset.acao === 'editar') {
+        if (botao.dataset.acao === 'comprovante') {
+            window.gerarComprovante(venda);
+        } else if (botao.dataset.acao === 'editar') {
             window.abrirModalEditarVenda(venda);
         } else if (botao.dataset.acao === 'excluir') {
             window.deletarVenda(venda.id);

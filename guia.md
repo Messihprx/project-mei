@@ -40,6 +40,7 @@ Rode no **Supabase → SQL Editor**, **nesta ordem**:
 | 12 | `sql/transferencias.sql` | Tabela `transferencias` — histórico de transferências entre contas (RF111/RF115), gravado pelo site e pela IA |
 | 13 | `sql/venda_itens.sql` | Tabela `venda_itens` — uma venda com vários produtos (item com qtd e preço unit); faz backfill das vendas antigas |
 | 14 | `sql/dashboard_rpc.sql` | **Reexecute após o item 13** — o donut de vendas por produto passa a somar pelos itens |
+| 15 | `sql/perfil_mei.sql` | Campos do perfil, foto do usuário e bucket `avatars` |
 
 > Os scripts assumem que `sql/admin_supabase.sql` (função `is_admin()`) já foi
 > executado. Se ainda não foi, rode-o antes do item 1.
@@ -282,7 +283,7 @@ e troca de provedor no fallback. Guarda 30 dias.
 
 - [ ] Senha do admin trocada
 - [ ] Redirect URLs do Supabase com os padrões local **e** de produção
-- [ ] Os 10 scripts SQL executados
+- [ ] Todos os scripts SQL de `sql/` executados na ordem
 - [ ] `BI_SHARED_SECRET` configurado no Supabase **e** no Streamlit, com o mesmo valor
 - [ ] Access token e chave secreta do webhook preenchidos no painel admin
 - [ ] Card "Webhook" do painel admin mostrando **Configurado** (e não "Sem verificação")

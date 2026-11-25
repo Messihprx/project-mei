@@ -94,7 +94,7 @@ async function carregarDadosUsuario() {
             }
             
             const fotoElem = document.getElementById("fotoUsuario");
-            if (fotoElem) fotoElem.src = user.user_metadata?.avatar_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+            if (fotoElem) fotoElem.src = user.user_metadata?.avatar_url || user.user_metadata?.picture || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
         }
     } catch (err) { console.error("Erro ao carregar dados do usuário:", err); }
 }

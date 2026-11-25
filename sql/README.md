@@ -12,14 +12,15 @@ nada.
 | 2 | `produtos.sql` | Tabela `produtos` + bucket de fotos |
 | 3 | `vendas_add_produto.sql` | Liga venda a produto |
 | 4 | `admin_supabase.sql` | `role`, `is_admin()` e as policies de admin |
-| 5 | `contas_financeiras.sql` | Tabela `contas`, `conta_id` em vendas/despesas e a RPC `incrementar_saldo` |
-| 6 | `gateway_config.sql` | Configuração do Mercado Pago |
-| 7 | `ai_config.sql` | Provedores, limites, uso e conversas de IA |
-| 8 | `ai_sessions.sql` | Sessões do chat |
-| 9 | `ai_individual_limits.sql` | Limite de IA por usuário |
-| 10 | `fix_perfis_nome_email.sql` | Preenche nome e e-mail nos perfis |
-| 11 | `verificar_email_confirmado.sql` | Confirmação de e-mail entre dispositivos |
-| 12 | `transferencias.sql` | Histórico de transferências entre contas |
+| 5 | `perfil_mei.sql` | Campos do perfil, foto do usuário e bucket `avatars` |
+| 6 | `contas_financeiras.sql` | Tabela `contas`, `conta_id` em vendas/despesas e a RPC `incrementar_saldo` |
+| 7 | `gateway_config.sql` | Configuração do Mercado Pago |
+| 8 | `ai_config.sql` | Provedores, limites, uso e conversas de IA |
+| 9 | `ai_sessions.sql` | Sessões do chat |
+| 10 | `ai_individual_limits.sql` | Limite de IA por usuário |
+| 11 | `fix_perfis_nome_email.sql` | Preenche nome e e-mail nos perfis |
+| 12 | `verificar_email_confirmado.sql` | Confirmação de e-mail entre dispositivos |
+| 13 | `transferencias.sql` | Histórico de transferências entre contas |
 
 > `admin_supabase.sql` precisa vir antes de qualquer script que use
 > `is_admin()` — que são quase todos os seguintes.
@@ -42,6 +43,7 @@ nada.
 | 12 | `transferencias.sql` | Tabela `transferencias` — histórico de transferências entre contas |
 | 13 | `venda_itens.sql` | Tabela `venda_itens` — venda com vários produtos (item com qtd e preço unit); backfill das vendas antigas |
 | 14 | `dashboard_rpc.sql` | **Reexecute após o item 13** — o donut por produto passa a somar pelos itens |
+| 15 | `perfil_mei.sql` | Campos do perfil, foto do usuário e bucket `avatars` |
 
 ## O que cada um resolve, quando não é óbvio
 

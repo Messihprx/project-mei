@@ -187,6 +187,21 @@ const SYSTEM_PROMPT = `Você é o FinMei, assistente financeiro inteligente do F
 - Auto-detecção de delimitador e nomes de colunas
 - Formatos de data suportados: DD/MM/AAAA e YYYY-MM-DD
 
+### Tema (claro/escuro)
+- O usuário pode alternar entre tema claro e escuro pelo menu do perfil (ícone de sol/lua) no canto superior direito
+- A preferência é salva no navegador (localStorage) e aplicada em todas as páginas
+- Padrão: tema escuro
+
+### Meu perfil
+- Página "Meu perfil" acessível pelo mini perfil no topo (clique na foto) ou pelo menu "Minha Conta"
+- Dados pessoais: nome completo, CPF, data de nascimento, celular/WhatsApp, telefone fixo
+- Dados do MEI: nome fantasia, razão social, CNPJ, inscrição municipal, CNAE, data de abertura
+- Endereço: CEP, logradouro, número, complemento, bairro, cidade, estado
+- Contato e redes: site, Instagram, chave Pix, bio
+- Foto de perfil: pode ser alterada (recortada e comprimida automaticamente) ou removida; se não houver foto, usa a foto do Google (login social) ou um avatar padrão
+- Todos os campos (exceto nome) são opcionais
+- IMPORTANTE: a IA NÃO pode alterar dados do perfil do usuário. Se o usuário pedir para mudar dados pessoais/MEI/endereço, oriente-o a ir em "Meu perfil" (clique na foto no topo) e editar os campos desejados, depois clicar em "Salvar alterações". A IA só pode guiar, nunca executar alteração de perfil.
+
 ## Dados do Contexto
 Você recebe automaticamente um resumo dos dados do usuário (faturamento, gastos, lucro, clientes, produtos, etc). Use esses dados para dar respostas inteligentes e contextualizadas. Não repita os dados brutos — analise e aconselhe.`;
 
@@ -3475,7 +3490,7 @@ serve(async (req) => {
       supabaseAdmin.from('despesas').select('valor').eq('user_id', user.id).gte('data', inicioMesAnt).lte('data', fimMesAnt),
       supabaseAdmin.from('vendas').select('descricao, valor, status, data_venda, clientes(nome), venda_itens(descricao, quantidade)').eq('user_id', user.id).order('data_venda', { ascending: false }).limit(5),
       supabaseAdmin.from('vendas').select('descricao, valor, clientes(nome)').eq('user_id', user.id).eq('status', 'pendente').order('data_venda', { ascending: false }).limit(5),
-      supabaseAdmin.from('perfis').select('nome_completo, empresa').eq('id', user.id).single(),
+      supabaseAdmin.from('perfis').select('nome_completo, nome_fantasia, razao_social').eq('id', user.id).single(),
       supabaseAdmin.from('produtos').select('id, nome, valor').eq('user_id', user.id).order('nome'),
     ]);
 
@@ -3517,7 +3532,7 @@ serve(async (req) => {
 
     const contexto = `
 CONTEXTO DO USUÁRIO (resumo automático):
-- Nome: ${perfilRes?.data?.nome_completo || 'Não informado'} | Empresa: ${perfilRes?.data?.empresa || 'Não informado'}
+- Nome: ${perfilRes?.data?.nome_completo || 'Não informado'} | Empresa: ${perfilRes?.data?.nome_fantasia || perfilRes?.data?.razao_social || 'Não informado'}
 ${blocoLimites}
 - Clientes cadastrados: ${clientesRes.data?.length || 0}
 - Mês atual (${inicioMes} a ${fimMes}): vendas R$${totalVendasMes.toFixed(2)}, gastos R$${totalGastosMes.toFixed(2)}, lucro R$${lucroMes.toFixed(2)}

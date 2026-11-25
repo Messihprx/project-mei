@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/auth-guard.js"></script>
+    <title>Meu perfil | FinMEI</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+    <meta name="theme-color" content="#080c16">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <script>
+        // PWA: deixa o app instalável na tela inicial do celular e
+        // guarda CSS/JS em cache para abrir rápido na segunda visita.
+        // Dado financeiro nunca é cacheado (ver public/sw.js).
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+    </script>
+</head>
+
+<body class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">MEI</div>
+                <span>finMEI</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="./" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
+            </a>
+            <a href="vendas" class="nav-item">
+                <i data-lucide="shopping-cart"></i> <span>Vendas</span>
+            </a>
+            <a href="gastos" class="nav-item">
+                <i data-lucide="trending-down"></i> <span>Gastos</span>
+            </a>
+            <a href="contas" class="nav-item">
+                <i data-lucide="wallet"></i> <span>Contas</span>
+            </a>
+            <a href="clientes" class="nav-item">
+                <i data-lucide="users"></i> <span>Clientes</span>
+            </a>
+            <a href="devendo" class="nav-item">
+                <i data-lucide="alert-circle"></i> <span>Devedores</span>
+            </a>
+            <a href="produtos" class="nav-item">
+                <i data-lucide="package"></i> <span>Produtos</span>
+            </a>
+
+            <div class="sidebar-divider">ASSISTENTE</div>
+            <a href="ia" class="nav-item">
+                <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
+            </a>
+
+            <div class="sidebar-divider">CONTA</div>
+            <a href="perfil" class="nav-item active">
+                <i data-lucide="user-round"></i> <span>Meu perfil</span>
+            </a>
+            <a href="planos" class="nav-item">
+                <i data-lucide="star"></i> <span>Ver Planos</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+
+        <header class="top-bar">
+            <div class="page-header">
+                <span class="page-kicker"><i data-lucide="user-round"></i> Conta</span>
+                <h2>Meu perfil</h2>
+                <p>Mantenha seus dados pessoais e os do seu MEI sempre atualizados</p>
+            </div>
+            <div class="top-actions">
+                <a href="./" class="top-action-secondary">
+                    <i data-lucide="arrow-left"></i><span>Voltar ao dashboard</span>
+                </a>
+                <div class="user-info">
+                    <div class="profile-dropdown">
+                        <button class="profile-toggle" onclick="toggleProfileDropdown(event)">
+                            <img id="fotoUsuario" src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                                referrerpolicy="no-referrer" alt="Perfil" onerror="this.onerror=null;this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
+                        </button>
+                        <div class="dropdown-menu" id="profileDropdown">
+                            <div class="dropdown-header">Minha Conta</div>
+                            <a href="perfil" class="dropdown-item">
+                                <i data-lucide="user-round"></i> <span>Meu perfil</span>
+                            </a>
+                            <a href="#" onclick="abrirImportacao()" class="dropdown-item">
+                                <i data-lucide="database-backup"></i> <span>Importar dados</span>
+                            </a>
+                            <a href="#" onclick="abrirRelatorioAnalitico()" class="dropdown-item">
+                                <i data-lucide="bar-chart-2"></i> <span>Relatórios Avançados</span>
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <button id="btnToggleTema" class="dropdown-item" onclick="toggleTema()">
+                                <i id="iconeTema" data-lucide="sun"></i>
+                                <span id="textoTema">Modo claro</span>
+                            </button>
+                            <a href="#" onclick="logout()" class="dropdown-item logout">
+                                <i data-lucide="log-out"></i> <span>Sair</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="content-wrapper perfil-wrapper">
+            <div class="perfil-grid">
+                <aside class="perfil-card perfil-avatar-card">
+                    <div class="perfil-avatar-wrap">
+                        <img id="perfilAvatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                            alt="Foto do perfil" onerror="this.onerror=null;this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png'">
+                        <button type="button" class="perfil-avatar-btn" id="btnTrocarFoto" title="Alterar foto">
+                            <i data-lucide="camera"></i>
+                        </button>
+                        <input type="file" id="inputFoto" accept="image/*" hidden>
+                    </div>
+
+                    <h3 id="perfilNome">Carregando...</h3>
+                    <p class="perfil-avatar-email" id="perfilEmail"></p>
+                    <span class="perfil-plano" id="perfilPlano"><i data-lucide="gem"></i> Plano gratuito</span>
+
+                    <div class="perfil-meta">
+                        <div class="perfil-meta-item">
+                            <span><i data-lucide="calendar-days"></i> Membro desde</span>
+                            <strong id="perfilMembroDesde">—</strong>
+                        </div>
+                        <div class="perfil-meta-item">
+                            <span><i data-lucide="badge-check"></i> Situação</span>
+                            <strong id="perfilSituacao">—</strong>
+                        </div>
+                    </div>
+
+                    <div class="perfil-avatar-acoes">
+                        <button type="button" class="btn-secondary" id="btnTrocarFoto2">
+                            <i data-lucide="upload"></i> Alterar foto
+                        </button>
+                        <button type="button" class="btn-secondary perfil-btn-remover" id="btnRemoverFoto">
+                            <i data-lucide="trash-2"></i> Remover foto
+                        </button>
+                    </div>
+
+                    <p class="perfil-dica">
+                        <i data-lucide="info"></i>
+                        A imagem é recortada e comprimida automaticamente antes do envio.
+                    </p>
+                </aside>
+
+                <form id="formPerfil" class="perfil-form" novalidate>
+                    <section class="perfil-card">
+                        <div class="perfil-secao-head">
+                            <span class="perfil-secao-icone"><i data-lucide="user"></i></span>
+                            <div>
+                                <h4>Dados pessoais</h4>
+                                <p>Informações de identificação do responsável pelo MEI.</p>
+                            </div>
+                        </div>
+
+                        <div class="perfil-campos">
+                            <div class="form-group">
+                                <label for="nome_completo">Nome completo</label>
+                                <input type="text" id="nome_completo" autocomplete="name" maxlength="120">
+                                <div class="erro-campo" id="erro-nome_completo"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email">E-mail</label>
+                                <input type="email" id="email" class="perfil-readonly" readonly>
+                                <div class="erro-campo" id="erro-email"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cpf">CPF <span class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="cpf" inputmode="numeric" autocomplete="off"
+                                    placeholder="000.000.000-00" maxlength="14">
+                                <div class="erro-campo" id="erro-cpf"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="data_nascimento">Data de nascimento <span
+                                        class="perfil-opcional">opcional</span></label>
+                                <input type="date" id="data_nascimento" autocomplete="bday">
+                                <div class="erro-campo" id="erro-data_nascimento"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="celular">Celular / WhatsApp <span
+                                        class="perfil-opcional">opcional</span></label>
+                                <input type="tel" id="celular" inputmode="tel" autocomplete="tel"
+                                    placeholder="(11) 99999-9999" maxlength="15">
+                                <div class="erro-campo" id="erro-celular"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="telefone">Telefone fixo <span
+                                        class="perfil-opcional">opcional</span></label>
+                                <input type="tel" id="telefone" inputmode="tel" autocomplete="tel"
+                                    placeholder="(11) 3333-4444" maxlength="14">
+                                <div class="erro-campo" id="erro-telefone"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="perfil-card">
+                        <div class="perfil-secao-head">
+                            <span class="perfil-secao-icone"><i data-lucide="briefcase"></i></span>
+                            <div>
+                                <h4>Dados do MEI</h4>
+                                <p>Informações do seu negócio, como aparecem no CNPJ.</p>
+                            </div>
+                        </div>
+
+                        <div class="perfil-campos">
+                            <div class="form-group">
+                                <label for="nome_fantasia">Nome fantasia <span
+                                        class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="nome_fantasia" maxlength="120">
+                                <div class="erro-campo" id="erro-nome_fantasia"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="razao_social">Razão social <span
+                                        class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="razao_social" maxlength="150">
+                                <div class="erro-campo" id="erro-razao_social"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cnpj">CNPJ <span class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="cnpj" inputmode="numeric" autocomplete="off"
+                                    placeholder="00.000.000/0000-00" maxlength="18">
+                                <div class="erro-campo" id="erro-cnpj"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="inscricao_municipal">Inscrição municipal <span
+                                        class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="inscricao_municipal" maxlength="30">
+                                <div class="erro-campo" id="erro-inscricao_municipal"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cnae">CNAE / atividade principal <span
+                                        class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="cnae" maxlength="60" placeholder="Ex.: 47.89-0-99">
+                                <div class="erro-campo" id="erro-cnae"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="data_abertura">Data de abertura <span
+                                        class="perfil-opcional">opcional</span></label>
+                                <input type="date" id="data_abertura">
+                                <div class="erro-campo" id="erro-data_abertura"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="perfil-card">
+                        <div class="perfil-secao-head">
+                            <span class="perfil-secao-icone"><i data-lucide="map-pin"></i></span>
+                            <div>
+                                <h4>Endereço</h4>
+                                <p>Endereço do negócio ou residencial, como preferir.</p>
+                            </div>
+                        </div>
+
+                        <div class="perfil-campos">
+                            <div class="form-group">
+                                <label for="cep">CEP <span class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="cep" inputmode="numeric" autocomplete="postal-code"
+                                    placeholder="00000-000" maxlength="9">
+                                <div class="erro-campo" id="erro-cep"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="logradouro">Logradouro <span
+                                        class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="logradouro" autocomplete="address-line1" maxlength="150">
+                                <div class="erro-campo" id="erro-logradouro"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="numero">Número <span class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="numero" maxlength="15">
+                                <div class="erro-campo" id="erro-numero"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="complemento">Complemento <span
+                                        class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="complemento" maxlength="60">
+                                <div class="erro-campo" id="erro-complemento"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bairro">Bairro <span class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="bairro" maxlength="80">
+                                <div class="erro-campo" id="erro-bairro"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cidade">Cidade <span class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="cidade" autocomplete="address-level2" maxlength="80">
+                                <div class="erro-campo" id="erro-cidade"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="estado">Estado <span class="perfil-opcional">opcional</span></label>
+                                <select id="estado">
+                                    <option value="">Selecione</option>
+                                    <option value="AC">Acre</option>
+                                    <option value="AL">Alagoas</option>
+                                    <option value="AP">Amapá</option>
+                                    <option value="AM">Amazonas</option>
+                                    <option value="BA">Bahia</option>
+                                    <option value="CE">Ceará</option>
+                                    <option value="DF">Distrito Federal</option>
+                                    <option value="ES">Espírito Santo</option>
+                                    <option value="GO">Goiás</option>
+                                    <option value="MA">Maranhão</option>
+                                    <option value="MT">Mato Grosso</option>
+                                    <option value="MS">Mato Grosso do Sul</option>
+                                    <option value="MG">Minas Gerais</option>
+                                    <option value="PA">Pará</option>
+                                    <option value="PB">Paraíba</option>
+                                    <option value="PR">Paraná</option>
+                                    <option value="PE">Pernambuco</option>
+                                    <option value="PI">Piauí</option>
+                                    <option value="RJ">Rio de Janeiro</option>
+                                    <option value="RN">Rio Grande do Norte</option>
+                                    <option value="RS">Rio Grande do Sul</option>
+                                    <option value="RO">Rondônia</option>
+                                    <option value="RR">Roraima</option>
+                                    <option value="SC">Santa Catarina</option>
+                                    <option value="SP">São Paulo</option>
+                                    <option value="SE">Sergipe</option>
+                                    <option value="TO">Tocantins</option>
+                                </select>
+                                <div class="erro-campo" id="erro-estado"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="perfil-card">
+                        <div class="perfil-secao-head">
+                            <span class="perfil-secao-icone"><i data-lucide="share-2"></i></span>
+                            <div>
+                                <h4>Contato e redes</h4>
+                                <p>Opcional. Ajuda a deixar seu perfil completo.</p>
+                            </div>
+                        </div>
+
+                        <div class="perfil-campos">
+                            <div class="form-group">
+                                <label for="site">Site <span class="perfil-opcional">opcional</span></label>
+                                <input type="url" id="site" placeholder="https://" maxlength="150">
+                                <div class="erro-campo" id="erro-site"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="instagram">Instagram <span class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="instagram" placeholder="@seu_negocio" maxlength="60">
+                                <div class="erro-campo" id="erro-instagram"></div>
+                            </div>
+
+                            <div class="form-group perfil-campo-full">
+                                <label for="chave_pix">Chave Pix <span class="perfil-opcional">opcional</span></label>
+                                <input type="text" id="chave_pix" maxlength="120"
+                                    placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
+                                <div class="erro-campo" id="erro-chave_pix"></div>
+                            </div>
+
+                            <div class="form-group perfil-campo-full">
+                                <label for="bio">Sobre o negócio <span class="perfil-opcional">opcional</span></label>
+                                <textarea id="bio" rows="4" maxlength="500"
+                                    placeholder="Conte em poucas palavras o que você faz..."></textarea>
+                                <div class="erro-campo" id="erro-bio"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="perfil-acoes">
+                        <span class="perfil-status" id="perfilStatus">
+                            <i data-lucide="shield-check"></i>
+                            Seus dados ficam protegidos e visíveis apenas para você.
+                        </span>
+                        <button type="submit" class="btn-primary" id="btnSalvarPerfil">
+                            <i data-lucide="save"></i> Salvar alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/ai-fab.js"></script>
+    <script type="module" src="js/perfil.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

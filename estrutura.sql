@@ -31,6 +31,31 @@ perfis
   assinatura_cancelada_em  timestamptz
   metodo_assinatura        text            -- 'recorrente' | 'avulso'
 
+  -- Perfil complementar (sql/perfil_mei.sql) — todos opcionais
+  foto_url                 text            -- bucket público 'avatars'
+  cpf                      text
+  data_nascimento          date
+  celular                  text
+  telefone                 text
+  nome_fantasia            text
+  razao_social             text
+  cnpj                     text
+  inscricao_municipal      text
+  cnae                     text
+  data_abertura            date
+  cep                      text
+  logradouro               text
+  numero                   text
+  complemento              text
+  bairro                   text
+  cidade                   text
+  estado                   text
+  site                     text
+  instagram                text
+  chave_pix                text
+  bio                      text
+  atualizado_em            timestamptz
+
 clientes
   id          uuid PK
   user_id     uuid -> auth.users(id) ON DELETE CASCADE
@@ -266,9 +291,10 @@ limpar_bi_handoff()                   void     tokens vencidos do BI
 --
 -- Exceções que importam:
 --
---   perfis          usuário só LÊ o próprio. Quem escreve o plano é o
---                   webhook, com service role. Sem isso, daria para
---                   virar premium por conta própria.
+--   perfis          usuário LÊ e ATUALIZA o próprio, mas a trigger
+--                   proteger_campos_perfil devolve plano, role,
+--                   assinatura e expira_em ao valor antigo. Quem
+--                   escreve esses campos é o webhook, com service role.
 --   ai_providers    leitura bloqueada para todos menos admin — a
 --                   tabela guarda as chaves de API.
 --   gateway_config  só admin, mesma razão.
@@ -293,3 +319,8 @@ limpar_bi_handoff()                   void     tokens vencidos do BI
 --   leitura   qualquer um (as fotos aparecem no catálogo)
 --   escrita   só na própria pasta: (storage.foldername(name))[1] = auth.uid()
 --   exclusão  mesma regra
+--
+-- bucket 'avatars' (público) — foto do perfil (sql/perfil_mei.sql)
+--   leitura   qualquer um (a foto aparece no site)
+--   escrita   só na pasta do próprio usuário: <uid>/arquivo.jpg
+--   alteração e exclusão  mesma regra

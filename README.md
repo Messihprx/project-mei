@@ -144,8 +144,8 @@ Connection string → URI) e serve para rodar SQL/DDL sem passar pela API.
 O passo a passo completo está em **[guia.md](guia.md)**: scripts SQL na ordem,
 secrets, deploy das funções, configuração do Mercado Pago e do app de BI.
 
-Resumo: rodar os 10 scripts de `sql/`, publicar as 8 Edge Functions, e apontar
-o Netlify para a pasta `public/`.
+Resumo: rodar os scripts de `sql/` na ordem do guia, publicar as 8 Edge
+Functions, e apontar o Netlify para a pasta `public/`.
 
 ---
 

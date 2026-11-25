@@ -28,10 +28,11 @@ export function urlDoApp(pagina) {
 // TEMA CLARO / ESCURO (salvo em localStorage)
 // ------------------------------------------------------------------
 const TEMA_KEY = 'finmei_tema';
-const iconeTemaEl = document.getElementById('iconeTema');
-const textoTemaEl = document.getElementById('textoTema');
 
 function aplicarTema(tema) {
+    const iconeTemaEl = document.getElementById('iconeTema');
+    const textoTemaEl = document.getElementById('textoTema');
+
     if (tema === 'light') {
         document.documentElement.setAttribute('data-theme', 'light');
         localStorage.setItem(TEMA_KEY, 'light');
@@ -58,6 +59,9 @@ if (temaSalvo === 'light') {
 } else if (!temaSalvo) {
     // sem preferência: mantém escuro (padrão) e registra
     localStorage.setItem(TEMA_KEY, 'dark');
+} else {
+    // se já estiver 'dark', garante que os ícones/textos reflitam isso
+    aplicarTema('dark');
 }
 
 // Expõe globalmente para o onclick do dropdown

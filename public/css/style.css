@@ -3621,6 +3621,20 @@ select {
     margin-bottom: 0;
 }
 
+/* O item de tema é um <button>: o reset fica no CSS, e não no style
+   inline, para o :hover conseguir trocar o fundo normalmente. */
+button.dropdown-item {
+    width: 100%;
+    background: transparent;
+    border: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .dropdown-item:hover {
     background: rgba(59, 130, 246, 0.1);
     color: var(--cor-primaria-strong);
@@ -7212,5 +7226,311 @@ html[data-theme="light"] .btn-secondary:hover {
     .btn-secondary {
         width: 100%;
         justify-content: center;
+    }
+}/* ============================================
+   MEU PERFIL
+   ============================================ */
+.perfil-wrapper {
+    padding-top: 1.5rem;
+}
+
+.perfil-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.perfil-card {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.perfil-avatar-card {
+    text-align: center;
+    position: sticky;
+    top: 1.5rem;
+}
+
+.perfil-avatar-wrap {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    margin: 0 auto 1rem;
+}
+
+.perfil-avatar-wrap img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--glass-border);
+    background: var(--fundo-card-solid);
+}
+
+.perfil-avatar-btn {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: var(--cor-primaria);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, .4);
+    transition: var(--transition);
+}
+
+.perfil-avatar-btn:hover {
+    transform: scale(1.08);
+    background: var(--cor-primaria-hover);
+}
+
+.perfil-avatar-btn i {
+    width: 18px;
+    height: 18px;
+}
+
+.perfil-avatar-card h3 {
+    font-size: 1.15rem;
+    margin-bottom: 0.2rem;
+}
+
+.perfil-avatar-email {
+    color: var(--texto-secundario);
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+    word-break: break-all;
+}
+
+.perfil-plano {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: var(--cor-primaria-soft);
+    color: var(--cor-primaria-strong);
+    margin-bottom: 1rem;
+}
+
+.perfil-plano i {
+    width: 13px;
+    height: 13px;
+}
+
+.perfil-plano.premium {
+    background: var(--cor-primaria-soft);
+    color: var(--cor-primaria-strong);
+    border: 1px solid var(--cor-primaria);
+}
+
+.perfil-meta {
+    display: grid;
+    gap: 0.6rem;
+    margin: 1rem 0;
+    text-align: left;
+}
+
+.perfil-meta-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.75rem;
+    background: rgba(8, 12, 22, .4);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+}
+
+.perfil-meta-item span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--texto-secundario);
+}
+
+.perfil-meta-item span i {
+    width: 14px;
+    height: 14px;
+}
+
+.perfil-meta-item strong {
+    color: var(--texto-principal);
+}
+
+.perfil-avatar-acoes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.perfil-avatar-acoes .btn-secondary {
+    width: 100%;
+    justify-content: center;
+}
+
+.perfil-btn-remover {
+    color: var(--cor-erro);
+    border-color: rgba(244, 63, 94, .3);
+}
+
+.perfil-btn-remover:hover {
+    border-color: var(--cor-erro);
+    background: var(--cor-erro-soft);
+    color: var(--cor-erro);
+}
+
+.perfil-dica {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--texto-faint);
+    font-size: 0.72rem;
+    margin-top: 1rem;
+    justify-content: center;
+}
+
+.perfil-dica i {
+    width: 13px;
+    height: 13px;
+}
+
+.perfil-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.perfil-secao-head {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.perfil-secao-icone {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--cor-primaria-soft);
+    color: var(--cor-primaria-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.perfil-secao-icone i {
+    width: 20px;
+    height: 20px;
+}
+
+.perfil-secao-head h4 {
+    font-size: 1.05rem;
+    margin-bottom: 0.1rem;
+}
+
+.perfil-secao-head p {
+    color: var(--texto-secundario);
+    font-size: 0.82rem;
+    margin: 0;
+}
+
+.perfil-campos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.perfil-campo-full {
+    grid-column: 1 / -1;
+}
+
+.perfil-opcional {
+    color: var(--texto-faint);
+    font-weight: 500;
+    font-size: 0.72rem;
+    margin-left: 0.25rem;
+}
+
+.perfil-readonly {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.perfil-acoes {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.perfil-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--texto-secundario);
+    font-size: 0.82rem;
+}
+
+.perfil-status.ok {
+    color: var(--cor-sucesso);
+}
+
+.perfil-status.pendente {
+    color: var(--cor-alerta);
+}
+
+.perfil-status i {
+    width: 16px;
+    height: 16px;
+}
+
+.perfil-acoes .btn-primary {
+    width: auto;
+    padding: 0.7rem 1.4rem;
+}
+
+@media (max-width: 900px) {
+    .perfil-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .perfil-avatar-card {
+        position: static;
+    }
+}
+
+@media (max-width: 600px) {
+    .perfil-campos {
+        grid-template-columns: 1fr;
+    }
+
+    .perfil-acoes {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .perfil-acoes .btn-primary {
+        width: 100%;
     }
 }
