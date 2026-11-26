@@ -180,6 +180,34 @@ export async function injetarBannerPlano() {
 
     const status = await verificarStatusPlano();
 
+    // Atualiza o card de plano na sidebar (quando presente)
+    const sidebarCard = document.getElementById('sidebarPlanCard');
+    if (sidebarCard) {
+        const titleEl = document.getElementById('sidebarPlanTitle');
+        const descEl = document.getElementById('sidebarPlanDesc');
+        const iconEl = document.getElementById('sidebarPlanIcon');
+        const btnEl = document.getElementById('sidebarPlanBtn');
+
+        if (status.premium) {
+            sidebarCard.classList.add('is-premium');
+            const expDate = status.validadePremium ? new Date(status.validadePremium).toLocaleDateString('pt-BR') : 'Ativa';
+            if (titleEl) titleEl.textContent = status.assinaturaCancelada ? 'Assinatura cancelada' : 'Membro Premium';
+            if (descEl) {
+                descEl.textContent = status.assinaturaCancelada
+                    ? `Acesso Premium ativo até ${expDate}.`
+                    : `Você já é membro Premium! Ativo até ${expDate}.`;
+            }
+            if (iconEl) iconEl.innerHTML = `<i data-lucide="crown"></i>`;
+            if (btnEl) btnEl.textContent = 'Ver Planos';
+        } else {
+            sidebarCard.classList.remove('is-premium');
+            if (titleEl) titleEl.textContent = 'Seja Premium';
+            if (descEl) descEl.textContent = 'Mais recursos para fazer seu negócio crescer.';
+            if (iconEl) iconEl.innerHTML = `<i data-lucide="crown"></i>`;
+            if (btnEl) btnEl.textContent = 'Ver Planos';
+        }
+    }
+
     // Se for Premium, mostra o badge de elite
     if (status.premium) {
         const userInfo = document.querySelector('.user-info');
@@ -202,8 +230,8 @@ export async function injetarBannerPlano() {
             userInfo.prepend(badge);
         }
 
-        // Card bonitinho na tela principal (Dashboard)
-        if (paginaAtual === "index") {
+        // Card bonitinho na tela principal (Dashboard) apenas se não houver o card na sidebar
+        if (paginaAtual === "index" && !sidebarCard) {
             const contentWrapper = document.querySelector('.content-wrapper');
             if (contentWrapper && !document.getElementById('card-status-premium')) {
                 const card = document.createElement('div');

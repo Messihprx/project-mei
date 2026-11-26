@@ -338,6 +338,8 @@ async function carregarGastos() {
         if (!tabelaGastos) montarTabelaGastos(container);
         tabelaGastos.atualizar(gastos);
 
+        atualizarCardsGastos(gastos);
+
     } catch (err) {
         console.error("Erro ao carregar gastos:", err);
         if (!tabelaGastos) {
@@ -346,6 +348,45 @@ async function carregarGastos() {
             mostrarModal('Erro ao carregar', 'Não foi possível carregar os gastos. Tente novamente.', 'alerta');
         }
     }
+}
+
+// --- CARDS INFORMATIVOS GASTOS ---
+function atualizarCardsGastos(gastos) {
+    const total = gastos.reduce((soma, g) => soma + Number(g.valor || 0), 0);
+    const qtd = gastos.length;
+    const media = qtd > 0 ? total / qtd : 0;
+
+    const porCategoria = {};
+    for (const g of gastos) {
+        const cat = g.categoria || 'Outros';
+        porCategoria[cat] = (porCategoria[cat] || 0) + Number(g.valor || 0);
+    }
+    let maiorCat = '—';
+    let maiorCatValor = 0;
+    for (const [cat, val] of Object.entries(porCategoria)) {
+        if (val > maiorCatValor) {
+            maiorCat = cat;
+            maiorCatValor = val;
+        }
+    }
+
+    const elTotal = document.getElementById("cardTotalGastos");
+    const elQtd = document.getElementById("cardQtdGastos");
+    const elMedia = document.getElementById("cardMediaGastos");
+    const elMaiorCat = document.getElementById("cardMaiorCatGastos");
+    const elSubTotal = document.getElementById("cardSubGastos");
+    const elSubQtd = document.getElementById("cardSubQtdGastos");
+    const elSubMedia = document.getElementById("cardSubMediaGastos");
+    const elSubMaiorCat = document.getElementById("cardSubMaiorCatGastos");
+
+    if (elTotal) elTotal.textContent = `- R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    if (elQtd) elQtd.textContent = qtd.toLocaleString('pt-BR');
+    if (elMedia) elMedia.textContent = `- R$ ${media.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    if (elMaiorCat) elMaiorCat.textContent = maiorCat;
+    if (elSubTotal) elSubTotal.textContent = qtd > 0 ? `média de R$ ${media.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} por gasto` : 'Sem gastos no período';
+    if (elSubQtd) elSubQtd.textContent = qtd === 1 ? '1 gasto registrado' : `${qtd} gastos registrados`;
+    if (elSubMedia) elSubMedia.textContent = maiorCatValor > 0 ? `R$ ${maiorCatValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em ${maiorCat}` : 'Sem gastos no período';
+    if (elSubMaiorCat) elSubMaiorCat.textContent = qtd > 0 ? `${Math.round((maiorCatValor / total) * 100)}% dos gastos estão em ${maiorCat.toLowerCase()}` : 'Sem gastos no período';
 }
 
 window.abrirEditarGasto = async function(id) {

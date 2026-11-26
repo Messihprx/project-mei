@@ -230,6 +230,8 @@ async function carregarProdutos() {
         if (!tabelaProdutos) montarTabelaProdutos(container);
         tabelaProdutos.atualizar(produtos);
 
+        atualizarCardsProdutos(produtos);
+
     } catch (err) {
         console.error("Erro ao carregar produtos:", err.message);
         if (!tabelaProdutos) {
@@ -238,6 +240,33 @@ async function carregarProdutos() {
             mostrarModal('Erro ao carregar', 'Não foi possível carregar os produtos. Tente novamente.', 'alerta');
         }
     }
+}
+
+// --- CARDS INFORMATIVOS PRODUTOS ---
+function atualizarCardsProdutos(produtos) {
+    const total = produtos.length;
+    const valores = produtos.map(p => Number(p.valor || 0));
+    const media = total > 0 ? valores.reduce((s, v) => s + v, 0) / total : 0;
+    const maisCaro = total > 0 ? Math.max(...valores) : 0;
+    const maisBarato = total > 0 ? Math.min(...valores) : 0;
+
+    const elTotal = document.getElementById("cardTotalProdutos");
+    const elMedia = document.getElementById("cardMediaProdutos");
+    const elMaior = document.getElementById("cardMaiorProduto");
+    const elMenor = document.getElementById("cardMenorProduto");
+    const elSubTotal = document.getElementById("cardSubProdutos");
+    const elSubMedia = document.getElementById("cardSubMediaProdutos");
+    const elSubMaior = document.getElementById("cardSubMaiorProduto");
+    const elSubMenor = document.getElementById("cardSubMenorProduto");
+
+    if (elTotal) elTotal.textContent = total.toLocaleString('pt-BR');
+    if (elMedia) elMedia.textContent = `R$ ${media.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    if (elMaior) elMaior.textContent = `R$ ${maisCaro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    if (elMenor) elMenor.textContent = `R$ ${maisBarato.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    if (elSubTotal) elSubTotal.textContent = total === 1 ? '1 produto cadastrado' : `${total} produtos no catálogo`;
+    if (elSubMedia) elSubMedia.textContent = total > 0 ? `média de R$ ${media.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Sem produtos cadastrados';
+    if (elSubMaior) elSubMaior.textContent = total > 0 ? 'produto mais caro' : 'Sem produtos cadastrados';
+    if (elSubMenor) elSubMenor.textContent = total > 0 ? 'produto mais barato' : 'Sem produtos cadastrados';
 }
 
 // --- EDITAR ---

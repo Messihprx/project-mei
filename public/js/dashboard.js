@@ -84,13 +84,20 @@ async function carregarDadosUsuario() {
     try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-            const nomeCompleto = user.user_metadata?.nome || user.user_metadata?.full_name || user.email.split('@')[0];
-            const primeiroNome = nomeCompleto.charAt(0).toUpperCase() + nomeCompleto.slice(1).split(' ')[0];
+            const nomeCompleto = (user.user_metadata?.nome || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário').toString().trim();
+            const primeiroNome = nomeCompleto ? nomeCompleto.charAt(0).toUpperCase() + nomeCompleto.slice(1).split(' ')[0] : 'Usuário';
             const saudacaoElem = document.getElementById("nomeUsuario");
             if (saudacaoElem) {
                 const h = new Date().getHours();
                 const g = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
                 saudacaoElem.textContent = `${g}, ${primeiroNome}!`;
+            }
+
+            const nomeHeaderElem = document.getElementById("nomePerfilHeader");
+            if (nomeHeaderElem) {
+                const partes = nomeCompleto.trim().split(/\s+/);
+                const nomeCurto = partes.length > 0 ? partes.slice(0, 2).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ') : 'Usuário';
+                nomeHeaderElem.textContent = nomeCurto || 'Usuário';
             }
             
             const fotoElem = document.getElementById("fotoUsuario");
@@ -130,15 +137,66 @@ async function carregarDashboard() {
         const mes = resumo.mes || {};
         const serie = resumo.serie_mensal || [];
 
+        // Formata moeda de forma segura: nunca exibe "undefined" / "NaN".
+        const moeda = (v) => {
+            const n = Number(v || 0);
+            return Number.isFinite(n) ? n : 0;
+        };
+
         const atualizarTexto = (id, valor) => {
             const el = document.getElementById(id);
-            if (el) el.textContent = `R$ ${Number(valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            if (el) el.textContent = `R$ ${moeda(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
         };
 
         atualizarTexto("totalEntradas", mes.entradas);
         atualizarTexto("totalSaidas", mes.pendentes);
         atualizarTexto("totalGastosDashboard", mes.gastos);
         atualizarTexto("lucroReal", mes.lucro);
+
+        // --- Variação % vs período anterior nos 4 cards ---
+        const mesAnt = resumo.mes_anterior || {};
+        const fmtVar = (atual, anterior) => {
+            const a = Number(atual || 0);
+            const ant = Number(anterior || 0);
+            if (!Number.isFinite(a)) a = 0;
+            if (!Number.isFinite(ant)) ant = 0;
+
+            // Sem dado do período anterior: não inventa variação, mostra 0% neutra.
+            if (ant === 0) {
+                const texto = a > 0 ? '+100,0%' : (a === 0 ? '0,0%' : '-100,0%');
+                const classe = a > 0 ? 'pos' : (a < 0 ? 'neg' : 'neutro');
+                const icone = a > 0 ? 'trending-up' : (a < 0 ? 'trending-down' : 'minus');
+                return { texto, icone, classe };
+            }
+
+            const pct = ((a / ant - 1) * 100);
+            const sinal = pct >= 0 ? '+' : '';
+            const icone = pct > 0 ? 'trending-up' : (pct < 0 ? 'trending-down' : 'minus');
+            return { texto: `${sinal}${pct.toFixed(1).replace('.', ',')}%`, icone, classe: pct > 0 ? 'pos' : (pct < 0 ? 'neg' : 'neutro') };
+        };
+
+        // Rótulo do período anterior para mostrar "vs X"
+        const rotuloMesAnt = (ref) => {
+            if (!ref) return 'período passado';
+            const [ano, m] = String(ref).split('-');
+            const nome = MESES_PT?.[Number(m) - 1] || m;
+            return `${nome.charAt(0).toUpperCase() + nome.slice(1)} de ${ano}`;
+        };
+        const labelComparacao = rotuloMesAnt(mesAnt.referencia);
+
+        const aplicarVariacao = (idAtual, idAnt, idEl) => {
+            const el = document.getElementById(idEl);
+            if (!el) return;
+            const v = fmtVar(mes[idAtual], mesAnt[idAnt]) || {};
+            el.innerHTML = `<i data-lucide="${esc(v.icone || 'minus')}"></i> ${esc(v.texto || '0,0%')} <span class="metric-variacao-vs">vs ${esc(labelComparacao || 'período passado')}</span>`;
+            el.className = 'metric-variacao ' + (v.classe || 'neutro');
+            if (window.lucide) lucide.createIcons();
+        };
+
+        aplicarVariacao('entradas', 'entradas', 'variacaoRecebido');
+        aplicarVariacao('pendentes', 'pendentes', 'variacaoReceber');
+        aplicarVariacao('gastos', 'gastos', 'variacaoDespesas');
+        aplicarVariacao('lucro', 'lucro', 'variacaoLucro');
 
         const saldoGeral = Number(resumo.saldo_geral || 0);
         const cardSaldo = document.getElementById("saldoGeralTotal");
@@ -476,7 +534,79 @@ document.addEventListener('visibilitychange', () => {
 // Inicialização
 document.addEventListener("DOMContentLoaded", () => {
     verificarSessao();
+    inicializarBuscaHeader();
 });
+
+function inicializarBuscaHeader() {
+    const input = document.getElementById('buscaGlobalHeader');
+    const resultsBox = document.getElementById('headerSearchResults');
+    if (!input || !resultsBox) return;
+
+    const atalhos = [
+        { titulo: 'Vendas', sub: 'Histórico e gestão de vendas', href: 'vendas', tags: 'venda faturamento receita pedido' },
+        { titulo: 'Nova venda', sub: 'Registrar uma nova venda agora', href: 'nova-venda', tags: 'nova venda adicionar registrar' },
+        { titulo: 'Clientes', sub: 'Base de clientes cadastrados', href: 'clientes', tags: 'cliente contato cadastro' },
+        { titulo: 'Novo cliente', sub: 'Cadastrar novo cliente', href: 'novo-cliente', tags: 'novo cliente adicionar' },
+        { titulo: 'Produtos', sub: 'Catálogo, preços e estoque', href: 'produtos', tags: 'produto item servico estoque' },
+        { titulo: 'Gastos', sub: 'Despesas e custos operacionais', href: 'gastos', tags: 'gasto despesa custo saida' },
+        { titulo: 'Contas', sub: 'Contas bancárias e saldos', href: 'contas', tags: 'conta banco saldo carteira' },
+        { titulo: 'Devedores / Pendentes', sub: 'Cobranças e valores a receber em Vendas', href: 'vendas', tags: 'devedor pendente receber cobranca' },
+        { titulo: 'FinMEI IA', sub: 'Assistente inteligente para seu MEI', href: 'ia', tags: 'ia assistente chat ajuda' },
+        { titulo: 'Meu perfil', sub: 'Dados da conta e preferências', href: 'perfil', tags: 'perfil conta configuracoes' },
+        { titulo: 'Ver Planos', sub: 'Assinatura e recursos Premium', href: 'planos', tags: 'plano premium assinatura' }
+    ];
+
+    const renderizar = (termo) => {
+        const q = termo.trim().toLowerCase();
+        if (!q) {
+            resultsBox.hidden = true;
+            resultsBox.innerHTML = '';
+            return;
+        }
+        const matches = atalhos.filter(item =>
+            item.titulo.toLowerCase().includes(q) ||
+            item.sub.toLowerCase().includes(q) ||
+            item.tags.includes(q)
+        ).slice(0, 6);
+
+        if (!matches.length) {
+            resultsBox.innerHTML = '<div class="header-search-empty">Nenhum atalho encontrado</div>';
+            resultsBox.hidden = false;
+            return;
+        }
+
+        resultsBox.innerHTML = matches.map(m => `
+            <a href="${m.href}" class="header-search-item">
+                <span class="header-search-item-title">${esc(m.titulo)}</span>
+                <span class="header-search-item-sub">${esc(m.sub)}</span>
+            </a>
+        `).join('');
+        resultsBox.hidden = false;
+    };
+
+    input.addEventListener('input', () => renderizar(input.value));
+    input.addEventListener('focus', () => {
+        if (input.value.trim()) renderizar(input.value);
+    });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const firstLink = resultsBox.querySelector('a.header-search-item');
+            if (firstLink) {
+                e.preventDefault();
+                window.location.href = firstLink.getAttribute('href');
+            }
+        } else if (e.key === 'Escape') {
+            resultsBox.hidden = true;
+            input.blur();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.header-search-wrap')) {
+            resultsBox.hidden = true;
+        }
+    });
+}
 
 window.abrirRelatorioAnalitico = async function() {
     const statusObj = await verificarStatusPlano();

@@ -168,3 +168,31 @@ export function botaoCarregarMais(container, recebidos, limiteAtual, aoCarregarM
 
   container.appendChild(botao);
 }
+
+// ============================================================
+// Leitura completa de uma consulta
+//
+// O DataTable precisa da lista inteira para buscar, filtrar e
+// ordenar no navegador. O PostgREST devolve no máximo 1000
+// linhas por requisição e corta o resto em silêncio, então a
+// consulta é repetida em lotes até vir menos que o lote.
+//
+// @param {Function} criarConsulta recebe (inicio, fim) e devolve
+//        a query já com .range(inicio, fim)
+// ============================================================
+export async function buscarTodasAsLinhas(criarConsulta, { lote = 1000, maximo = 10000 } = {}) {
+  const todas = [];
+
+  for (let inicio = 0; inicio < maximo; inicio += lote) {
+    const { data, error } = await criarConsulta(inicio, inicio + lote - 1);
+    if (error) throw error;
+
+    const linhas = data || [];
+    todas.push(...linhas);
+
+    if (linhas.length < lote) return todas;
+  }
+
+  console.warn(`[FinMEI] Limite de ${maximo} registros atingido na listagem.`);
+  return todas;
+}

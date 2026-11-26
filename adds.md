@@ -10,4 +10,4 @@
 
 - futuramente fazer uma landing page
 
-prompt pra rodar: atualiza os dados do banco de acordo com as alterações feitas que foram feitas: perfil_mei, setup_planos, admin_supabase e atualizar o ai-chat com index.ts
+prompt pra rodar: no dropdown, o "modo escuro" ou "modo claro" nao tem hover e o icone nao troca ao clicar e mudar o tema

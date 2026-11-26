@@ -153,17 +153,37 @@ function montarTabelaVendas(container) {
                 ordenavel: false,
                 busca: false,
                 alinhamento: 'right',
-                render: (venda) => `<div class="dt-acoes">
-                    <button data-acao="comprovante" data-id="${esc(venda.id)}" class="btn-acao btn-comprovante" title="Gerar comprovante">
-                        <i data-lucide="receipt"></i>
-                    </button>
-                    <button data-acao="editar" data-id="${esc(venda.id)}" class="btn-acao btn-edit" title="Editar">
-                        <i data-lucide="edit-3"></i>
-                    </button>
-                    <button data-acao="excluir" data-id="${esc(venda.id)}" class="btn-acao btn-delete" title="Excluir">
-                        <i data-lucide="trash-2"></i>
-                    </button>
-                </div>`,
+                render: (venda) => {
+                    const pendente = venda.status === 'pendente';
+                    return `<div class="dt-acoes-menu">
+                        <button type="button" class="btn-acao btn-acao-dots" data-menu-toggle="${esc(venda.id)}" title="Ações" aria-haspopup="true" aria-expanded="false">
+                            <i data-lucide="more-vertical"></i>
+                        </button>
+                        <div class="dt-dropdown-acoes" data-menu-id="${esc(venda.id)}" hidden>
+                            <button type="button" class="dt-dropdown-item" data-acao="ver" data-id="${esc(venda.id)}">
+                                <i data-lucide="eye"></i> <span>Ver venda</span>
+                            </button>
+                            ${pendente ? `
+                                <button type="button" class="dt-dropdown-item is-success" data-acao="pago" data-id="${esc(venda.id)}">
+                                    <i data-lucide="check-circle-2"></i> <span>Marcar como pago</span>
+                                </button>
+                                <button type="button" class="dt-dropdown-item is-whatsapp" data-acao="cobrar" data-id="${esc(venda.id)}">
+                                    <i data-lucide="message-circle"></i> <span>Cobrar pelo WhatsApp</span>
+                                </button>
+                            ` : ''}
+                            <button type="button" class="dt-dropdown-item" data-acao="comprovante" data-id="${esc(venda.id)}">
+                                <i data-lucide="receipt"></i> <span>Gerar comprovante</span>
+                            </button>
+                            <button type="button" class="dt-dropdown-item" data-acao="editar" data-id="${esc(venda.id)}">
+                                <i data-lucide="edit-3"></i> <span>Editar</span>
+                            </button>
+                            <div class="dt-dropdown-divider"></div>
+                            <button type="button" class="dt-dropdown-item is-danger" data-acao="excluir" data-id="${esc(venda.id)}">
+                                <i data-lucide="trash-2"></i> <span>Excluir</span>
+                            </button>
+                        </div>
+                    </div>`;
+                },
             },
         ],
     });
@@ -184,7 +204,7 @@ async function carregarVendas() {
         const vendas = await buscarTodasAsLinhas((inicio, fim) => {
             let query = supabase
                 .from('vendas')
-                .select('id, descricao, valor, status, data_venda, created_at, cliente_id, clientes(nome), conta_id, contas(nome), venda_itens(descricao, quantidade, valor_unit, produto_id)')
+                .select('id, descricao, valor, status, data_venda, created_at, cliente_id, clientes(nome, telefone), conta_id, contas(nome), venda_itens(descricao, quantidade, valor_unit, produto_id)')
                 .order('data_venda', { ascending: false })
                 .order('id', { ascending: true });
 
@@ -207,6 +227,8 @@ async function carregarVendas() {
         if (!tabelaVendas) montarTabelaVendas(container);
         tabelaVendas.atualizar(vendas);
 
+        atualizarCardsVendas(vendas);
+
     } catch (err) {
         console.error("Erro ao carregar vendas:", err.message);
         if (!tabelaVendas) {
@@ -215,6 +237,37 @@ async function carregarVendas() {
             mostrarModal('Erro ao carregar', 'Não foi possível carregar as vendas. Tente novamente.', 'alerta');
         }
     }
+}
+
+// --- CARDS INFORMATIVOS VENDAS ---
+function atualizarCardsVendas(vendas) {
+    const vendasPagas = vendas.filter((v) => (v.status || '').toLowerCase() !== 'pendente');
+    const total = vendasPagas.reduce((s, v) => s + Number(v.valor || 0), 0);
+    const qtdPagas = vendasPagas.length;
+    const ticketMedio = qtdPagas > 0 ? total / qtdPagas : 0;
+    const pendentes = vendas
+        .filter((v) => (v.status || '').toLowerCase() === 'pendente')
+        .reduce((s, v) => s + Number(v.valor || 0), 0);
+    const qtdPendentes = vendas.filter((v) => (v.status || '').toLowerCase() === 'pendente').length;
+    const totalBruto = total + pendentes;
+
+    const elTotal = document.getElementById("cardTotalVendas");
+    const elQtd = document.getElementById("cardQtdVendas");
+    const elTicket = document.getElementById("cardTicketVendas");
+    const elPend = document.getElementById("cardPendentesVendas");
+    const elSubTotal = document.getElementById("cardSubVendas");
+    const elSubQtd = document.getElementById("cardSubQtdVendas");
+    const elSubTicket = document.getElementById("cardSubTicketVendas");
+    const elSubPend = document.getElementById("cardSubPendentesVendas");
+
+    if (elTotal) elTotal.textContent = `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    if (elQtd) elQtd.textContent = qtdPagas.toLocaleString('pt-BR');
+    if (elTicket) elTicket.textContent = `R$ ${ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    if (elPend) elPend.textContent = `R$ ${pendentes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    if (elSubTotal) elSubTotal.textContent = qtdPagas > 0 ? `média de R$ ${ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} por venda paga` : 'Sem vendas pagas no período';
+    if (elSubQtd) elSubQtd.textContent = qtdPagas === 1 ? '1 venda paga registrada' : `${qtdPagas} vendas pagas registradas`;
+    if (elSubTicket) elSubTicket.textContent = pendentes > 0 ? `R$ ${pendentes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} a receber` : 'Tudo recebido';
+    if (elSubPend) elSubPend.textContent = totalBruto > 0 ? `${Math.round((pendentes / totalBruto) * 100)}% do total ainda está pendente` : 'Sem vendas no período';
 }
 
 // --- 4. CONSTRUTOR DE ITENS DO MODAL DE EDIÇÃO ---
@@ -282,6 +335,145 @@ window.fecharModalEditarVenda = () => {
     document.getElementById("modalEditarVenda").style.display = "none";
 };
 
+function fecharMenusAcoes() {
+    document.querySelectorAll('.dt-dropdown-acoes:not([hidden])').forEach(menu => {
+        menu.hidden = true;
+    });
+    document.querySelectorAll('.btn-acao-dots[aria-expanded="true"]').forEach(btn => {
+        btn.setAttribute('aria-expanded', 'false');
+    });
+}
+
+window.fecharModalVerVenda = () => {
+    const modal = document.getElementById("modalVerVenda");
+    if (modal) modal.style.display = "none";
+};
+
+window.abrirModalVerVenda = async (venda) => {
+    const modal = document.getElementById("modalVerVenda");
+    if (!modal) return;
+
+    const valorNum = Number(venda.valor || 0);
+    const status = String(venda.status || 'pago').toLowerCase();
+    const isPendente = status === 'pendente';
+
+    document.getElementById("verVendaValor").textContent = `R$ ${valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    const badgeEl = document.getElementById("verVendaStatusBadge");
+    badgeEl.textContent = status.toUpperCase();
+    badgeEl.className = `badge-status ${status}`;
+
+    document.getElementById("verVendaCliente").textContent = venda.clientes?.nome || 'Cliente avulso';
+    document.getElementById("verVendaTelefone").textContent = venda.clientes?.telefone || '';
+    document.getElementById("verVendaData").textContent = formatarDataVenda(venda.data_venda || venda.created_at);
+    document.getElementById("verVendaConta").textContent = venda.contas?.nome || '—';
+    document.getElementById("verVendaDescricao").textContent = venda.descricao || 'Serviço Geral';
+
+    let itens = venda.venda_itens || [];
+    if (itens.length === 0) {
+        try {
+            const { data } = await supabase
+                .from('venda_itens')
+                .select('descricao, quantidade, valor_unit')
+                .eq('venda_id', venda.id);
+            itens = data || [];
+        } catch { itens = []; }
+    }
+
+    const listaItensEl = document.getElementById("verVendaListaItens");
+    if (itens.length > 0) {
+        listaItensEl.innerHTML = itens.map(it => {
+            const qtd = Number(it.quantidade) || 1;
+            const unit = Number(it.valor_unit || 0);
+            const sub = qtd * unit;
+            return `
+                <div class="ver-venda-item-row">
+                    <div class="ver-venda-item-info">
+                        <span class="ver-venda-item-nome">${esc(it.descricao || 'Item')}</span>
+                        <span class="ver-venda-item-qtd">${qtd}x R$ ${unit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <strong class="ver-venda-item-sub">R$ ${sub.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                </div>
+            `;
+        }).join('');
+    } else {
+        listaItensEl.innerHTML = `
+            <div class="ver-venda-item-row">
+                <div class="ver-venda-item-info">
+                    <span class="ver-venda-item-nome">${esc(venda.descricao || 'Serviço Geral')}</span>
+                    <span class="ver-venda-item-qtd">1x</span>
+                </div>
+                <strong class="ver-venda-item-sub">R$ ${valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+            </div>
+        `;
+    }
+
+    const acoesEl = document.getElementById("verVendaAcoes");
+    acoesEl.innerHTML = `
+        ${isPendente ? `
+            <button type="button" class="btn-ver-venda-wpp" id="btnVerVendaCobrar">
+                <i data-lucide="message-circle"></i> Cobrar WhatsApp
+            </button>
+            <button type="button" class="btn-ver-venda-pago" id="btnVerVendaPago">
+                <i data-lucide="check-circle-2"></i> Marcar como pago
+            </button>
+        ` : `
+            <button type="button" class="btn-secondary" id="btnVerVendaComprovante">
+                <i data-lucide="receipt"></i> Comprovante
+            </button>
+        `}
+        <button type="button" class="btn-primary" onclick="fecharModalVerVenda()" style="width:auto; padding:0.6rem 1.2rem;">
+            Fechar
+        </button>
+    `;
+
+    document.getElementById("btnVerVendaComprovante")?.addEventListener("click", () => {
+        window.gerarComprovante(venda);
+    });
+    document.getElementById("btnVerVendaCobrar")?.addEventListener("click", () => {
+        window.enviarCobranca(venda.clientes?.telefone, venda.clientes?.nome || 'Cliente', valorNum);
+    });
+    document.getElementById("btnVerVendaPago")?.addEventListener("click", async () => {
+        await window.marcarComoPago(venda.id);
+        window.fecharModalVerVenda();
+    });
+
+    modal.style.display = "flex";
+    if (window.lucide) lucide.createIcons();
+};
+
+window.marcarComoPago = async (id) => {
+    const confirmed = await confirmModal("Confirmar recebimento", "Confirmar que esta venda foi paga?");
+    if (!confirmed) return;
+    try {
+        const { data: venda } = await supabase
+            .from('vendas')
+            .select('conta_id, valor, status')
+            .eq('id', id)
+            .single();
+
+        const { error } = await supabase.from('vendas').update({ status: 'pago' }).eq('id', id);
+        if (error) throw error;
+
+        if (venda?.conta_id) {
+            const delta = calcDeltaVenda(venda.valor, 'pago', 'editar', venda.valor, venda.status);
+            if (delta !== 0) await atualizarSaldoConta(venda.conta_id, delta);
+        }
+        invalidarCachePlano();
+        mostrarModal('Status atualizado!', 'A venda foi marcada como recebida.', 'sucesso');
+        carregarVendas();
+    } catch (err) {
+        mostrarModal('Erro ao atualizar', traduzirErro(err.message));
+    }
+};
+
+window.enviarCobranca = (telefone, nome, valor) => {
+    if (!telefone) return mostrarModal('Sem telefone', 'Cliente sem telefone cadastrado.', 'alerta');
+    const valorNum = Number(valor) || 0;
+    const numero = String(telefone).replace(/\D/g, "");
+    const msg = encodeURIComponent(`Olá ${nome || 'cliente'}, tudo bem? Passando para lembrar do valor de R$ ${valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} pendente. Como prefere pagar?`);
+    window.open(`https://wa.me/55${numero}?text=${msg}`, '_blank');
+};
+
 window.deletarVenda = async (id) => {
     const confirmed = await confirmModal("Excluir venda", "Tem certeza que deseja excluir esta venda? Essa ação não pode ser desfeita.");
     if (!confirmed) return;
@@ -300,7 +492,13 @@ window.deletarVenda = async (id) => {
     }
 };
 
-window.gerarComprovante = (venda) => {
+window.gerarComprovante = async (venda) => {
+    const status = String(venda.status || 'pago').toLowerCase();
+    if (status === 'pendente') {
+        mostrarModal('Venda pendente', 'Esta venda ainda não foi paga. Não há comprovante de pagamento para gerar. Marque-a como recebida primeiro.', 'alerta');
+        return;
+    }
+
     const itens = venda.venda_itens || [];
     const itensHtml = itens.length
         ? itens.map(it => `<tr>
@@ -310,6 +508,46 @@ window.gerarComprovante = (venda) => {
             <td style="text-align:right;">R$ ${(Number(it.quantidade || 1) * Number(it.valor_unit || 0)).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
         </tr>`).join('')
         : `<tr><td colspan="4">${esc(venda.descricao || 'Serviço geral')}</td></tr>`;
+
+    // Busca dados do perfil do usuário logado (se houver)
+    let perfil = {};
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { data: perfilData } = await supabase
+                .from('perfis')
+                .select('*')
+                .eq('user_id', user.id)
+                .maybeSingle();
+            if (perfilData) perfil = perfilData;
+        }
+    } catch (_) { /* perfil opcional */ }
+
+    // Formatação de dados para exibição
+    const formatarCPF = (cpf) => {
+        if (!cpf) return '';
+        const d = cpf.replace(/\D/g, '');
+        return d.length === 11 ? `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9,11)}` : cpf;
+    };
+    const formatarCNPJ = (cnpj) => {
+        if (!cnpj) return '';
+        const d = cnpj.replace(/\D/g, '');
+        return d.length === 14 ? `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12,14)}` : cnpj;
+    };
+    const formatarCEP = (cep) => {
+        if (!cep) return '';
+        const d = cep.replace(/\D/g, '');
+        return d.length === 8 ? `${d.slice(0,5)}-${d.slice(5,8)}` : cep;
+    };
+
+    const nomeEmissor = perfil.nome_completo || '';
+    const nomeFantasia = perfil.nome_fantasia || perfil.razao_social || '';
+    const cnpjFormatado = formatarCNPJ(perfil.cnpj);
+    const cpfFormatado = formatarCPF(perfil.cpf);
+    const endereco = [perfil.logradouro, perfil.numero, perfil.complemento, perfil.bairro, perfil.cidade, perfil.estado]
+        .filter(Boolean).join(', ');
+    const telefoneEmissor = perfil.celular || perfil.telefone || '';
+    const chavePix = perfil.chave_pix || '';
 
     const html = `<!DOCTYPE html>
 <html lang="pt-br"><head><meta charset="UTF-8"><title>Comprovante de Pagamento</title>
@@ -337,6 +575,9 @@ window.gerarComprovante = (venda) => {
   .tot span:last-child{font-size:1.4rem;font-weight:800;color:#3b82f6;}
   .footer{background:#f8fafc;padding:16px 32px;text-align:center;font-size:.7rem;color:#94a3b8;}
   .footer strong{color:#64748b;}
+  .emitente{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-top:20px;}
+  .emitente h5{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:10px;}
+  .emitente .row{padding:6px 0;}
   @media print{body{background:#fff;padding:0;}.box{box-shadow:none;border-radius:0;}}
 </style></head><body>
 <div class="box">
@@ -345,6 +586,18 @@ window.gerarComprovante = (venda) => {
     <div class="sub">Comprovante de Pagamento</div>
   </div>
   <div class="body">
+    ${nomeFantasia || cnpjFormatado || cpfFormatado || nomeEmissor ? `
+    <div class="emitente">
+      <h5>Emitente</h5>
+      ${nomeFantasia ? `<div class="row"><span class="label">Nome fantasia</span><span class="value">${esc(nomeFantasia)}</span></div>` : ''}
+      ${nomeEmissor ? `<div class="row"><span class="label">Responsável</span><span class="value">${esc(nomeEmissor)}</span></div>` : ''}
+      ${cnpjFormatado ? `<div class="row"><span class="label">CNPJ</span><span class="value">${esc(cnpjFormatado)}</span></div>` : ''}
+      ${cpfFormatado ? `<div class="row"><span class="label">CPF</span><span class="value">${esc(cpfFormatado)}</span></div>` : ''}
+      ${endereco ? `<div class="row"><span class="label">Endereço</span><span class="value">${esc(endereco)}</span></div>` : ''}
+      ${telefoneEmissor ? `<div class="row"><span class="label">Telefone</span><span class="value">${esc(telefoneEmissor)}</span></div>` : ''}
+      ${chavePix ? `<div class="row"><span class="label">Chave Pix</span><span class="value">${esc(chavePix)}</span></div>` : ''}
+    </div>
+    ` : ''}
     <div class="row"><span class="label">Cliente</span><span class="value">${esc(venda.clientes?.nome || 'Cliente avulso')}</span></div>
     <div class="row"><span class="label">Data da venda</span><span class="value">${esc(formatarDataVenda(venda.data_venda || venda.created_at))}</span></div>
     <div class="row"><span class="label">Status</span><span class="badge ${esc(venda.status)}">${esc((venda.status || '').toUpperCase())}</span></div>
@@ -460,18 +713,73 @@ if (formEditarVenda) {
 
 // --- 7. INICIALIZAÇÃO ---
 document.addEventListener("DOMContentLoaded", () => {
-    // Delegação no lugar dos onclick inline
-    delegate(document.getElementById('listaVendas'), 'button[data-acao]', 'click', (e, botao) => {
+    const listaVendasEl = document.getElementById('listaVendas');
+
+    // Abre/fecha menu de 3 pontinhos posicionado sem clipping do container da tabela
+    delegate(listaVendasEl, 'button[data-menu-toggle]', 'click', (e, botao) => {
+        e.stopPropagation();
+        const id = botao.dataset.menuToggle;
+        const menu = listaVendasEl.querySelector(`.dt-dropdown-acoes[data-menu-id="${CSS.escape(id)}"]`);
+        if (!menu) return;
+
+        const estavaAberto = !menu.hidden;
+        fecharMenusAcoes();
+        if (estavaAberto) return;
+
+        menu.hidden = false;
+        botao.setAttribute('aria-expanded', 'true');
+
+        const rect = botao.getBoundingClientRect();
+        const menuRect = menu.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const top = spaceBelow >= menuRect.height + 10
+            ? rect.bottom + 6
+            : Math.max(8, rect.top - menuRect.height - 6);
+        const left = Math.max(8, Math.min(rect.right - menuRect.width, window.innerWidth - menuRect.width - 8));
+
+        menu.style.top = `${top}px`;
+        menu.style.left = `${left}px`;
+    });
+
+    // Delegação das ações dentro do menu de 3 pontinhos
+    delegate(listaVendasEl, 'button[data-acao]', 'click', (e, botao) => {
+        e.stopPropagation();
+        fecharMenusAcoes();
         const venda = vendasRenderizadas.find(v => v.id === botao.dataset.id);
         if (!venda) return;
-        if (botao.dataset.acao === 'comprovante') {
+        const acao = botao.dataset.acao;
+        if (acao === 'ver') {
+            window.abrirModalVerVenda(venda);
+        } else if (acao === 'pago') {
+            window.marcarComoPago(venda.id);
+        } else if (acao === 'cobrar') {
+            window.enviarCobranca(venda.clientes?.telefone, venda.clientes?.nome || 'Cliente', Number(venda.valor));
+        } else if (acao === 'comprovante') {
             window.gerarComprovante(venda);
-        } else if (botao.dataset.acao === 'editar') {
+        } else if (acao === 'editar') {
             window.abrirModalEditarVenda(venda);
-        } else if (botao.dataset.acao === 'excluir') {
+        } else if (acao === 'excluir') {
             window.deletarVenda(venda.id);
         }
     });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.dt-acoes-menu')) fecharMenusAcoes();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            fecharMenusAcoes();
+            window.fecharModalVerVenda();
+        }
+    });
+    window.addEventListener('scroll', fecharMenusAcoes, true);
+
+    const modalVerVenda = document.getElementById('modalVerVenda');
+    if (modalVerVenda) {
+        modalVerVenda.addEventListener('click', (e) => {
+            if (e.target === modalVerVenda) window.fecharModalVerVenda();
+        });
+    }
 
     const filtroMesVendas = document.getElementById("filtroMesVendas");
 

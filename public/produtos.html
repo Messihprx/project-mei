@@ -87,6 +87,41 @@
         </header>
 
         <section class="content-wrapper">
+            <div class="cards-resumo" id="cardsProdutos">
+                <div class="card-resumo card-azul">
+                    <div class="card-resumo-header">
+                        <span class="card-resumo-label">Total de Produtos</span>
+                        <div class="card-resumo-icon"><i data-lucide="package"></i></div>
+                    </div>
+                    <h3 class="card-resumo-valor" id="cardTotalProdutos">0</h3>
+                    <span class="card-resumo-sub" id="cardSubProdutos"></span>
+                </div>
+                <div class="card-resumo card-verde">
+                    <div class="card-resumo-header">
+                        <span class="card-resumo-label">Valor Médio</span>
+                        <div class="card-resumo-icon"><i data-lucide="dollar-sign"></i></div>
+                    </div>
+                    <h3 class="card-resumo-valor" id="cardMediaProdutos">R$ 0,00</h3>
+                    <span class="card-resumo-sub" id="cardSubMediaProdutos"></span>
+                </div>
+                <div class="card-resumo card-roxo">
+                    <div class="card-resumo-header">
+                        <span class="card-resumo-label">Produto Mais Caro</span>
+                        <div class="card-resumo-icon"><i data-lucide="trending-up"></i></div>
+                    </div>
+                    <h3 class="card-resumo-valor" id="cardMaiorProduto">R$ 0,00</h3>
+                    <span class="card-resumo-sub" id="cardSubMaiorProduto"></span>
+                </div>
+                <div class="card-resumo card-laranja">
+                    <div class="card-resumo-header">
+                        <span class="card-resumo-label">Produto Mais Barato</span>
+                        <div class="card-resumo-icon"><i data-lucide="trending-down"></i></div>
+                    </div>
+                    <h3 class="card-resumo-valor" id="cardMenorProduto">R$ 0,00</h3>
+                    <span class="card-resumo-sub" id="cardSubMenorProduto"></span>
+                </div>
+            </div>
+
             <div id="listaProdutos"></div>
         </section>
     </main>

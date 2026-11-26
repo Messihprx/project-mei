@@ -169,6 +169,8 @@ async function carregarClientes() {
         if (!tabelaClientes) montarTabelaClientes(container);
         tabelaClientes.atualizar(clientes);
 
+        atualizarCardsClientes(clientes);
+
     } catch (err) {
         console.error("Erro ao carregar:", err.message);
         if (!tabelaClientes) {
@@ -177,6 +179,32 @@ async function carregarClientes() {
             mostrarModal('Erro ao carregar', 'Não foi possível carregar os clientes. Tente novamente.', 'alerta');
         }
     }
+}
+
+// --- CARDS INFORMATIVOS CLIENTES ---
+function atualizarCardsClientes(clientes) {
+    const total = clientes.length;
+    const comTelefone = clientes.filter(c => c.telefone).length;
+    const semTelefone = total - comTelefone;
+    const comWhatsApp = clientes.filter(c => c.telefone).length;
+
+    const elTotal = document.getElementById("cardTotalClientes");
+    const elComTel = document.getElementById("cardClientesComTelefone");
+    const elSemTel = document.getElementById("cardClientesSemTelefone");
+    const elWhatsApp = document.getElementById("cardClientesWhatsApp");
+    const elSubTotal = document.getElementById("cardSubClientes");
+    const elSubComTel = document.getElementById("cardSubClientesComTelefone");
+    const elSubSemTel = document.getElementById("cardSubClientesSemTelefone");
+    const elSubWhatsApp = document.getElementById("cardSubClientesWhatsApp");
+
+    if (elTotal) elTotal.textContent = total.toLocaleString('pt-BR');
+    if (elComTel) elComTel.textContent = comTelefone.toLocaleString('pt-BR');
+    if (elSemTel) elSemTel.textContent = semTelefone.toLocaleString('pt-BR');
+    if (elWhatsApp) elWhatsApp.textContent = comWhatsApp.toLocaleString('pt-BR');
+    if (elSubTotal) elSubTotal.textContent = total === 1 ? '1 cliente cadastrado' : `${total} clientes cadastrados`;
+    if (elSubComTel) elSubComTel.textContent = comTelefone === 0 ? 'Nenhum com telefone' : total > 0 ? `${Math.round((comTelefone / total) * 100)}% tem telefone` : 'Sem clientes no período';
+    if (elSubSemTel) elSubSemTel.textContent = semTelefone === 0 ? 'Todos com telefone' : total > 0 ? `${Math.round((semTelefone / total) * 100)}% sem telefone cadastrado` : 'Sem clientes no período';
+    if (elSubWhatsApp) elSubWhatsApp.textContent = comWhatsApp === 0 ? 'Nenhum contato direto' : total > 0 ? `${Math.round((comWhatsApp / total) * 100)}% com WhatsApp disponível` : 'Sem clientes no período';
 }
 
 // --- 2. EDITAR CLIENTE ---
