@@ -27,7 +27,7 @@
     <meta property="og:type" content="website">
 
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=6">
     <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <meta name="theme-color" content="#080c16">
@@ -73,9 +73,6 @@
             <a href="clientes" class="nav-item">
                 <i data-lucide="users"></i> <span>Clientes</span>
             </a>
-            <a href="devendo" class="nav-item">
-                <i data-lucide="alert-circle"></i> <span>Devedores</span>
-            </a>
             <a href="produtos" class="nav-item">
                 <i data-lucide="package"></i> <span>Produtos</span>
             </a>
@@ -85,14 +82,18 @@
                 <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
             </a>
 
-            <div class="sidebar-divider">CONTA</div>
-            <a href="perfil" class="nav-item">
-                <i data-lucide="user-round"></i> <span>Meu perfil</span>
-            </a>
-            <a href="planos" class="nav-item">
-                <i data-lucide="star"></i> <span>Ver Planos</span>
-            </a>
         </nav>
+
+        <div class="sidebar-plan-wrapper">
+            <div class="sidebar-plan-card" id="sidebarPlanCard">
+                <div class="plan-card-icon" id="sidebarPlanIcon">
+                    <i data-lucide="crown"></i>
+                </div>
+                <h4 id="sidebarPlanTitle">Seja Premium</h4>
+                <p id="sidebarPlanDesc">Mais recursos para fazer seu negócio crescer.</p>
+                <a href="planos" class="sidebar-plan-btn" id="sidebarPlanBtn">Ver Planos</a>
+            </div>
+        </div>
 
     </aside>
 
@@ -101,11 +102,13 @@
             <i data-lucide="menu"></i>
         </button>
 
-        <header class="top-bar">
-            <div class="page-header">
-                <span class="page-kicker"><i data-lucide="sparkles"></i> Visão geral do negócio</span>
-                <h2 id="nomeUsuario">Olá, Usuário</h2>
-                <p>Gerencie suas finanças em tempo real</p>
+        <header class="top-bar top-bar-dashboard">
+            <div class="header-search-wrap">
+                <i data-lucide="search" class="header-search-icon"></i>
+                <input type="search" id="buscaGlobalHeader" class="header-search-input"
+                    placeholder="Buscar por vendas, clientes, produtos..." autocomplete="off"
+                    aria-label="Buscar no FinMEI">
+                <div class="header-search-results" id="headerSearchResults" hidden></div>
             </div>
             <div class="top-actions">
                 <a href="nova-venda" class="top-action-primary"><i data-lucide="plus"></i><span>Nova
@@ -114,9 +117,11 @@
                         cliente</span></a>
                 <div class="user-info">
                     <div class="profile-dropdown">
-                        <button class="profile-toggle" onclick="toggleProfileDropdown(event)">
+                        <button class="profile-toggle profile-toggle-pill" onclick="toggleProfileDropdown(event)">
                             <img id="fotoUsuario" src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
                                 referrerpolicy="no-referrer" alt="Perfil">
+                            <span id="nomePerfilHeader" class="profile-name">Usuário</span>
+                            <i data-lucide="chevron-down" class="profile-chevron"></i>
                         </button>
                         <div class="dropdown-menu" id="profileDropdown">
                         <div class="dropdown-header">Minha Conta</div>
@@ -144,31 +149,33 @@
         </header>
 
         <section class="content-wrapper">
-            <div class="dashboard-toolbar dashboard-filtros-mobile">
-                <div class="toolbar-title">
-                    <span class="toolbar-icon"><i data-lucide="calendar"></i></span>
-                    <div class="period-filter-controls">
-                        <div class="period-filter-field">
-                            <label for="filtroTipoPeriodo">Período</label>
-                            <select id="filtroTipoPeriodo" class="dashboard-filter-select">
-                                <option value="month">Mês</option>
-                                <option value="year">Ano</option>
-                                <option value="all">Todo o período</option>
-                            </select>
-                        </div>
-                        <div id="campoFiltroMes" class="period-filter-field">
-                            <label for="filtroMesDashboard">Mês de análise</label>
-                            <input type="month" id="filtroMesDashboard" class="input-mes input-mes-dashboard">
-                        </div>
-                        <div id="campoFiltroAno" class="period-filter-field" hidden>
-                            <label for="filtroAnoDashboard">Ano de análise</label>
-                            <input type="number" id="filtroAnoDashboard" class="dashboard-filter-select"
-                                min="1900" max="2100" step="1" inputmode="numeric" required>
-                        </div>
-                    </div>
+            <div class="dashboard-hero">
+                <div class="page-header">
+                    <span class="page-kicker"><i data-lucide="sparkles"></i> Visão geral do negócio</span>
+                    <h2 id="nomeUsuario">Olá, Usuário</h2>
+                    <p>Aqui está um resumo do seu negócio como MEI.</p>
                 </div>
-                <span id="badgePeriodo" class="period-badge"><span class="badge-dot"></span><span id="textoBadgePeriodo">Mês atual</span></span>
-                <button id="btnLimparFiltro" class="btn-secondary">Mês atual</button>
+
+                <div class="period-minimal-bar dashboard-filtros-mobile">
+                    <span class="period-pill-icon"><i data-lucide="calendar"></i></span>
+                    <select id="filtroTipoPeriodo" class="period-pill-select" aria-label="Período">
+                        <option value="month">Mês</option>
+                        <option value="year">Ano</option>
+                        <option value="all">Todo o período</option>
+                    </select>
+                    <div id="campoFiltroMes" class="period-pill-field">
+                        <input type="month" id="filtroMesDashboard" class="period-pill-input input-mes-dashboard" aria-label="Mês de análise">
+                    </div>
+                    <div id="campoFiltroAno" class="period-pill-field" hidden>
+                        <input type="number" id="filtroAnoDashboard" class="period-pill-input period-pill-year"
+                            min="1900" max="2100" step="1" inputmode="numeric" required aria-label="Ano de análise">
+                    </div>
+                    <span id="badgePeriodo" class="period-badge period-badge-minimal" hidden><span class="badge-dot"></span><span id="textoBadgePeriodo">Mês atual</span></span>
+                    <button id="btnLimparFiltro" class="period-pill-reset" title="Voltar para o mês atual">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span>Mês atual</span>
+                    </button>
+                </div>
             </div>
 
             <div class="section-head">
@@ -179,36 +186,80 @@
             </div>
 
             <div class="resumo-cards">
-                <div class="metric-card pos">
-                    <span class="metric-label">
-                        <i data-lucide="trending-up"></i> <span id="labelRecebidoDashboard">Recebido (Mês)</span>
-                    </span>
-                    <h2 id="totalEntradas" class="metric-value">R$ 0,00</h2>
-                    <div class="metric-foot">Vendas já pagas</div>
+                <div class="metric-card metric-card-styled pos">
+                    <div class="metric-card-top">
+                        <div class="metric-icon-badge">
+                            <i data-lucide="trending-up"></i>
+                        </div>
+                        <div class="metric-title-group">
+                            <span class="metric-label">
+                                <span id="labelRecebidoDashboard">Recebido (Mês)</span>
+                            </span>
+                            <h2 id="totalEntradas" class="metric-value">R$ 0,00</h2>
+                            <div class="metric-variacao" id="variacaoRecebido">--</div>
+                        </div>
+                        <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
+                            <path d="M2 22C10 22 14 14 22 15C30 16 34 8 42 10C50 12 54 4 62 3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="metric-foot"><i data-lucide="arrow-up-right"></i> Vendas já pagas</div>
                 </div>
 
-                <div class="metric-card warn">
-                    <span class="metric-label">
-                        <i data-lucide="clock"></i> <span id="labelPendenteDashboard">A Receber (Mês)</span>
-                    </span>
-                    <h2 id="totalSaidas" class="metric-value">R$ 0,00</h2>
-                    <div class="metric-foot">Vendas aguardando pgto</div>
+                <div class="metric-card metric-card-styled warn">
+                    <div class="metric-card-top">
+                        <div class="metric-icon-badge">
+                            <i data-lucide="clock"></i>
+                        </div>
+                        <div class="metric-title-group">
+                            <span class="metric-label">
+                                <span id="labelPendenteDashboard">A Receber (Mês)</span>
+                            </span>
+                            <h2 id="totalSaidas" class="metric-value">R$ 0,00</h2>
+                            <div class="metric-variacao" id="variacaoReceber">--</div>
+                        </div>
+                        <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
+                            <path d="M2 18C12 18 16 11 26 14C34 16 40 9 48 11C55 13 58 7 62 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="metric-foot"><i data-lucide="hourglass"></i> Vendas aguardando pgto</div>
                 </div>
 
-                <div class="metric-card neg">
-                    <span class="metric-label">
-                        <i data-lucide="trending-down"></i> <span id="labelDespesasDashboard">Despesas (Mês)</span>
-                    </span>
-                    <h2 id="totalGastosDashboard" class="metric-value">R$ 0,00</h2>
-                    <div class="metric-foot">Gastos operacionais</div>
+                <div class="metric-card metric-card-styled neg">
+                    <div class="metric-card-top">
+                        <div class="metric-icon-badge">
+                            <i data-lucide="trending-down"></i>
+                        </div>
+                        <div class="metric-title-group">
+                            <span class="metric-label">
+                                <span id="labelDespesasDashboard">Despesas (Mês)</span>
+                            </span>
+                            <h2 id="totalGastosDashboard" class="metric-value">R$ 0,00</h2>
+                            <div class="metric-variacao" id="variacaoDespesas">--</div>
+                        </div>
+                        <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
+                            <path d="M2 14C10 10 18 19 26 16C34 13 42 21 50 15C56 11 59 14 62 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="metric-foot"><i data-lucide="receipt"></i> Gastos operacionais</div>
                 </div>
 
-                <div class="metric-card acc">
-                    <span class="metric-label">
-                        <i data-lucide="target"></i> <span id="labelLucroDashboard">Lucro Líquido (Mês)</span>
-                    </span>
-                    <h2 id="lucroReal" class="metric-value">R$ 0,00</h2>
-                    <div class="metric-foot">Recebido - Gastos</div>
+                <div class="metric-card metric-card-styled acc">
+                    <div class="metric-card-top">
+                        <div class="metric-icon-badge">
+                            <i data-lucide="target"></i>
+                        </div>
+                        <div class="metric-title-group">
+                            <span class="metric-label">
+                                <span id="labelLucroDashboard">Lucro Líquido (Mês)</span>
+                            </span>
+                            <h2 id="lucroReal" class="metric-value">R$ 0,00</h2>
+                            <div class="metric-variacao" id="variacaoLucro">--</div>
+                        </div>
+                        <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
+                            <path d="M2 23C11 20 18 16 26 17C35 18 42 9 50 7C56 5 59 4 62 2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="metric-foot"><i data-lucide="sparkles"></i> Recebido - Gastos</div>
                 </div>
             </div>
 
@@ -294,8 +345,8 @@
         </section>
     </main>
 
-    <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/dashboard.js"></script>
+    <script type="module" src="js/auth.js?v=6"></script>
+    <script type="module" src="js/dashboard.js?v=6"></script>
     <script type="module" src="js/ai-fab.js"></script>
     <script>
         // Inicializa os ícones
