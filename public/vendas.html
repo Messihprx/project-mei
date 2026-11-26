@@ -6,7 +6,7 @@
     <script src="js/auth-guard.js"></script>
     <title>Vendas | FinMEI fluxo inteligente</title>
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=7">
     <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
     <meta name="theme-color" content="#080c16">
     <link rel="manifest" href="manifest.json">
@@ -47,9 +47,6 @@
             <a href="clientes" class="nav-item">
                 <i data-lucide="users"></i> <span>Clientes</span>
             </a>
-            <a href="devendo" class="nav-item">
-                <i data-lucide="alert-circle"></i> <span>Devedores</span>
-            </a>
             <a href="produtos" class="nav-item">
                 <i data-lucide="package"></i> <span>Produtos</span>
             </a>
@@ -60,9 +57,6 @@
             </a>
 
             <div class="sidebar-divider">CONTA</div>
-            <a href="perfil" class="nav-item">
-                <i data-lucide="user-round"></i> <span>Meu perfil</span>
-            </a>
             <a href="planos" class="nav-item">
                 <i data-lucide="star"></i> <span>Ver Planos</span>
             </a>
@@ -160,10 +154,62 @@
         </div>
     </div>
 
-    <script type="module" src="js/auth.js"></script>
+    <div id="modalVerVenda" class="modal">
+        <div class="modal-content card modal-ver-venda-card">
+            <div class="modal-ver-venda-header">
+                <div class="modal-ver-venda-title-wrap">
+                    <span class="modal-ver-venda-icon"><i data-lucide="shopping-bag"></i></span>
+                    <div>
+                        <h3>Detalhes da Venda</h3>
+                        <p id="verVendaSubtitulo">Resumo completo da transação</p>
+                    </div>
+                </div>
+                <button type="button" onclick="fecharModalVerVenda()" class="btn-close-ver-venda" aria-label="Fechar">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <div class="modal-ver-venda-hero">
+                <div>
+                    <span class="ver-venda-hero-label">Valor total</span>
+                    <div id="verVendaValor" class="ver-venda-hero-valor">R$ 0,00</div>
+                </div>
+                <span id="verVendaStatusBadge" class="badge-status pago">PAGO</span>
+            </div>
+
+            <div class="modal-ver-venda-grid">
+                <div class="ver-venda-info-box">
+                    <span class="ver-venda-info-label"><i data-lucide="user"></i> Cliente</span>
+                    <strong id="verVendaCliente">—</strong>
+                    <small id="verVendaTelefone"></small>
+                </div>
+                <div class="ver-venda-info-box">
+                    <span class="ver-venda-info-label"><i data-lucide="calendar"></i> Data da venda</span>
+                    <strong id="verVendaData">—</strong>
+                </div>
+                <div class="ver-venda-info-box">
+                    <span class="ver-venda-info-label"><i data-lucide="wallet"></i> Conta financeira</span>
+                    <strong id="verVendaConta">—</strong>
+                </div>
+                <div class="ver-venda-info-box">
+                    <span class="ver-venda-info-label"><i data-lucide="file-text"></i> Descrição</span>
+                    <strong id="verVendaDescricao">—</strong>
+                </div>
+            </div>
+
+            <div class="modal-ver-venda-itens">
+                <h4><i data-lucide="list"></i> Itens da venda</h4>
+                <div id="verVendaListaItens" class="ver-venda-itens-lista"></div>
+            </div>
+
+            <div id="verVendaAcoes" class="modal-ver-venda-footer"></div>
+        </div>
+    </div>
+
+    <script type="module" src="js/auth.js?v=7"></script>
     <script type="module" src="js/ai-fab.js"></script>
     <script src="js/confirm-modal.js"></script>
-    <script type="module" src="js/vendas.js"></script>
+    <script type="module" src="js/vendas.js?v=7"></script>
     <script>lucide.createIcons();</script>
 </body>
 </html>
