@@ -1,6 +1,7 @@
 import { supabase } from './auth.js';
 import { formatarTelefone } from './novo-cliente.js';
-import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais } from './dom-utils.js';
+import { esc, delegate, montarCsv, buscarTodasAsLinhas } from './dom-utils.js';
+import { criarDataTable } from './datatable.js';
 
 // --- FUNÇÕES DE ERRO INLINE ---
 function mostrarErro(campoId, mensagem) {
@@ -73,64 +74,108 @@ async function verificarDuplicata(nome, telefone, userId, excluirId = null) {
 let clientesRenderizados = [];
 
 // --- 1. LISTAR CLIENTES ---
-let limiteClientes = TAMANHO_PAGINA;
+let tabelaClientes = null;
 
-async function carregarClientes(filtro = "", limite = limiteClientes) {
-    limiteClientes = limite;
-    const container = document.getElementById("listaClientes");
-    if (!container) return;
-
-    try {
-        let query = supabase.from('clientes')
-            .select('id, nome, telefone, observacao')
-            .eq('ativo', true).order('nome').limit(limite);
-        if (filtro) query = query.ilike('nome', `%${filtro}%`);
-
-        const { data: clientes, error } = await query;
-        if (error) throw error;
-
-        if (clientes.length === 0) {
-            container.innerHTML = `<p style="text-align:center; color:var(--texto-secundario); margin-top:2rem;">
-                ${filtro ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado ainda.'}
-            </p>`;
-            return;
-        }
-
-        clientesRenderizados = clientes;
-
-        container.innerHTML = clientes.map(cliente => `
-            <div class="card-item-flex">
-                <div class="info-principal">
-                    <div class="avatar-cliente">
-                        ${esc((cliente.nome || '?').charAt(0).toUpperCase())}
-                    </div>
-                    <div>
-                        <h4>${esc(cliente.nome)}</h4>
-                        <p><i data-lucide="phone" style="width:12px"></i> ${esc(cliente.telefone || 'Sem contato')}</p>
-                        ${cliente.observacao ? `<small class="obs-tag">${esc(cliente.observacao)}</small>` : ''}
-                    </div>
-                </div>
-                <div class="acoes">
+function montarTabelaClientes(container) {
+    tabelaClientes = criarDataTable({
+        container,
+        idLinha: (cliente) => cliente.id,
+        porPagina: 10,
+        placeholderBusca: 'Buscar por nome, telefone ou observação...',
+        textoVazio: 'Nenhum cliente encontrado.',
+        ordenacaoInicial: { coluna: 'nome', direcao: 'asc' },
+        filtros: [
+            {
+                id: 'contato',
+                rotulo: 'Contato',
+                opcoes: [
+                    { valor: '', texto: 'Todos' },
+                    { valor: 'com', texto: 'Com telefone' },
+                    { valor: 'sem', texto: 'Sem telefone' },
+                ],
+                testar: (cliente, valor) => valor === 'com'
+                    ? Boolean(cliente.telefone)
+                    : !cliente.telefone,
+            },
+        ],
+        colunas: [
+            {
+                id: 'nome',
+                titulo: 'Cliente',
+                valor: (cliente) => cliente.nome || '',
+                render: (cliente) => `<div class="dt-celula-principal">
+                    <span class="dt-avatar">${esc((cliente.nome || '?').charAt(0).toUpperCase())}</span>
+                    <span class="dt-nome">${esc(cliente.nome)}</span>
+                </div>`,
+            },
+            {
+                id: 'telefone',
+                titulo: 'Telefone',
+                valor: (cliente) => cliente.telefone || '',
+                render: (cliente) => cliente.telefone
+                    ? `<span>${esc(cliente.telefone)}</span>`
+                    : '<span class="dt-sub" style="margin-top:0;">Sem contato</span>',
+            },
+            {
+                id: 'observacao',
+                titulo: 'Observação',
+                valor: (cliente) => cliente.observacao || '',
+                render: (cliente) => cliente.observacao
+                    ? `<span class="dt-obs" title="${esc(cliente.observacao)}">${esc(cliente.observacao)}</span>`
+                    : '<span class="dt-sub" style="margin-top:0;">—</span>',
+            },
+            {
+                id: 'acoes',
+                titulo: '',
+                ordenavel: false,
+                busca: false,
+                alinhamento: 'right',
+                render: (cliente) => `<div class="dt-acoes">
                     <button data-acao="whatsapp" data-id="${esc(cliente.id)}" class="btn-acao btn-whatsapp" title="Conversar">
                         <i data-lucide="message-circle"></i>
                     </button>
-                    <button data-acao="editar" data-id="${esc(cliente.id)}" class="btn-acao" style="color: var(--cor-primaria);" title="Editar">
+                    <button data-acao="editar" data-id="${esc(cliente.id)}" class="btn-acao btn-edit" title="Editar">
                         <i data-lucide="edit-3"></i>
                     </button>
                     <button data-acao="excluir" data-id="${esc(cliente.id)}" class="btn-acao btn-delete" title="Excluir">
                         <i data-lucide="trash-2"></i>
                     </button>
-                </div>
-            </div>
-        `).join('');
+                </div>`,
+            },
+        ],
+    });
+}
 
-        botaoCarregarMais(container, clientes.length, limite,
-            (novoLimite) => carregarClientes(filtro, novoLimite));
+async function carregarClientes() {
+    const container = document.getElementById("listaClientes");
+    if (!container) return;
 
-        if (window.lucide) lucide.createIcons();
+    if (!tabelaClientes) {
+        container.innerHTML = '<p class="dt-carregando">Carregando clientes...</p>';
+    }
+
+    try {
+        const clientes = await buscarTodasAsLinhas((inicio, fim) =>
+            supabase.from('clientes')
+                .select('id, nome, telefone, observacao')
+                .eq('ativo', true)
+                .order('nome')
+                .order('id')
+                .range(inicio, fim)
+        );
+
+        clientesRenderizados = clientes;
+
+        if (!tabelaClientes) montarTabelaClientes(container);
+        tabelaClientes.atualizar(clientes);
 
     } catch (err) {
         console.error("Erro ao carregar:", err.message);
+        if (!tabelaClientes) {
+            container.innerHTML = '<p style="color:red">Erro ao carregar dados.</p>';
+        } else {
+            mostrarModal('Erro ao carregar', 'Não foi possível carregar os clientes. Tente novamente.', 'alerta');
+        }
     }
 }
 
@@ -245,22 +290,11 @@ window.deletarCliente = async (id) => {
         // A contagem mudou: o aviso de limite não pode continuar
         // mostrando o número anterior a esta operação.
         invalidarCachePlano();
-        carregarClientes(document.getElementById("buscarCliente")?.value || "");
+        carregarClientes();
     } catch (err) {
         mostrarModal('Erro ao excluir', traduzirErro(err.message));
     }
 };
-
-// --- 4. BUSCA ---
-const inputBusca = document.getElementById("buscarCliente");
-if (inputBusca) {
-    inputBusca.addEventListener("input", (e) => {
-        clearTimeout(window.buscaTimer);
-        window.buscaTimer = setTimeout(() => {
-            carregarClientes(e.target.value);
-        }, 300);
-    });
-}
 
 import { verificarStatusPlano } from './planos.js';
 

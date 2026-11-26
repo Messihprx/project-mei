@@ -1,8 +1,9 @@
 import { supabase } from './auth.js';
-import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais, dataVendaISO, formatarDataVenda } from './dom-utils.js';
+import { esc, delegate, montarCsv, buscarTodasAsLinhas, dataVendaISO, formatarDataVenda } from './dom-utils.js';
 import { atualizarSaldoConta, calcDeltaVenda, garantirOpcaoConta, garantirContaPadrao } from './conta-saldo.js';
 import { montarSelectBusca } from './select-busca.js';
 import { criarEditorItens, resumoDosItens } from './itens-venda.js';
+import { criarDataTable } from './datatable.js';
 
 // Vendas da última renderização. Antes a descrição era injetada
 // dentro de onclick="...('${venda.descricao}')", então uma venda
@@ -69,86 +70,150 @@ function resumoCardItens(venda) {
 }
 
 // --- 3. FUNÇÃO MESTRE PARA LISTAR VENDAS (COM FILTRO REAL) ---
-let limiteVendas = TAMANHO_PAGINA;
+let tabelaVendas = null;
 
-async function carregarVendas(limite = limiteVendas) {
-    limiteVendas = limite;
+function montarTabelaVendas(container) {
+    tabelaVendas = criarDataTable({
+        container,
+        idLinha: (venda) => venda.id,
+        porPagina: 10,
+        placeholderBusca: 'Buscar por cliente, descrição ou item...',
+        textoVazio: 'Nenhuma venda encontrada para este período.',
+        ordenacaoInicial: { coluna: 'data', direcao: 'desc' },
+        filtros: [
+            {
+                id: 'status',
+                rotulo: 'Status',
+                opcoes: [
+                    { valor: '', texto: 'Todos' },
+                    { valor: 'pago', texto: 'Pago' },
+                    { valor: 'pendente', texto: 'Pendente' },
+                ],
+                testar: (venda, valor) => venda.status === valor,
+            },
+        ],
+        colunas: [
+            {
+                id: 'data',
+                titulo: 'Data',
+                valor: (venda) => formatarDataVenda(venda.data_venda || venda.created_at),
+                ordenarPor: (venda) => dataVendaISO(venda.data_venda || venda.created_at),
+                classe: 'dt-col-data',
+            },
+            {
+                id: 'cliente',
+                titulo: 'Cliente',
+                valor: (venda) => venda.clientes?.nome || 'Cliente avulso',
+                render: (venda) => {
+                    const nome = venda.clientes?.nome || 'Cliente avulso';
+                    return `<div class="dt-celula-principal">
+                        <span class="dt-avatar">${esc(nome.charAt(0).toUpperCase())}</span>
+                        <span class="dt-nome">${esc(nome)}</span>
+                    </div>`;
+                },
+            },
+            {
+                id: 'descricao',
+                titulo: 'Serviço / Itens',
+                valor: (venda) => `${venda.descricao || 'Serviço Geral'} ${resumoCardItens(venda)}`,
+                render: (venda) => {
+                    const resumo = resumoCardItens(venda);
+                    const descricao = venda.descricao || 'Serviço Geral';
+                    return `<div class="dt-celula-texto">
+                        <span class="dt-nome">${esc(descricao)}</span>
+                        ${resumo && resumo !== descricao ? `<span class="dt-sub">${esc(resumo)}</span>` : ''}
+                    </div>`;
+                },
+            },
+            {
+                id: 'conta',
+                titulo: 'Conta',
+                valor: (venda) => venda.contas?.nome || '',
+                render: (venda) => `<span class="dt-sub" style="margin-top:0;">${esc(venda.contas?.nome || '—')}</span>`,
+            },
+            {
+                id: 'valor',
+                titulo: 'Valor',
+                alinhamento: 'right',
+                valor: (venda) => Number(venda.valor || 0),
+                ordenarPor: (venda) => Number(venda.valor || 0),
+                buscaTexto: (venda) => `R$ ${Number(venda.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                render: (venda) => `<span class="dt-valor pos">R$ ${Number(venda.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>`,
+            },
+            {
+                id: 'status',
+                titulo: 'Status',
+                alinhamento: 'center',
+                valor: (venda) => venda.status || '',
+                render: (venda) => `<span class="badge-status ${esc(venda.status || '')}">${esc((venda.status || '').toUpperCase())}</span>`,
+            },
+            {
+                id: 'acoes',
+                titulo: '',
+                ordenavel: false,
+                busca: false,
+                alinhamento: 'right',
+                render: (venda) => `<div class="dt-acoes">
+                    <button data-acao="comprovante" data-id="${esc(venda.id)}" class="btn-acao btn-comprovante" title="Gerar comprovante">
+                        <i data-lucide="receipt"></i>
+                    </button>
+                    <button data-acao="editar" data-id="${esc(venda.id)}" class="btn-acao btn-edit" title="Editar">
+                        <i data-lucide="edit-3"></i>
+                    </button>
+                    <button data-acao="excluir" data-id="${esc(venda.id)}" class="btn-acao btn-delete" title="Excluir">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>`,
+            },
+        ],
+    });
+}
+
+async function carregarVendas() {
     const container = document.getElementById("listaVendas");
-    const filtroMesInput = document.getElementById("filtroMesVendas"); 
+    const filtroMesInput = document.getElementById("filtroMesVendas");
     const filtroContaInput = document.getElementById("filtroContaVendas");
-    
+
     if (!container) return;
 
+    if (!tabelaVendas) {
+        container.innerHTML = '<p class="dt-carregando">Carregando vendas...</p>';
+    }
+
     try {
-        let query = supabase
-            .from('vendas')
-            .select('id, descricao, valor, status, data_venda, cliente_id, clientes(nome), conta_id, venda_itens(descricao, quantidade, valor_unit, produto_id)')
-            .order('data_venda', { ascending: false })
-            .limit(limite);
+        const vendas = await buscarTodasAsLinhas((inicio, fim) => {
+            let query = supabase
+                .from('vendas')
+                .select('id, descricao, valor, status, data_venda, created_at, cliente_id, clientes(nome), conta_id, contas(nome), venda_itens(descricao, quantidade, valor_unit, produto_id)')
+                .order('data_venda', { ascending: false })
+                .order('id', { ascending: true });
 
-        if (filtroMesInput && filtroMesInput.value) {
-            const [ano, mes] = filtroMesInput.value.split('-');
-            const primeiroDia = `${ano}-${mes}-01T00:00:00Z`;
-            const ultimoDia = new Date(ano, mes, 0).toISOString().replace(/T.*$/, 'T23:59:59Z');
-            query = query.gte('data_venda', primeiroDia).lte('data_venda', ultimoDia);
-        }
+            if (filtroMesInput && filtroMesInput.value) {
+                const [ano, mes] = filtroMesInput.value.split('-');
+                const primeiroDia = `${ano}-${mes}-01T00:00:00Z`;
+                const ultimoDia = new Date(ano, mes, 0).toISOString().replace(/T.*$/, 'T23:59:59Z');
+                query = query.gte('data_venda', primeiroDia).lte('data_venda', ultimoDia);
+            }
 
-        if (filtroContaInput && filtroContaInput.value) {
-            query = query.eq('conta_id', filtroContaInput.value);
-        }
+            if (filtroContaInput && filtroContaInput.value) {
+                query = query.eq('conta_id', filtroContaInput.value);
+            }
 
-        const { data: vendas, error } = await query;
-        if (error) throw error;
-
-        if (vendas.length === 0) {
-            container.innerHTML = `<p style="text-align:center; color:var(--texto-secundario); margin-top:2rem;">Nenhuma venda encontrada para este período.</p>`;
-            return;
-        }
+            return query.range(inicio, fim);
+        });
 
         vendasRenderizadas = vendas;
 
-        container.innerHTML = vendas.map(venda => {
-            const resumoItens = resumoCardItens(venda);
-            return `
-            <div class="card-venda-premium ${esc(venda.status)}">
-                <div class="venda-frente">
-                    <div class="venda-icone">
-                        <i data-lucide="${venda.status === 'pago' ? 'check-circle' : 'clock'}"></i>
-                    </div>
-                    <div class="venda-detalhes">
-                        <h4>${esc(venda.clientes?.nome || 'Cliente avulso')}</h4>
-                        <p>${esc(venda.descricao || 'Serviço Geral')}</p>
-                        ${resumoItens && resumoItens !== venda.descricao ? `<p class="venda-itens-resumo">${esc(resumoItens)}</p>` : ''}
-                        <span class="venda-data">${formatarDataVenda(venda.data_venda || venda.created_at)}</span>
-                    </div>
-                </div>
-                <div class="venda-financeiro">
-                    <span class="venda-valor">R$ ${parseFloat(venda.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                    <span class="venda-badge">${esc((venda.status || "").toUpperCase())}</span>
-                    
-                    <div style="display:flex; gap:8px; justify-content: flex-end; margin-top:10px;">
-                        <button data-acao="comprovante" data-id="${esc(venda.id)}" class="btn-acao" style="color: var(--cor-sucesso);" title="Gerar comprovante">
-                            <i data-lucide="receipt"></i>
-                        </button>
-                        <button data-acao="editar" data-id="${esc(venda.id)}" class="btn-acao" style="color: var(--cor-primaria);" title="Editar">
-                            <i data-lucide="edit-3"></i>
-                        </button>
-                        <button data-acao="excluir" data-id="${esc(venda.id)}" class="btn-acao btn-delete" title="Excluir">
-                            <i data-lucide="trash-2"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        }).join('');
-
-        botaoCarregarMais(container, vendas.length, limite, carregarVendas);
-
-        if (window.lucide) lucide.createIcons();
+        if (!tabelaVendas) montarTabelaVendas(container);
+        tabelaVendas.atualizar(vendas);
 
     } catch (err) {
         console.error("Erro ao carregar vendas:", err.message);
-        container.innerHTML = `<p style="color:red">Erro ao carregar dados.</p>`;
+        if (!tabelaVendas) {
+            container.innerHTML = `<p style="color:red">Erro ao carregar dados.</p>`;
+        } else {
+            mostrarModal('Erro ao carregar', 'Não foi possível carregar as vendas. Tente novamente.', 'alerta');
+        }
     }
 }
 
@@ -415,19 +480,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const agora = new Date();
             filtroMesVendas.value = agora.toISOString().substring(0, 7);
         }
-        filtroMesVendas.addEventListener("change", () => carregarVendas(TAMANHO_PAGINA));
-    }
-
-    const inputBusca = document.getElementById("buscarVenda");
-    if (inputBusca) {
-        inputBusca.addEventListener("input", (e) => {
-            const termo = e.target.value.toLowerCase().trim();
-            const itens = document.querySelectorAll(".card-venda-premium");
-            itens.forEach(item => {
-                const texto = item.innerText.toLowerCase();
-                item.style.display = texto.includes(termo) ? "flex" : "none";
-            });
-        });
+        filtroMesVendas.addEventListener("change", () => carregarVendas());
     }
 
     carregarVendas();
@@ -437,7 +490,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const filtroContaVendas = document.getElementById("filtroContaVendas");
     if (filtroContaVendas) {
         popularSelectContasFiltro('filtroContaVendas');
-        filtroContaVendas.addEventListener("change", () => carregarVendas(TAMANHO_PAGINA));
+        filtroContaVendas.addEventListener("change", () => carregarVendas());
     }
 
     // --- 8. EXPORTAÇÃO PARA CSV (PREMIUM) ---

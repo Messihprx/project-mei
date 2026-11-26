@@ -16,7 +16,7 @@
 const BASE = new URL('./', self.location.href);
 const paraUrl = (caminho) => new URL(caminho, BASE).href;
 
-const VERSAO = 'finmei-v5';
+const VERSAO = 'finmei-v7';
 const CACHE_CASCA = `casca-${VERSAO}`;
 const OFFLINE_URL = paraUrl('offline');
 const ADMIN_URL = paraUrl('admin/');

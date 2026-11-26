@@ -1,8 +1,9 @@
 import { supabase } from './auth.js';
 import { verificarStatusPlano, invalidarCachePlano } from './planos.js';
-import { esc, delegate, montarCsv, TAMANHO_PAGINA, botaoCarregarMais } from './dom-utils.js';
+import { esc, delegate, montarCsv, buscarTodasAsLinhas } from './dom-utils.js';
 import { atualizarSaldoConta, garantirOpcaoConta } from './conta-saldo.js';
 import { montarSelectBusca } from './select-busca.js';
+import { criarDataTable } from './datatable.js';
 
 let gastosRenderizados = [];
 
@@ -79,7 +80,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const hoje = new Date();
             filtroMes.value = hoje.toISOString().substring(0, 7);
         }
-        filtroMes.addEventListener("change", () => carregarGastos(TAMANHO_PAGINA));
+        filtroMes.addEventListener("change", () => carregarGastos());
     }
 
     carregarGastos();
@@ -89,7 +90,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const filtroContaGastos = document.getElementById("filtroContaGastos");
     if (filtroContaGastos) {
         popularSelectContasFiltroGastos();
-        filtroContaGastos.addEventListener("change", () => carregarGastos(TAMANHO_PAGINA));
+        filtroContaGastos.addEventListener("change", () => carregarGastos());
     }
 
     if (formGasto) {
@@ -214,81 +215,136 @@ window.fecharModalGasto = function() {
     document.getElementById("modalGasto").style.display = 'none';
 };
 
-// ... Resto das funções carregarGastos, fecharModalEditarGasto, etc. (mantendo a lógica existente)
-let limiteGastos = TAMANHO_PAGINA;
+// --- LISTA DE GASTOS (TABELA COM BUSCA E FILTRO) ---
+let tabelaGastos = null;
 
-async function carregarGastos(limite = limiteGastos) {
-    limiteGastos = limite;
+function montarTabelaGastos(container) {
+    tabelaGastos = criarDataTable({
+        container,
+        idLinha: (gasto) => gasto.id,
+        porPagina: 10,
+        placeholderBusca: 'Buscar por descrição, categoria ou conta...',
+        textoVazio: 'Nenhum gasto registrado neste mês.',
+        ordenacaoInicial: { coluna: 'data', direcao: 'desc' },
+        filtros: [
+            {
+                id: 'categoria',
+                rotulo: 'Categoria',
+                opcoes: [
+                    { valor: '', texto: 'Todas' },
+                    { valor: 'Mercadoria', texto: 'Mercadoria' },
+                    { valor: 'Aluguel', texto: 'Aluguel' },
+                    { valor: 'Marketing', texto: 'Marketing' },
+                    { valor: 'Serviços', texto: 'Serviços' },
+                    { valor: 'Outros', texto: 'Outros' },
+                ],
+                testar: (gasto, valor) => gasto.categoria === valor,
+            },
+        ],
+        colunas: [
+            {
+                id: 'data',
+                titulo: 'Data',
+                valor: (gasto) => new Date(gasto.data + 'T12:00:00').toLocaleDateString('pt-BR'),
+                ordenarPor: (gasto) => gasto.data,
+                classe: 'dt-col-data',
+            },
+            {
+                id: 'descricao',
+                titulo: 'Descrição',
+                valor: (gasto) => gasto.descricao || '',
+                render: (gasto) => `<div class="dt-celula-texto">
+                    <span class="dt-nome">${esc(gasto.descricao)}</span>
+                </div>`,
+            },
+            {
+                id: 'categoria',
+                titulo: 'Categoria',
+                valor: (gasto) => gasto.categoria || '',
+                render: (gasto) => `<span class="dt-tag">${esc(gasto.categoria || 'Outros')}</span>`,
+            },
+            {
+                id: 'conta',
+                titulo: 'Conta',
+                valor: (gasto) => gasto.contas?.nome || '',
+                render: (gasto) => `<span class="dt-sub" style="margin-top:0;">${esc(gasto.contas?.nome || '—')}</span>`,
+            },
+            {
+                id: 'valor',
+                titulo: 'Valor',
+                alinhamento: 'right',
+                valor: (gasto) => Number(gasto.valor || 0),
+                ordenarPor: (gasto) => Number(gasto.valor || 0),
+                buscaTexto: (gasto) => `R$ ${Number(gasto.valor || 0).toFixed(2).replace('.', ',')}`,
+                render: (gasto) => `<span class="dt-valor neg">- R$ ${Number(gasto.valor || 0).toFixed(2).replace('.', ',')}</span>`,
+            },
+            {
+                id: 'acoes',
+                titulo: '',
+                ordenavel: false,
+                busca: false,
+                alinhamento: 'right',
+                render: (gasto) => `<div class="dt-acoes">
+                    <button data-acao="editar" data-id="${esc(gasto.id)}" class="btn-acao btn-edit" title="Editar">
+                        <i data-lucide="edit-2"></i>
+                    </button>
+                    <button data-acao="excluir" data-id="${esc(gasto.id)}" class="btn-acao btn-delete" title="Excluir">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>`,
+            },
+        ],
+    });
+}
+
+async function carregarGastos() {
     const mesSel = filtroMes.value;
     if (!mesSel) return;
+
+    const container = document.getElementById("listaGastos");
+    if (!container) return;
 
     const [ano, mes] = mesSel.split('-');
     const ultimoDia = new Date(ano, mes, 0).getDate();
 
+    if (!tabelaGastos) {
+        container.innerHTML = '<p class="dt-carregando">Carregando gastos...</p>';
+    }
+
     try {
-        let query = supabase
-            .from('despesas')
-            .select('id, descricao, valor, data, categoria, conta_id')
-            .gte('data', `${ano}-${mes}-01`)
-            .lte('data', `${ano}-${mes}-${ultimoDia}`)
-            .order('data', { ascending: false })
-            .limit(limite);
+        const gastos = await buscarTodasAsLinhas((inicio, fim) => {
+            let query = supabase
+                .from('despesas')
+                .select('id, descricao, valor, data, categoria, conta_id, contas(nome)')
+                .gte('data', `${ano}-${mes}-01`)
+                .lte('data', `${ano}-${mes}-${ultimoDia}`)
+                .order('data', { ascending: false })
+                .order('id', { ascending: true });
 
-        const filtroConta = document.getElementById("filtroContaGastos");
-        if (filtroConta && filtroConta.value) {
-            query = query.eq('conta_id', filtroConta.value);
-        }
+            const filtroConta = document.getElementById("filtroContaGastos");
+            if (filtroConta && filtroConta.value) {
+                query = query.eq('conta_id', filtroConta.value);
+            }
 
-        const { data: gastos, error } = await query;
-
-        if (error) throw error;
-
-        const lista = document.getElementById("listaGastos");
-        let total = 0;
-        
-        if (!gastos || gastos.length === 0) {
-            lista.innerHTML = '<p style="text-align:center; color:var(--texto-secundario); margin-top:2rem;">Nenhum gasto registrado neste mês.</p>';
-            document.getElementById("totalGastoMes").textContent = "R$ 0,00";
-            return;
-        }
+            return query.range(inicio, fim);
+        });
 
         gastosRenderizados = gastos;
 
-        lista.innerHTML = gastos.map(g => {
-            total += parseFloat(g.valor);
-            return `
-                <div class="gasto-card">
-                    <div class="gasto-info">
-                        <div class="gasto-icone">
-                            <i data-lucide="trending-down" style="width: 20px;"></i>
-                        </div>
-                        <div class="gasto-texto">
-                            <h4>${esc(g.descricao)}</h4>
-                            <small>${esc(g.categoria)} • ${new Date(g.data + 'T12:00:00').toLocaleDateString('pt-BR')}</small>
-                        </div>
-                    </div>
-                    <div class="gasto-preco-acoes">
-                        <span class="gasto-valor">- R$ ${parseFloat(g.valor).toFixed(2)}</span>
-                        <div class="gasto-acoes">
-                            <button data-acao="editar" data-id="${esc(g.id)}" class="btn-acao btn-edit" title="Editar">
-                                <i data-lucide="edit-2"></i>
-                            </button>
-                            <button data-acao="excluir" data-id="${esc(g.id)}" class="btn-acao btn-delete" title="Excluir">
-                                <i data-lucide="trash-2"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        const total = gastos.reduce((soma, gasto) => soma + Number(gasto.valor || 0), 0);
+        document.getElementById("totalGastoMes").textContent =
+            `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
-        botaoCarregarMais(lista, gastos.length, limite, carregarGastos);
-
-        document.getElementById("totalGastoMes").textContent = `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        lucide.createIcons();
+        if (!tabelaGastos) montarTabelaGastos(container);
+        tabelaGastos.atualizar(gastos);
 
     } catch (err) {
         console.error("Erro ao carregar gastos:", err);
+        if (!tabelaGastos) {
+            container.innerHTML = '<p style="color:red">Erro ao carregar dados.</p>';
+        } else {
+            mostrarModal('Erro ao carregar', 'Não foi possível carregar os gastos. Tente novamente.', 'alerta');
+        }
     }
 }
 

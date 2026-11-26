@@ -1,6 +1,7 @@
 import { supabase } from './auth.js';
-import { esc, delegate, TAMANHO_PAGINA, botaoCarregarMais } from './dom-utils.js';
+import { esc, delegate, buscarTodasAsLinhas } from './dom-utils.js';
 import { protegerAcao, invalidarCachePlano } from './planos.js';
+import { criarDataTable } from './datatable.js';
 
 // Produtos da última renderização: os botões guardam só o id.
 let produtosRenderizados = [];
@@ -129,66 +130,113 @@ window.removerFotoEdicao = function () {
 };
 
 // --- CARREGAR PRODUTOS ---
-let limiteProdutos = TAMANHO_PAGINA;
+let tabelaProdutos = null;
 
-async function carregarProdutos(filtro = '', limite = limiteProdutos) {
-    limiteProdutos = limite;
+function montarTabelaProdutos(container) {
+    tabelaProdutos = criarDataTable({
+        container,
+        idLinha: (produto) => produto.id,
+        porPagina: 10,
+        placeholderBusca: 'Buscar por nome ou descrição...',
+        textoVazio: 'Nenhum produto cadastrado ainda.',
+        filtros: [
+            {
+                id: 'preco',
+                rotulo: 'Preço',
+                opcoes: [
+                    { valor: '', texto: 'Todos' },
+                    { valor: 'ate50', texto: 'Até R$ 50' },
+                    { valor: '50a200', texto: 'R$ 50 a 200' },
+                    { valor: 'acima200', texto: 'Acima de R$ 200' },
+                ],
+                testar: (produto, valor) => {
+                    const preco = Number(produto.valor || 0);
+                    if (valor === 'ate50') return preco <= 50;
+                    if (valor === '50a200') return preco > 50 && preco <= 200;
+                    if (valor === 'acima200') return preco > 200;
+                    return true;
+                },
+            },
+        ],
+        colunas: [
+            {
+                id: 'nome',
+                titulo: 'Produto',
+                valor: (produto) => produto.nome || '',
+                buscaTexto: (produto) => `${produto.nome || ''} ${produto.descricao || ''}`,
+                render: (produto) => {
+                    const descricao = produto.descricao
+                        ? produto.descricao.substring(0, 60) + (produto.descricao.length > 60 ? '...' : '')
+                        : 'Sem descrição';
+                    return `<div class="dt-celula-principal">
+                        ${produto.foto_url
+                            ? `<img src="${esc(produto.foto_url)}" class="dt-thumb" alt="${esc(produto.nome)}">`
+                            : `<span class="dt-thumb-placeholder"><i data-lucide="package"></i></span>`
+                        }
+                        <span class="dt-celula-texto">
+                            <span class="dt-nome">${esc(produto.nome)}</span>
+                            <span class="dt-sub">${esc(descricao)}</span>
+                        </span>
+                    </div>`;
+                },
+            },
+            {
+                id: 'valor',
+                titulo: 'Valor',
+                alinhamento: 'right',
+                valor: (produto) => Number(produto.valor || 0),
+                ordenarPor: (produto) => Number(produto.valor || 0),
+                buscaTexto: (produto) => `R$ ${Number(produto.valor || 0).toFixed(2).replace('.', ',')}`,
+                render: (produto) => `<span class="dt-valor">R$ ${Number(produto.valor || 0).toFixed(2).replace('.', ',')}</span>`,
+            },
+            {
+                id: 'acoes',
+                titulo: '',
+                ordenavel: false,
+                busca: false,
+                alinhamento: 'right',
+                render: (produto) => `<div class="dt-acoes">
+                    <button data-acao="editar" data-id="${esc(produto.id)}" class="btn-acao btn-edit" title="Editar">
+                        <i data-lucide="edit-3"></i>
+                    </button>
+                    <button data-acao="excluir" data-id="${esc(produto.id)}" class="btn-acao btn-delete" title="Excluir">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>`,
+            },
+        ],
+    });
+}
+
+async function carregarProdutos() {
     const container = document.getElementById('listaProdutos');
     if (!container) return;
 
+    if (!tabelaProdutos) {
+        container.innerHTML = '<p class="dt-carregando">Carregando produtos...</p>';
+    }
+
     try {
-        let query = supabase.from('produtos')
-            .select('id, nome, descricao, valor, foto_url')
-            .order('created_at', { ascending: false }).limit(limite);
-        if (filtro) query = query.ilike('nome', `%${filtro}%`);
-
-        const { data: produtos, error } = await query;
-        if (error) throw error;
-
-        if (!produtos || produtos.length === 0) {
-            container.innerHTML = `<p style="text-align:center; color:var(--texto-secundario); margin-top:2rem;">
-                ${filtro ? 'Nenhum produto encontrado.' : 'Nenhum produto cadastrado ainda.'}
-            </p>`;
-            return;
-        }
+        const produtos = await buscarTodasAsLinhas((inicio, fim) =>
+            supabase.from('produtos')
+                .select('id, nome, descricao, valor, foto_url')
+                .order('created_at', { ascending: false })
+                .order('id', { ascending: true })
+                .range(inicio, fim)
+        );
 
         produtosRenderizados = produtos;
 
-        container.innerHTML = produtos.map(p => `
-            <div class="produto-card">
-                <div class="produto-info">
-                    ${p.foto_url
-                        ? `<img src="${esc(p.foto_url)}" class="produto-thumb" alt="${esc(p.nome)}">`
-                        : `<div class="produto-thumb-placeholder">
-                             <i data-lucide="package" style="width: 20px; color: white;"></i>
-                           </div>`
-                    }
-                    <div class="produto-texto">
-                        <h4>${esc(p.nome)}</h4>
-                        <p>${esc(p.descricao ? p.descricao.substring(0, 50) + (p.descricao.length > 50 ? '...' : '') : 'Sem descrição')}</p>
-                    </div>
-                </div>
-                <div class="produto-preco-acoes">
-                    <span class="produto-preco">R$ ${parseFloat(p.valor).toFixed(2)}</span>
-                    <div class="produto-acoes">
-                        <button data-acao="editar" data-id="${esc(p.id)}" class="btn-acao btn-edit" title="Editar">
-                            <i data-lucide="edit-3"></i>
-                        </button>
-                        <button data-acao="excluir" data-id="${esc(p.id)}" class="btn-acao btn-delete" title="Excluir">
-                            <i data-lucide="trash-2"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
+        if (!tabelaProdutos) montarTabelaProdutos(container);
+        tabelaProdutos.atualizar(produtos);
 
-
-        botaoCarregarMais(container, produtos.length, limite,
-            (novoLimite) => carregarProdutos(filtro, novoLimite));
-
-        if (window.lucide) lucide.createIcons();
     } catch (err) {
         console.error("Erro ao carregar produtos:", err.message);
+        if (!tabelaProdutos) {
+            container.innerHTML = '<p style="color:red">Erro ao carregar dados.</p>';
+        } else {
+            mostrarModal('Erro ao carregar', 'Não foi possível carregar os produtos. Tente novamente.', 'alerta');
+        }
     }
 }
 
@@ -234,7 +282,7 @@ window.deletarProduto = async function (id, fotoUrl) {
         // mostrando o número anterior a esta operação.
         invalidarCachePlano();
         await removerFotoStorage(fotoUrl);
-        carregarProdutos(document.getElementById('buscarProduto')?.value || '');
+        carregarProdutos();
     } catch (err) {
         mostrarModal('Erro ao excluir', traduzirErro(err.message));
     }
@@ -340,17 +388,6 @@ if (formEditar) {
     });
 }
 
-// --- BUSCA ---
-const inputBusca = document.getElementById('buscarProduto');
-if (inputBusca) {
-    inputBusca.addEventListener('input', (e) => {
-        clearTimeout(window.buscaProdutoTimer);
-        window.buscaProdutoTimer = setTimeout(() => {
-            carregarProdutos(e.target.value);
-        }, 300);
-    });
-}
-
 // --- INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -358,8 +395,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = 'login';
         return;
     }
-
-    carregarProdutos();
 
     // Delegação: um listener na grade inteira, no lugar dos onclick
     // inline que interpolavam foto_url e nome direto no HTML.
@@ -372,6 +407,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.deletarProduto(produto.id, produto.foto_url || '');
         }
     });
+
+    carregarProdutos();
 
     setupDropZone('dropZoneProduto', 'fotoProduto', async (file) => {
         if (!file.type.startsWith('image/')) {
