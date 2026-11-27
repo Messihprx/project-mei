@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -6,7 +6,7 @@
     <script src="js/auth-guard.js"></script>
     <title>Nova Venda | FinMEI fluxo inteligente</title>
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=12">
     <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
     <meta name="theme-color" content="#080c16">
     <link rel="manifest" href="manifest.json">
@@ -50,6 +50,9 @@
             <a href="produtos" class="nav-item">
                 <i data-lucide="package"></i> <span>Produtos</span>
             </a>
+            <a href="mei" class="nav-item">
+                <i data-lucide="clipboard-check"></i> <span>MEI</span>
+            </a>
 
             <div class="sidebar-divider">ASSISTENTE</div>
             <a href="ia" class="nav-item">
@@ -83,59 +86,118 @@
         </header>
 
         <section class="content-wrapper">
-            <div class="formulario">
-                <form id="formNovaVenda">
-                    <div class="input-group">
-                        <label>Cliente (opcional)</label>
-                        <input type="text" id="clienteVendaInput" placeholder="Buscar cliente..." autocomplete="off">
-                        <input type="hidden" id="clienteIdSelecionado">
-                        <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Digite para buscar. Se vazio, fica sem cliente vinculado</small>
-                    </div>
-
-                    <div class="input-group">
-                        <label>Itens da venda</label>
-                        <div class="itens-busca">
-                            <input type="text" id="itemProdutoInput" placeholder="Buscar produto para adicionar..." autocomplete="off">
-                            <button type="button" id="btnAddProduto" class="btn-add-item">Adicionar</button>
-                        </div>
-                        <button type="button" id="btnAddAvulso" class="btn-item-avulso">+ Serviço avulso</button>
-                        <div id="listaItensVenda" class="lista-itens"></div>
-                        <div class="itens-total">Total: <strong id="totalItensVenda">R$ 0,00</strong></div>
-                        <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Adicione 1 ou mais itens (produto ou serviço avulso). O valor da venda é a soma deles.</small>
-                    </div>
-
-                    <div class="input-group">
-                        <label>Título da venda (opcional)</label>
-                        <input type="text" id="servicoVenda" placeholder="Ex: Encomenda da Dona Maria">
-                        <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Se vazio, a descrição vira o resumo dos itens</small>
-                    </div>
-                    <div class="input-group">
-                        <label>Conta Financeira</label>
-                        <select id="contaVenda">
-                            <option value="" disabled selected>Selecione a conta</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label>Data da Venda</label>
-                        <input type="date" id="dataVenda" required>
-                        <small style="color: var(--texto-secundario); font-size: 0.75rem;">Padrão: hoje. Altere se a venda foi realizada em outro dia.</small>
-                    </div>
-                    <div class="input-group">
-                        <label>Status</label>
-                        <select id="statusVenda">
-                            <option value="pago">Pago ✅</option>
-                            <option value="pendente">Pendente ⏳</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn-primary" style="margin-top: 1.5rem; width: 100%;">Finalizar Registro</button>
-                </form>
+            <!-- Dados rápidos da venda -->
+            <div class="venda-dados">
+                <div class="input-group">
+                    <label>Conta financeira</label>
+                    <select id="contaVenda">
+                        <option value="" disabled selected>Selecione a conta</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Data da venda</label>
+                    <input type="date" id="dataVenda" required>
+                    <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Padrão: hoje.</small>
+                </div>
+                <div class="input-group">
+                    <label>Status</label>
+                    <select id="statusVenda">
+                        <option value="pago">Pago ✅</option>
+                        <option value="pendente">Pendente ⏳</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Título da venda (opcional)</label>
+                    <input type="text" id="servicoVenda" placeholder="Ex: Encomenda da Dona Maria">
+                    <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Se vazio, vira o resumo dos itens</small>
+                </div>
+                <div class="input-group" style="max-width: 260px;">
+                    <label>Cliente (opcional)</label>
+                    <input type="text" id="clienteVendaInput" placeholder="Buscar cliente..." autocomplete="off">
+                    <input type="hidden" id="clienteIdSelecionado">
+                    <small style="color: var(--texto-faint); font-size: 0.72rem; margin-top: 2px; display: block;">Deixe vazio para venda avulsa</small>
+                </div>
             </div>
+
+            <div class="pdv-layout">
+                <!-- Catálogo de produtos -->
+                <div class="pdv-catalogo">
+                    <div class="pdv-busca-wrap">
+                        <input type="text" id="catalogoBuscaInput" placeholder="Buscar produto..." autocomplete="off">
+                        <span id="catalogoContador" class="pdv-contador"></span>
+                    </div>
+
+                    <div id="gradeCatalogo" class="grade-produtos"></div>
+                    <p id="catalogoVazio" class="pdv-vazio" hidden>Nenhum produto encontrado.</p>
+                </div>
+
+                <!-- Carrinho / resumo (desliza da direita) -->
+                <div id="overlayCarrinho" class="overlay-carrinho" hidden></div>
+                <aside class="pdv-carrinho" id="pdvCarrinho">
+                    <div class="carrinho-header">
+                        <h3>Carrinho <span id="carrinhoQtdItens">0</span></h3>
+                        <button type="button" class="btn-fechar-carrinho" title="Fechar carrinho">&times;</button>
+                    </div>
+                    <div id="carrinhoItens" class="carrinho-itens"></div>
+                    <p id="carrinhoVazio" class="carrinho-vazio" hidden>Seu carrinho está vazio.<br>Toque em <b>+</b> em qualquer produto do catálogo.</p>
+
+                    <div class="pdv-desconto-box" id="pdvDescontoBox">
+                        <button type="button" class="pdv-desconto-toggle" id="btnToggleDesconto" aria-expanded="false">
+                            <span class="pdv-desconto-toggle-left">
+                                <i data-lucide="tag"></i>
+                                <span>Aplicar desconto</span>
+                                <span class="pdv-desconto-badge" id="badgeDescontoAtivo" hidden></span>
+                            </span>
+                            <i data-lucide="chevron-down" class="pdv-desconto-chevron"></i>
+                        </button>
+                        <div class="pdv-desconto-body" id="pdvDescontoBody" hidden>
+                            <div class="pdv-desconto-controles">
+                                <div class="pdv-desconto-tipos" role="tablist" aria-label="Tipo de desconto">
+                                    <button type="button" class="pdv-desconto-tipo active" data-tipo="percentual">% Porcentagem</button>
+                                    <button type="button" class="pdv-desconto-tipo" data-tipo="fixo">R$ Valor fixo</button>
+                                </div>
+                                <div class="pdv-desconto-input-wrap">
+                                    <span class="pdv-desconto-prefixo" id="descontoPrefixo">%</span>
+                                    <input type="number" id="descontoValorInput" min="0" step="0.01" placeholder="0" inputmode="decimal">
+                                    <button type="button" class="pdv-desconto-limpar" id="btnLimparDesconto" title="Remover desconto" hidden>Limpar</button>
+                                </div>
+                            </div>
+                            <div class="pdv-desconto-resumo" id="descontoResumoTexto">
+                                Informe o desconto em % ou R$.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="carrinho-desconto-resumo" id="carrinhoDescontoResumo" hidden>
+                        <div class="carrinho-sub-linha">
+                            <span>Subtotal</span>
+                            <span id="carrinhoSubtotal">R$ 0,00</span>
+                        </div>
+                        <div class="carrinho-sub-linha is-desconto">
+                            <span id="carrinhoDescontoLabel">Desconto</span>
+                            <span id="carrinhoDescontoValor">- R$ 0,00</span>
+                        </div>
+                    </div>
+                    <div class="carrinho-total">
+                        <span>Total a pagar</span>
+                        <strong id="carrinhoTotal">R$ 0,00</strong>
+                    </div>
+                    <div class="carrinho-acoes">
+                        <button type="button" id="btnFinalizarVenda" class="btn-finalizar-venda">Finalizar Venda</button>
+                    </div>
+                </aside>
+            </div>
+
+            <form id="formNovaVenda" hidden>
+                <button type="submit" style="display:none;"></button>
+            </form>
         </section>
     </main>
 
-    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/auth.js?v=14"></script>
     <script type="module" src="js/ai-fab.js"></script>
-    <script type="module" src="js/nova-venda.js"></script>
+    <script src="js/confirm-modal.js?v=14"></script>
+    <script type="module" src="js/nova-venda.js?v=14"></script>
     <script>lucide.createIcons();</script>
 </body>
 </html>

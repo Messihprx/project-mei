@@ -76,6 +76,9 @@
             <a href="produtos" class="nav-item">
                 <i data-lucide="package"></i> <span>Produtos</span>
             </a>
+            <a href="mei" class="nav-item">
+                <i data-lucide="clipboard-check"></i> <span>MEI</span>
+            </a>
 
             <div class="sidebar-divider">ASSISTENTE</div>
             <a href="ia" class="nav-item">
@@ -195,12 +198,14 @@
                             <span class="metric-label">
                                 <span id="labelRecebidoDashboard">Recebido (Mês)</span>
                             </span>
-                            <h2 id="totalEntradas" class="metric-value">R$ 0,00</h2>
+                            <div class="metric-value-row">
+                                <h2 id="totalEntradas" class="metric-value">R$ 0,00</h2>
+                                <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
+                                    <path d="M2 22C10 22 14 14 22 15C30 16 34 8 42 10C50 12 54 4 62 3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
                             <div class="metric-variacao" id="variacaoRecebido">--</div>
                         </div>
-                        <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
-                            <path d="M2 22C10 22 14 14 22 15C30 16 34 8 42 10C50 12 54 4 62 3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                        </svg>
                     </div>
                     <div class="metric-foot"><i data-lucide="arrow-up-right"></i> Vendas já pagas</div>
                 </div>
@@ -214,12 +219,14 @@
                             <span class="metric-label">
                                 <span id="labelPendenteDashboard">A Receber (Mês)</span>
                             </span>
-                            <h2 id="totalSaidas" class="metric-value">R$ 0,00</h2>
+                            <div class="metric-value-row">
+                                <h2 id="totalSaidas" class="metric-value">R$ 0,00</h2>
+                                <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
+                                    <path d="M2 18C12 18 16 11 26 14C34 16 40 9 48 11C55 13 58 7 62 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
                             <div class="metric-variacao" id="variacaoReceber">--</div>
                         </div>
-                        <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
-                            <path d="M2 18C12 18 16 11 26 14C34 16 40 9 48 11C55 13 58 7 62 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                        </svg>
                     </div>
                     <div class="metric-foot"><i data-lucide="hourglass"></i> Vendas aguardando pgto</div>
                 </div>
@@ -233,12 +240,14 @@
                             <span class="metric-label">
                                 <span id="labelDespesasDashboard">Despesas (Mês)</span>
                             </span>
-                            <h2 id="totalGastosDashboard" class="metric-value">R$ 0,00</h2>
+                            <div class="metric-value-row">
+                                <h2 id="totalGastosDashboard" class="metric-value">R$ 0,00</h2>
+                                <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
+                                    <path d="M2 14C10 10 18 19 26 16C34 13 42 21 50 15C56 11 59 14 62 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
                             <div class="metric-variacao" id="variacaoDespesas">--</div>
                         </div>
-                        <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
-                            <path d="M2 14C10 10 18 19 26 16C34 13 42 21 50 15C56 11 59 14 62 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                        </svg>
                     </div>
                     <div class="metric-foot"><i data-lucide="receipt"></i> Gastos operacionais</div>
                 </div>
@@ -252,12 +261,14 @@
                             <span class="metric-label">
                                 <span id="labelLucroDashboard">Lucro Líquido (Mês)</span>
                             </span>
-                            <h2 id="lucroReal" class="metric-value">R$ 0,00</h2>
+                            <div class="metric-value-row">
+                                <h2 id="lucroReal" class="metric-value">R$ 0,00</h2>
+                                <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
+                                    <path d="M2 23C11 20 18 16 26 17C35 18 42 9 50 7C56 5 59 4 62 2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
                             <div class="metric-variacao" id="variacaoLucro">--</div>
                         </div>
-                        <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
-                            <path d="M2 23C11 20 18 16 26 17C35 18 42 9 50 7C56 5 59 4 62 2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                        </svg>
                     </div>
                     <div class="metric-foot"><i data-lucide="sparkles"></i> Recebido - Gastos</div>
                 </div>

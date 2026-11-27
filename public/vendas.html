@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="js/auth-guard.js"></script>
     <title>Vendas | FinMEI fluxo inteligente</title>
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
-    <link rel="stylesheet" href="css/style.css?v=7">
+    <link rel="stylesheet" href="css/style.css?v=11">
     <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
     <meta name="theme-color" content="#080c16">
     <link rel="manifest" href="manifest.json">
@@ -17,7 +18,7 @@
         // Dado financeiro nunca é cacheado (ver public/sw.js).
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(() => {});
+                navigator.serviceWorker.register('sw.js').catch(() => { });
             });
         }
     </script>
@@ -49,6 +50,9 @@
             </a>
             <a href="produtos" class="nav-item">
                 <i data-lucide="package"></i> <span>Produtos</span>
+            </a>
+            <a href="mei" class="nav-item">
+                <i data-lucide="clipboard-check"></i> <span>MEI</span>
             </a>
 
             <div class="sidebar-divider">ASSISTENTE</div>
@@ -83,7 +87,8 @@
                 <button id="btnExportarVendas" class="btn-secondary" style="font-size: 0.82rem;">
                     <i data-lucide="download" style="width: 15px;"></i> <span>Exportar CSV</span>
                 </button>
-                <a href="nova-venda" class="btn-primary" style="width: auto; padding: 0.55rem 1.1rem; text-decoration: none; font-size: 0.85rem;">
+                <a href="nova-venda" class="btn-primary"
+                    style="width: auto; padding: 0.55rem 1.1rem; text-decoration: none; font-size: 0.85rem;">
                     <i data-lucide="plus-circle" style="width: 15px;"></i> <span>Nova Venda</span>
                 </a>
             </div>
@@ -140,7 +145,7 @@
             </div>
 
             <div id="listaVendas">
-                </div>
+            </div>
         </section>
     </main>
 
@@ -148,12 +153,13 @@
         <div class="modal-content card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h3 style="color: var(--cor-primaria); font-size: 1.1rem;">Editar Venda</h3>
-                <button onclick="fecharModalEditarVenda()" class="btn-close" style="background:none; border:none; color:var(--texto-secundario); cursor:pointer; font-size: 1.2rem;">&times;</button>
+                <button onclick="fecharModalEditarVenda()" class="btn-close"
+                    style="background:none; border:none; color:var(--texto-secundario); cursor:pointer; font-size: 1.2rem;">&times;</button>
             </div>
-            
+
             <form id="formEditarVenda">
                 <input type="hidden" id="editVendaId">
-                
+
                 <div class="input-group">
                     <label>Serviço/Produto</label>
                     <input type="text" id="editServicoVenda">
@@ -162,7 +168,8 @@
                 <div class="input-group">
                     <label>Itens da venda</label>
                     <div class="itens-busca">
-                        <input type="text" id="editItemProdutoInput" placeholder="Buscar produto para adicionar..." autocomplete="off">
+                        <input type="text" id="editItemProdutoInput" placeholder="Buscar produto para adicionar..."
+                            autocomplete="off">
                         <button type="button" id="btnEditAddProduto" class="btn-add-item">Adicionar</button>
                     </div>
                     <button type="button" id="btnEditAddAvulso" class="btn-item-avulso">+ Serviço avulso</button>
@@ -215,6 +222,7 @@
                 <div>
                     <span class="ver-venda-hero-label">Valor total</span>
                     <div id="verVendaValor" class="ver-venda-hero-valor">R$ 0,00</div>
+                    <div id="verVendaDescontoHero" class="ver-venda-desconto-hero" hidden></div>
                 </div>
                 <span id="verVendaStatusBadge" class="badge-status pago">PAGO</span>
             </div>
@@ -248,10 +256,11 @@
         </div>
     </div>
 
-    <script type="module" src="js/auth.js?v=7"></script>
+    <script type="module" src="js/auth.js?v=13"></script>
     <script type="module" src="js/ai-fab.js"></script>
     <script src="js/confirm-modal.js"></script>
-    <script type="module" src="js/vendas.js?v=7"></script>
+    <script type="module" src="js/vendas.js?v=13"></script>
     <script>lucide.createIcons();</script>
 </body>
+
 </html>

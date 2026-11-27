@@ -552,6 +552,7 @@ function inicializarBuscaHeader() {
         { titulo: 'Contas', sub: 'Contas bancárias e saldos', href: 'contas', tags: 'conta banco saldo carteira' },
         { titulo: 'Devedores / Pendentes', sub: 'Cobranças e valores a receber em Vendas', href: 'vendas', tags: 'devedor pendente receber cobranca' },
         { titulo: 'FinMEI IA', sub: 'Assistente inteligente para seu MEI', href: 'ia', tags: 'ia assistente chat ajuda' },
+        { titulo: 'Obrigações do MEI', sub: 'DAS, DASN-SIMEI, limites e calendário fiscal', href: 'mei', tags: 'mei obrigacoes das dasn simei limite faturamento imposto nota fiscal' },
         { titulo: 'Meu perfil', sub: 'Dados da conta e preferências', href: 'perfil', tags: 'perfil conta configuracoes' },
         { titulo: 'Ver Planos', sub: 'Assinatura e recursos Premium', href: 'planos', tags: 'plano premium assinatura' }
     ];

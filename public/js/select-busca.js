@@ -90,6 +90,10 @@ export function montarSelectBusca(alvo, config = {}) {
     let textoSelecionado = '';
     let indiceAtivo = -1;
     let itensVisiveis = [];
+    let listaNoBody = false;
+
+    // Guarda a referência original da raiz (pode ser reposicionada no body)
+    const raizOriginal = raiz;
 
     // Valor inicial vindo do select nativo (se aplicável)
     if (alvo.tagName === 'SELECT') {
@@ -123,13 +127,48 @@ export function montarSelectBusca(alvo, config = {}) {
     }
 
     function fecharLista() {
+        if (listaNoBody) {
+            document.body.removeChild(lista);
+            raizOriginal.appendChild(lista);
+            listaNoBody = false;
+            lista.style.position = '';
+            lista.style.top = '';
+            lista.style.left = '';
+            lista.style.right = '';
+            lista.style.width = '';
+            lista.style.zIndex = '';
+        }
         lista.hidden = true;
         campo.setAttribute('aria-expanded', 'false');
         indiceAtivo = -1;
     }
 
+    function ancorarListaNoBody() {
+        // Tira a lista do container com overflow e fixa no viewport,
+        // para que o dropdown não fique cortado nem por trás de outros elementos.
+        if (listaNoBody) return;
+        raizOriginal.removeChild(lista);
+        document.body.appendChild(lista);
+
+        const rect = campo.getBoundingClientRect();
+        const largura = rect.width;
+        const top = rect.bottom + window.scrollY;
+        const left = rect.left + window.scrollX;
+
+        lista.style.position = 'fixed';
+        lista.style.zIndex = '1200';
+        lista.style.width = largura + 'px';
+        lista.style.top = top + 'px';
+        lista.style.left = left + 'px';
+        lista.style.right = 'auto';
+        lista.style.maxHeight = '260px';
+        lista.style.overflowY = 'auto';
+        listaNoBody = true;
+    }
+
     function abrirLista() {
         renderLista(campo.value);
+        ancorarListaNoBody();
         lista.hidden = itensVisiveis.length === 0;
         campo.setAttribute('aria-expanded', lista.hidden ? 'false' : 'true');
     }

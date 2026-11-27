@@ -140,6 +140,10 @@ export function criarEditorItens(config) {
                 meta: { nome: p.nome, valor: p.valor }
             })));
         },
+        /** Adiciona um produto ao carrinho (incrementa quantidade se já existir). */
+        adicionarProduto(prod) {
+            adicionarProduto(prod);
+        },
         getItens() {
             return itens.map(it => ({ ...it }));
         },

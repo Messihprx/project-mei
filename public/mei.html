@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('finmei_tema') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { /* localStorage indisponível */ }
+        })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/auth-guard.js"></script>
+    <title>Obrigações do MEI | FinMEI fluxo inteligente</title>
+    <meta name="description"
+        content="Calendário fiscal, DAS, DASN-SIMEI, limite de faturamento e calculadora de lucro tributável do MEI em um só lugar.">
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+    <meta name="theme-color" content="#080c16">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+    </script>
+</head>
+
+<body class="dashboard-layout">
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">MEI</div><span>finMEI</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="./" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
+            </a>
+            <a href="vendas" class="nav-item">
+                <i data-lucide="shopping-cart"></i> <span>Vendas</span>
+            </a>
+            <a href="gastos" class="nav-item">
+                <i data-lucide="trending-down"></i> <span>Gastos</span>
+            </a>
+            <a href="contas" class="nav-item">
+                <i data-lucide="wallet"></i> <span>Contas</span>
+            </a>
+            <a href="clientes" class="nav-item">
+                <i data-lucide="users"></i> <span>Clientes</span>
+            </a>
+            <a href="produtos" class="nav-item">
+                <i data-lucide="package"></i> <span>Produtos</span>
+            </a>
+            <a href="mei" class="nav-item active">
+                <i data-lucide="clipboard-check"></i> <span>MEI</span>
+            </a>
+
+            <div class="sidebar-divider">ASSISTENTE</div>
+            <a href="ia" class="nav-item">
+                <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-plan-wrapper">
+            <div class="sidebar-plan-card" id="sidebarPlanCard">
+                <div class="plan-card-icon" id="sidebarPlanIcon">
+                    <i data-lucide="crown"></i>
+                </div>
+                <h4 id="sidebarPlanTitle">Seja Premium</h4>
+                <p id="sidebarPlanDesc">Mais recursos para fazer seu negócio crescer.</p>
+                <a href="planos" class="sidebar-plan-btn" id="sidebarPlanBtn">Ver Planos</a>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+
+        <header class="top-bar">
+            <div class="page-header">
+                <h3>Obrigações do MEI</h3>
+                <p>Guias, declarações, limites e prazos do seu negócio em um só lugar</p>
+            </div>
+            <div class="user-info">
+                <a href="perfil" class="btn-secondary">
+                    <i data-lucide="user-round" style="width: 15px;"></i> <span>Atualizar cadastro</span>
+                </a>
+            </div>
+        </header>
+
+        <section class="content-wrapper">
+
+            <!-- Banner de novidades legislativas -->
+            <div class="mei-banner">
+                <div class="mei-banner-icon"><i data-lucide="megaphone"></i></div>
+                <div class="mei-banner-body">
+                    <h4>Alertas e novidades — 2025/2026</h4>
+                    <ul>
+                        <li><strong>Teto em discussão:</strong> o PLP 67/2025 propõe elevar o limite do MEI para
+                            R$ 150 mil por ano. Acompanhe a tramitação antes de planejar o crescimento.</li>
+                        <li><strong>Perdão de dívidas:</strong> lei complementar sancionada em outubro de 2026 prevê
+                            transação e perdão de débitos com a União constituídos até outubro de 2026.</li>
+                        <li><strong>NFS-e só no Emissor Nacional:</strong> MEIs de serviços não emitem mais nota no
+                            sistema das prefeituras.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Resumo: DAS, DASN e limite -->
+            <div class="mei-resumo-grid">
+                <div class="mei-card mei-card-das">
+                    <div class="mei-card-head">
+                        <span class="mei-card-icon"><i data-lucide="receipt-text"></i></span>
+                        <span class="mei-card-label">DAS-MEI · todo dia 20</span>
+                    </div>
+                    <strong class="mei-card-value" id="meiDasValor">R$ 81,05</strong>
+                    <span class="mei-card-sub" id="meiDasVencimento">Calculando vencimento…</span>
+                    <span class="mei-status" id="meiDasStatus">—</span>
+                    <div class="mei-card-actions">
+                        <a class="btn-primary" target="_blank" rel="noopener"
+                            href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATSPO/pgmei.app/Identificacao">
+                            <i data-lucide="file-plus-2" style="width: 15px;"></i> Gerar DAS
+                        </a>
+                        <a class="btn-secondary" target="_blank" rel="noopener"
+                            href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATSPO/pgmei.app/Identificacao">
+                            Atrasou o DAS?
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mei-card mei-card-dasn">
+                    <div class="mei-card-head">
+                        <span class="mei-card-icon"><i data-lucide="calendar-clock"></i></span>
+                        <span class="mei-card-label">DASN-SIMEI · até 31 de maio</span>
+                    </div>
+                    <strong class="mei-card-value" id="meiDasnData">—</strong>
+                    <span class="mei-card-sub" id="meiDasnReferencia">Calculando prazo…</span>
+                    <span class="mei-status" id="meiDasnStatus">—</span>
+                    <div class="mei-card-actions">
+                        <a class="btn-primary" target="_blank" rel="noopener"
+                            href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATBHE/declaracaosimei.app/Principal">
+                            <i data-lucide="file-check-2" style="width: 15px;"></i> Declarar agora
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mei-card mei-card-limite">
+                    <div class="mei-card-head">
+                        <span class="mei-card-icon"><i data-lucide="gauge"></i></span>
+                        <span class="mei-card-label">Limite de faturamento anual</span>
+                    </div>
+                    <div class="mei-limite-valores">
+                        <strong class="mei-card-value" id="meiLimiteUsado">R$ 0,00</strong>
+                        <span class="mei-card-sub" id="meiLimiteTotal">de R$ 81.000,00</span>
+                    </div>
+                    <div class="mei-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                        aria-valuenow="0" id="meiProgress">
+                        <div class="mei-progress-fill" id="meiProgressFill"></div>
+                    </div>
+                    <span class="mei-status" id="meiLimiteStatus">Calculando…</span>
+                    <p class="mei-hint" id="meiLimiteDetalhe"></p>
+                </div>
+            </div>
+
+            <!-- Obrigações mensais -->
+            <div class="section-head">
+                <div class="section-title">
+                    <i data-lucide="calendar-days"></i>
+                    <h4>Obrigações mensais</h4>
+                </div>
+            </div>
+
+            <div class="mei-grid">
+                <div class="mei-panel">
+                    <div class="mei-panel-head">
+                        <span class="mei-panel-icon"><i data-lucide="receipt-text"></i></span>
+                        <div>
+                            <h4>Pagamento do DAS-MEI</h4>
+                            <p>Guia única mensal do INSS + ISS/ICMS</p>
+                        </div>
+                    </div>
+                    <p>O boleto vence <strong>todo dia 20</strong>. Em 2026, o valor base do MEI Geral é de
+                        <strong>R$ 81,05</strong> (5% do salário mínimo para o INSS), podendo variar conforme a
+                        atividade (comércio, indústria ou serviços).</p>
+                    <ul class="mei-list">
+                        <li><i data-lucide="check"></i> Gere a guia no Portal do Empreendedor ou no PGMEI.</li>
+                        <li><i data-lucide="check"></i> Acompanhe no card acima quantos dias faltam para o vencimento.</li>
+                        <li><i data-lucide="check"></i> Pagamento em atraso gera multa e juros (SELIC).</li>
+                    </ul>
+                    <div class="mei-panel-actions">
+                        <a class="btn-primary" target="_blank" rel="noopener"
+                            href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATSPO/pgmei.app/Identificacao">
+                            <i data-lucide="external-link" style="width: 15px;"></i> Gerar DAS no PGMEI
+                        </a>
+                        <a class="btn-secondary" target="_blank" rel="noopener"
+                            href="https://www.gov.br/empresas-e-negocios/pt-br/empreendedor">
+                            Portal do Empreendedor
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mei-panel">
+                    <div class="mei-panel-head">
+                        <span class="mei-panel-icon"><i data-lucide="file-text"></i></span>
+                        <div>
+                            <h4>Emissão de nota fiscal</h4>
+                            <p>NF-e (comércio) e NFS-e (serviços)</p>
+                        </div>
+                    </div>
+                    <p>O MEI é <strong>obrigado</strong> a emitir nota fiscal quando vende ou presta serviços para
+                        outras empresas (PJ). Para consumidor final (pessoa física), a emissão é opcional, exceto se o
+                        cliente exigir.</p>
+                    <div class="mei-callout">
+                        <i data-lucide="info"></i>
+                        <span>Notas de serviço devem ser emitidas <strong>somente pelo Emissor Nacional de NFS-e</strong>.
+                            O sistema da prefeitura não é mais usado pelos MEIs.</span>
+                    </div>
+                    <div class="mei-panel-actions">
+                        <a class="btn-primary" target="_blank" rel="noopener"
+                            href="https://www.nfse.gov.br/EmissorNacional">
+                            <i data-lucide="external-link" style="width: 15px;"></i> Abrir Emissor Nacional
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mei-panel mei-panel-relatorio">
+                    <div class="mei-panel-head">
+                        <span class="mei-panel-icon"><i data-lucide="file-bar-chart"></i></span>
+                        <div>
+                            <h4>Relatório mensal das receitas brutas</h4>
+                            <p>Some o faturamento do mês e guarde o comprovante</p>
+                        </div>
+                    </div>
+                    <p>Preencha quanto você faturou no mês. O FinMEI gera um relatório pronto para imprimir ou salvar
+                        em PDF. A guarda desses documentos é <strong>obrigatória por 5 anos</strong>.</p>
+                    <form id="formRelatorio" class="mei-form">
+                        <div class="mei-form-row">
+                            <div class="input-group">
+                                <label for="relatorioMes">Mês de referência</label>
+                                <input type="month" id="relatorioMes" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="relatorioValor">Faturamento do mês (R$)</label>
+                                <input type="number" id="relatorioValor" min="0" step="0.01" required
+                                    placeholder="0,00">
+                            </div>
+                        </div>
+                        <div class="mei-panel-actions">
+                            <button type="button" class="btn-secondary" id="btnUsarVendasMes">
+                                <i data-lucide="download-cloud" style="width: 15px;"></i> Usar vendas do mês
+                            </button>
+                            <button type="submit" class="btn-primary">
+                                <i data-lucide="printer" style="width: 15px;"></i> Gerar relatório (PDF)
+                            </button>
+                        </div>
+                    </form>
+                    <p class="mei-hint" id="relatorioFeedback"></p>
+                </div>
+            </div>
+
+            <!-- Obrigações anuais -->
+            <div class="section-head">
+                <div class="section-title">
+                    <i data-lucide="calendar-range"></i>
+                    <h4>Obrigações anuais</h4>
+                </div>
+            </div>
+
+            <div class="mei-grid">
+                <div class="mei-panel">
+                    <div class="mei-panel-head">
+                        <span class="mei-panel-icon"><i data-lucide="file-check-2"></i></span>
+                        <div>
+                            <h4>DASN-SIMEI</h4>
+                            <p>Declaração Anual do MEI — até 31 de maio</p>
+                        </div>
+                    </div>
+                    <p>Conhecida como a “declaração de imposto de renda do MEI”, informa o faturamento do ano anterior.
+                        Entregue até <strong>31 de maio</strong> para evitar multa.</p>
+                    <ol class="mei-steps">
+                        <li><span>1</span> Tenha em mãos o faturamento bruto do ano anterior.</li>
+                        <li><span>2</span> Acesse o DASN-SIMEI no Portal do Simples Nacional.</li>
+                        <li><span>3</span> Informe as receitas de comércio, indústria e/ou serviços.</li>
+                        <li><span>4</span> Declare se teve funcionário no período.</li>
+                        <li><span>5</span> Envie a declaração e guarde o recibo.</li>
+                    </ol>
+                    <div class="mei-panel-actions">
+                        <a class="btn-primary" target="_blank" rel="noopener"
+                            href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATBHE/declaracaosimei.app/Principal">
+                            <i data-lucide="external-link" style="width: 15px;"></i> Abrir DASN-SIMEI
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mei-panel">
+                    <div class="mei-panel-head">
+                        <span class="mei-panel-icon"><i data-lucide="calculator"></i></span>
+                        <div>
+                            <h4>Calculadora de lucro tributável</h4>
+                            <p>Separe o lucro isento do rendimento tributável no IRPF</p>
+                        </div>
+                    </div>
+                    <p>O MEI não paga IRPJ, mas o dono pode precisar declarar o IRPF. A Receita aplica percentuais de
+                        presunção sobre o faturamento bruto para separar o que é isento do que é tributável.</p>
+                    <form id="formCalculadora" class="mei-form">
+                        <div class="mei-form-row">
+                            <div class="input-group">
+                                <label for="calcFaturamento">Faturamento bruto (R$)</label>
+                                <input type="number" id="calcFaturamento" min="0" step="0.01" required
+                                    placeholder="0,00">
+                            </div>
+                            <div class="input-group">
+                                <label for="calcAtividade">Atividade</label>
+                                <select id="calcAtividade">
+                                    <option value="0.08">Comércio / Indústria (8%)</option>
+                                    <option value="0.16">Transporte de cargas (16%)</option>
+                                    <option value="0.32">Serviços (32%)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mei-panel-actions">
+                            <button type="submit" class="btn-primary">
+                                <i data-lucide="calculator" style="width: 15px;"></i> Calcular
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mei-calc-result" id="calcResultado" hidden>
+                        <div class="mei-calc-item mei-calc-isento">
+                            <span>Lucro isento</span>
+                            <strong id="calcIsento">R$ 0,00</strong>
+                        </div>
+                        <div class="mei-calc-item mei-calc-tributavel">
+                            <span>Rendimento tributável</span>
+                            <strong id="calcTributavel">R$ 0,00</strong>
+                        </div>
+                        <p class="mei-hint" id="calcDetalhe"></p>
+                    </div>
+                    <p class="mei-hint">Estimativa educativa. Confirme os valores com um contador antes de declarar.</p>
+                </div>
+            </div>
+
+            <!-- Controles obrigatórios -->
+            <div class="section-head">
+                <div class="section-title">
+                    <i data-lucide="shield-check"></i>
+                    <h4>Controles obrigatórios</h4>
+                </div>
+            </div>
+
+            <div class="mei-grid">
+                <div class="mei-panel">
+                    <div class="mei-panel-head">
+                        <span class="mei-panel-icon"><i data-lucide="users"></i></span>
+                        <div>
+                            <h4>Funcionário e eSocial</h4>
+                            <p>O MEI pode ter no máximo 1 funcionário</p>
+                        </div>
+                    </div>
+                    <p>Se você tem um empregado, mantenha estas obrigações trabalhistas em dia todos os meses:</p>
+                    <div class="mei-checklist" id="checklistFuncionario">
+                        <label class="mei-check-item">
+                            <input type="checkbox" data-key="esocial">
+                            <span><strong>eSocial</strong> — enviar a folha de pagamento do mês</span>
+                        </label>
+                        <label class="mei-check-item">
+                            <input type="checkbox" data-key="fgts">
+                            <span><strong>FGTS</strong> — depositar 8% até o dia 7</span>
+                        </label>
+                        <label class="mei-check-item">
+                            <input type="checkbox" data-key="inss">
+                            <span><strong>INSS patronal</strong> — 3% sobre a remuneração</span>
+                        </label>
+                        <label class="mei-check-item">
+                            <input type="checkbox" data-key="comprovantes">
+                            <span><strong>Comprovantes</strong> — guardar folha assinada e guias pagas</span>
+                        </label>
+                    </div>
+                    <div class="mei-panel-actions">
+                        <a class="btn-secondary" target="_blank" rel="noopener" href="https://www.esocial.gov.br/">
+                            <i data-lucide="external-link" style="width: 15px;"></i> Acessar eSocial
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mei-panel">
+                    <div class="mei-panel-head">
+                        <span class="mei-panel-icon"><i data-lucide="map-pin"></i></span>
+                        <div>
+                            <h4>Atualização cadastral</h4>
+                            <p>Mantenha os dados do CNPJ sempre corretos</p>
+                        </div>
+                    </div>
+                    <p>A atualização é <strong>obrigatória</strong> sempre que houver mudança de endereço, atividade
+                        (CNAE) ou forma de atuação. Também é recomendada anualmente, no momento da DASN-SIMEI.</p>
+                    <ul class="mei-list">
+                        <li><i data-lucide="check"></i> Mudou de endereço? Atualize no CCMEI.</li>
+                        <li><i data-lucide="check"></i> Mudou a atividade? Verifique o CNAE permitido ao MEI.</li>
+                        <li><i data-lucide="check"></i> Revise seus dados no perfil do FinMEI.</li>
+                    </ul>
+                    <div class="mei-panel-actions">
+                        <a class="btn-primary" href="perfil">
+                            <i data-lucide="user-round" style="width: 15px;"></i> Atualizar meu perfil
+                        </a>
+                        <a class="btn-secondary" target="_blank" rel="noopener"
+                            href="https://www.gov.br/empresas-e-negocios/pt-br/empreendedor">
+                            Abrir CCMEI
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendário fiscal -->
+            <div class="section-head">
+                <div class="section-title">
+                    <i data-lucide="calendar"></i>
+                    <h4>Calendário fiscal</h4>
+                </div>
+            </div>
+
+            <div class="mei-panel">
+                <div class="mei-legenda">
+                    <span><i class="mei-dot mei-dot-vermelho"></i> Dia 20 — DAS-MEI</span>
+                    <span><i class="mei-dot mei-dot-azul"></i> 31 de maio — DASN-SIMEI</span>
+                    <span><i class="mei-dot mei-dot-atual"></i> Mês atual</span>
+                </div>
+                <div class="mei-calendario" id="meiCalendario"></div>
+            </div>
+
+            <!-- Checklist de documentos -->
+            <div class="section-head">
+                <div class="section-title">
+                    <i data-lucide="folder-check"></i>
+                    <h4>Checklist de documentos</h4>
+                </div>
+            </div>
+
+            <div class="mei-panel">
+                <p>Marque o que você já arquivou. Guarde todos os documentos do MEI por <strong>5 anos</strong> — é o
+                    prazo de prescrição da Receita Federal.</p>
+                <div class="mei-checklist mei-checklist-docs" id="checklistDocumentos">
+                    <label class="mei-check-item">
+                        <input type="checkbox" data-key="nf-emitidas">
+                        <span><strong>Notas fiscais emitidas</strong></span>
+                    </label>
+                    <label class="mei-check-item">
+                        <input type="checkbox" data-key="nf-recebidas">
+                        <span><strong>Notas fiscais recebidas</strong></span>
+                    </label>
+                    <label class="mei-check-item">
+                        <input type="checkbox" data-key="relatorios">
+                        <span><strong>Relatórios mensais de receitas</strong></span>
+                    </label>
+                    <label class="mei-check-item">
+                        <input type="checkbox" data-key="das">
+                        <span><strong>Comprovantes de pagamento do DAS</strong></span>
+                    </label>
+                    <label class="mei-check-item">
+                        <input type="checkbox" data-key="dasn">
+                        <span><strong>Recibo da DASN-SIMEI</strong></span>
+                    </label>
+                </div>
+                <div class="mei-panel-actions">
+                    <button type="button" class="btn-secondary" id="btnSobreDocumentos">
+                        <i data-lucide="info" style="width: 15px;"></i> Por que guardar por 5 anos?
+                    </button>
+                    <button type="button" class="btn-secondary" id="btnLimparChecklists">
+                        <i data-lucide="rotate-ccw" style="width: 15px;"></i> Limpar checklists
+                    </button>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Modal simples de informação -->
+    <div class="mei-modal-overlay" id="meiModalOverlay" hidden>
+        <div class="mei-modal" role="dialog" aria-modal="true" aria-labelledby="meiModalTitulo">
+            <h4 id="meiModalTitulo"></h4>
+            <p id="meiModalTexto"></p>
+            <button type="button" class="btn-primary" id="meiModalFechar">Entendi</button>
+        </div>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/ai-fab.js"></script>
+    <script type="module" src="js/mei.js"></script>
+    <script>setTimeout(() => lucide.createIcons(), 400);</script>
+</body>
+
+</html>

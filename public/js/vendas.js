@@ -4,6 +4,7 @@ import { atualizarSaldoConta, calcDeltaVenda, garantirOpcaoConta, garantirContaP
 import { montarSelectBusca } from './select-busca.js';
 import { criarEditorItens, resumoDosItens } from './itens-venda.js';
 import { criarDataTable } from './datatable.js';
+import { gerarComprovante } from './comprovante.js';
 
 // Vendas da última renderização. Antes a descrição era injetada
 // dentro de onclick="...('${venda.descricao}')", então uma venda
@@ -380,8 +381,32 @@ window.abrirModalVerVenda = async (venda) => {
     }
 
     const listaItensEl = document.getElementById("verVendaListaItens");
+    const descontoHeroEl = document.getElementById("verVendaDescontoHero");
+
+    const subtotalItens = itens.reduce((soma, it) => {
+        const qtd = Number(it.quantidade) || 1;
+        const unit = Number(it.valor_unit || 0);
+        return soma + (qtd * unit);
+    }, 0);
+    const descontoReais = subtotalItens > valorNum + 0.009
+        ? Math.round((subtotalItens - valorNum) * 100) / 100
+        : 0;
+    const descontoPct = descontoReais > 0 && subtotalItens > 0
+        ? Math.round((descontoReais / subtotalItens) * 1000) / 10
+        : 0;
+
+    if (descontoHeroEl) {
+        if (descontoReais > 0) {
+            descontoHeroEl.hidden = false;
+            descontoHeroEl.innerHTML = `<i data-lucide="tag"></i> Desconto aplicado: <strong>- R$ ${descontoReais.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> (${descontoPct}%) · de R$ ${subtotalItens.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        } else {
+            descontoHeroEl.hidden = true;
+            descontoHeroEl.innerHTML = '';
+        }
+    }
+
     if (itens.length > 0) {
-        listaItensEl.innerHTML = itens.map(it => {
+        const linhasItens = itens.map(it => {
             const qtd = Number(it.quantidade) || 1;
             const unit = Number(it.valor_unit || 0);
             const sub = qtd * unit;
@@ -395,6 +420,19 @@ window.abrirModalVerVenda = async (venda) => {
                 </div>
             `;
         }).join('');
+
+        const blocoDesconto = descontoReais > 0 ? `
+            <div class="ver-venda-item-row ver-venda-resumo-sub">
+                <span>Subtotal dos itens</span>
+                <span>R$ ${subtotalItens.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div class="ver-venda-item-row ver-venda-resumo-desconto">
+                <span><i data-lucide="tag"></i> Desconto aplicado (${descontoPct}%)</span>
+                <strong>- R$ ${descontoReais.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+            </div>
+        ` : '';
+
+        listaItensEl.innerHTML = linhasItens + blocoDesconto;
     } else {
         listaItensEl.innerHTML = `
             <div class="ver-venda-item-row">
@@ -492,130 +530,7 @@ window.deletarVenda = async (id) => {
     }
 };
 
-window.gerarComprovante = async (venda) => {
-    const status = String(venda.status || 'pago').toLowerCase();
-    if (status === 'pendente') {
-        mostrarModal('Venda pendente', 'Esta venda ainda não foi paga. Não há comprovante de pagamento para gerar. Marque-a como recebida primeiro.', 'alerta');
-        return;
-    }
-
-    const itens = venda.venda_itens || [];
-    const itensHtml = itens.length
-        ? itens.map(it => `<tr>
-            <td>${esc(it.descricao || '-')}</td>
-            <td style="text-align:center;">${Number(it.quantidade) || 1}</td>
-            <td style="text-align:right;">R$ ${Number(it.valor_unit || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-            <td style="text-align:right;">R$ ${(Number(it.quantidade || 1) * Number(it.valor_unit || 0)).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-        </tr>`).join('')
-        : `<tr><td colspan="4">${esc(venda.descricao || 'Serviço geral')}</td></tr>`;
-
-    // Busca dados do perfil do usuário logado (se houver)
-    let perfil = {};
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            const { data: perfilData } = await supabase
-                .from('perfis')
-                .select('*')
-                .eq('user_id', user.id)
-                .maybeSingle();
-            if (perfilData) perfil = perfilData;
-        }
-    } catch (_) { /* perfil opcional */ }
-
-    // Formatação de dados para exibição
-    const formatarCPF = (cpf) => {
-        if (!cpf) return '';
-        const d = cpf.replace(/\D/g, '');
-        return d.length === 11 ? `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9,11)}` : cpf;
-    };
-    const formatarCNPJ = (cnpj) => {
-        if (!cnpj) return '';
-        const d = cnpj.replace(/\D/g, '');
-        return d.length === 14 ? `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12,14)}` : cnpj;
-    };
-    const formatarCEP = (cep) => {
-        if (!cep) return '';
-        const d = cep.replace(/\D/g, '');
-        return d.length === 8 ? `${d.slice(0,5)}-${d.slice(5,8)}` : cep;
-    };
-
-    const nomeEmissor = perfil.nome_completo || '';
-    const nomeFantasia = perfil.nome_fantasia || perfil.razao_social || '';
-    const cnpjFormatado = formatarCNPJ(perfil.cnpj);
-    const cpfFormatado = formatarCPF(perfil.cpf);
-    const endereco = [perfil.logradouro, perfil.numero, perfil.complemento, perfil.bairro, perfil.cidade, perfil.estado]
-        .filter(Boolean).join(', ');
-    const telefoneEmissor = perfil.celular || perfil.telefone || '';
-    const chavePix = perfil.chave_pix || '';
-
-    const html = `<!DOCTYPE html>
-<html lang="pt-br"><head><meta charset="UTF-8"><title>Comprovante de Pagamento</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Segoe UI',Arial,sans-serif;background:#f1f5f9;padding:32px 16px;color:#0f172a;}
-  .box{max-width:560px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.08);overflow:hidden;}
-  .header{background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;padding:28px 32px;text-align:center;}
-  .header .logo{font-size:1.6rem;font-weight:800;letter-spacing:-.5px;}
-  .header .sub{opacity:.85;font-size:.85rem;margin-top:4px;}
-  .body{padding:28px 32px;}
-  .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed #e2e8f0;}
-  .row:last-child{border-bottom:none;}
-  .label{color:#64748b;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
-  .value{font-weight:600;font-size:.95rem;}
-  .badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:.75rem;font-weight:700;}
-  .pago{background:#dcfce7;color:#16a34a;}
-  .pendente{background:#fee2e2;color:#dc2626;}
-  table{width:100%;border-collapse:collapse;margin:16px 0;}
-  th{background:#f8fafc;padding:10px 8px;text-align:left;font-size:.75rem;text-transform:uppercase;letter-spacing:.5px;color:#64748b;border-bottom:2px solid #e2e8f0;}
-  td{padding:10px 8px;font-size:.85rem;border-bottom:1px solid #f1f5f9;}
-  tr:last-child td{border-bottom:none;}
-  .tot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:2px solid #e2e8f0;}
-  .tot span:first-child{font-size:.9rem;color:#64748b;font-weight:600;}
-  .tot span:last-child{font-size:1.4rem;font-weight:800;color:#3b82f6;}
-  .footer{background:#f8fafc;padding:16px 32px;text-align:center;font-size:.7rem;color:#94a3b8;}
-  .footer strong{color:#64748b;}
-  .emitente{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-top:20px;}
-  .emitente h5{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:10px;}
-  .emitente .row{padding:6px 0;}
-  @media print{body{background:#fff;padding:0;}.box{box-shadow:none;border-radius:0;}}
-</style></head><body>
-<div class="box">
-  <div class="header">
-    <div class="logo">finMEI</div>
-    <div class="sub">Comprovante de Pagamento</div>
-  </div>
-  <div class="body">
-    ${nomeFantasia || cnpjFormatado || cpfFormatado || nomeEmissor ? `
-    <div class="emitente">
-      <h5>Emitente</h5>
-      ${nomeFantasia ? `<div class="row"><span class="label">Nome fantasia</span><span class="value">${esc(nomeFantasia)}</span></div>` : ''}
-      ${nomeEmissor ? `<div class="row"><span class="label">Responsável</span><span class="value">${esc(nomeEmissor)}</span></div>` : ''}
-      ${cnpjFormatado ? `<div class="row"><span class="label">CNPJ</span><span class="value">${esc(cnpjFormatado)}</span></div>` : ''}
-      ${cpfFormatado ? `<div class="row"><span class="label">CPF</span><span class="value">${esc(cpfFormatado)}</span></div>` : ''}
-      ${endereco ? `<div class="row"><span class="label">Endereço</span><span class="value">${esc(endereco)}</span></div>` : ''}
-      ${telefoneEmissor ? `<div class="row"><span class="label">Telefone</span><span class="value">${esc(telefoneEmissor)}</span></div>` : ''}
-      ${chavePix ? `<div class="row"><span class="label">Chave Pix</span><span class="value">${esc(chavePix)}</span></div>` : ''}
-    </div>
-    ` : ''}
-    <div class="row"><span class="label">Cliente</span><span class="value">${esc(venda.clientes?.nome || 'Cliente avulso')}</span></div>
-    <div class="row"><span class="label">Data da venda</span><span class="value">${esc(formatarDataVenda(venda.data_venda || venda.created_at))}</span></div>
-    <div class="row"><span class="label">Status</span><span class="badge ${esc(venda.status)}">${esc((venda.status || '').toUpperCase())}</span></div>
-    <table>
-      <thead><tr><th>Descrição</th><th style="text-align:center;">Qtd</th><th style="text-align:right;">Unit.</th><th style="text-align:right;">Subtotal</th></tr></thead>
-      <tbody>${itensHtml}</tbody>
-    </table>
-    <div class="tot"><span>Total</span><span>R$ ${parseFloat(venda.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
-  </div>
-  <div class="footer">Gerado pelo <strong>FinMEI</strong> em ${new Date().toLocaleDateString('pt-BR')} · Documento sem valor fiscal</div>
-</div>
-<script>window.onload=()=>{window.print();};</script>
-</body></html>`;
-
-    const w = window.open('', '_blank');
-    if (w) { w.document.write(html); w.document.close(); }
-    else { mostrarModal('Bloqueado', 'Permita pop-ups para gerar o comprovante.', 'alerta'); }
-};
+window.gerarComprovante = gerarComprovante;
 
 // --- 6. SUBMIT DA EDIÇÃO ---
 import { protegerAcao, verificarStatusPlano, invalidarCachePlano } from './planos.js';

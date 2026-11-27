@@ -16,7 +16,7 @@
 const BASE = new URL('./', self.location.href);
 const paraUrl = (caminho) => new URL(caminho, BASE).href;
 
-const VERSAO = 'finmei-v7';
+const VERSAO = 'finmei-v14';
 const CACHE_CASCA = `casca-${VERSAO}`;
 const OFFLINE_URL = paraUrl('offline');
 const ADMIN_URL = paraUrl('admin/');
@@ -108,7 +108,7 @@ self.addEventListener('fetch', (evento) => {
       const emCache = await cache.match(req);
 
       const daRede = fetch(req).then(resp => {
-        if (resp && resp.ok) cache.put(req, resp.clone()).catch(() => {});
+        if (resp && resp.ok) cache.put(req, resp.clone()).catch(() => { });
         return resp;
       }).catch(() => null);
 

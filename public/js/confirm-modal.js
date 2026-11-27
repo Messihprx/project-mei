@@ -1,5 +1,5 @@
 // Modal de confirmação estilizado
-function confirmModal(titulo, mensagem) {
+function confirmModal(titulo, mensagem, opcoes = {}) {
   return new Promise((resolve) => {
     let overlay = document.getElementById('confirmModalOverlay');
     if (!overlay) {
@@ -8,7 +8,7 @@ function confirmModal(titulo, mensagem) {
       overlay.className = 'modal-confirmar-overlay';
       overlay.innerHTML = `
         <div class="modal-confirmar">
-          <div class="modal-confirmar-icone">⚠</div>
+          <div class="modal-confirmar-icone" id="confirmModalIcon">⚠</div>
           <div class="modal-confirmar-titulo" id="confirmModalTitle"></div>
           <div class="modal-confirmar-mensagem" id="confirmModalMsg"></div>
           <div class="modal-confirmar-botoes">
@@ -20,8 +20,14 @@ function confirmModal(titulo, mensagem) {
       document.body.appendChild(overlay);
     }
 
+    document.getElementById('confirmModalIcon').textContent = opcoes.icon || '⚠';
     document.getElementById('confirmModalTitle').textContent = titulo;
     document.getElementById('confirmModalMsg').textContent = mensagem;
+    const cancelInit = document.getElementById('confirmModalCancel');
+    const okInit = document.getElementById('confirmModalOk');
+    cancelInit.textContent = opcoes.cancelText || 'Cancelar';
+    okInit.textContent = opcoes.okText || 'Excluir';
+    okInit.className = opcoes.okClass || 'modal-confirmar-excluir';
     overlay.classList.add('active');
 
     const cancel = document.getElementById('confirmModalCancel');
