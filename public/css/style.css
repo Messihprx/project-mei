@@ -10989,7 +10989,8 @@ body.auth-split-page {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 2.75rem 3.5rem;
+    align-items: center;
+    padding: 2.75rem 3rem;
     background:
         radial-gradient(680px 520px at 18% 18%, rgba(59, 130, 246, .18), transparent 62%),
         radial-gradient(560px 460px at 85% 88%, rgba(16, 185, 129, .11), transparent 60%),
@@ -11014,6 +11015,8 @@ body.auth-split-page {
 .auth-split-topbar {
     position: relative;
     z-index: 1;
+    width: 100%;
+    max-width: 500px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -11067,8 +11070,9 @@ body.auth-split-page {
 .auth-split-hero {
     position: relative;
     z-index: 1;
-    max-width: 480px;
-    margin: auto 0;
+    width: 100%;
+    max-width: 500px;
+    margin: auto;
     padding: 2rem 0;
 }
 
@@ -11206,6 +11210,8 @@ body.auth-split-page {
 .auth-split-bottom {
     position: relative;
     z-index: 1;
+    width: 100%;
+    max-width: 500px;
     display: flex;
     align-items: center;
     justify-content: space-between;
