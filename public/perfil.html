@@ -13,9 +13,9 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <script>
-        // PWA: deixa o app instalável na tela inicial do celular e
-        // guarda CSS/JS em cache para abrir rápido na segunda visita.
-        // Dado financeiro nunca é cacheado (ver public/sw.js).
+        // PWA: deixa o app instalÃ¡vel na tela inicial do celular e
+        // guarda CSS/JS em cache para abrir rÃ¡pido na segunda visita.
+        // Dado financeiro nunca Ã© cacheado (ver public/sw.js).
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -68,7 +68,7 @@
                     <i data-lucide="crown"></i>
                 </div>
                 <h4 id="sidebarPlanTitle">Seja Premium</h4>
-                <p id="sidebarPlanDesc">Mais recursos para fazer seu negócio crescer.</p>
+                <p id="sidebarPlanDesc">Mais recursos para fazer seu negÃ³cio crescer.</p>
                 <a href="planos" class="sidebar-plan-btn" id="sidebarPlanBtn">Ver Planos</a>
             </div>
         </div>
@@ -104,7 +104,7 @@
                                 <i data-lucide="database-backup"></i> <span>Importar dados</span>
                             </a>
                             <a href="#" onclick="abrirRelatorioAnalitico()" class="dropdown-item">
-                                <i data-lucide="bar-chart-2"></i> <span>Relatórios Avançados</span>
+                                <i data-lucide="bar-chart-2"></i> <span>RelatÃ³rios AvanÃ§ados</span>
                             </a>
                             <div class="dropdown-divider"></div>
                             <button id="btnToggleTema" class="dropdown-item" onclick="toggleTema()">
@@ -139,11 +139,11 @@
                     <div class="perfil-meta">
                         <div class="perfil-meta-item">
                             <span><i data-lucide="calendar-days"></i> Membro desde</span>
-                            <strong id="perfilMembroDesde">—</strong>
+                            <strong id="perfilMembroDesde">â€”</strong>
                         </div>
                         <div class="perfil-meta-item">
-                            <span><i data-lucide="badge-check"></i> Situação</span>
-                            <strong id="perfilSituacao">—</strong>
+                            <span><i data-lucide="badge-check"></i> SituaÃ§Ã£o</span>
+                            <strong id="perfilSituacao">â€”</strong>
                         </div>
                     </div>
 
@@ -158,7 +158,7 @@
 
                     <p class="perfil-dica">
                         <i data-lucide="info"></i>
-                        A imagem é recortada e comprimida automaticamente antes do envio.
+                        A imagem Ã© recortada e comprimida automaticamente antes do envio.
                     </p>
                 </aside>
 
@@ -168,7 +168,7 @@
                             <span class="perfil-secao-icone"><i data-lucide="user"></i></span>
                             <div>
                                 <h4>Dados pessoais</h4>
-                                <p>Informações de identificação do responsável pelo MEI.</p>
+                                <p>InformaÃ§Ãµes de identificaÃ§Ã£o do responsÃ¡vel pelo MEI.</p>
                             </div>
                         </div>
 
@@ -222,7 +222,7 @@
                             <span class="perfil-secao-icone"><i data-lucide="briefcase"></i></span>
                             <div>
                                 <h4>Dados do MEI</h4>
-                                <p>Informações do seu negócio, como aparecem no CNPJ.</p>
+                                <p>InformaÃ§Ãµes do seu negÃ³cio, como aparecem no CNPJ.</p>
                             </div>
                         </div>
 
@@ -235,7 +235,7 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="razao_social">Razão social <span
+                                <label for="razao_social">RazÃ£o social <span
                                         class="perfil-opcional">opcional</span></label>
                                 <input type="text" id="razao_social" maxlength="150">
                                 <div class="erro-campo" id="erro-razao_social"></div>
@@ -249,7 +249,7 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="inscricao_municipal">Inscrição municipal <span
+                                <label for="inscricao_municipal">InscriÃ§Ã£o municipal <span
                                         class="perfil-opcional">opcional</span></label>
                                 <input type="text" id="inscricao_municipal" maxlength="30">
                                 <div class="erro-campo" id="erro-inscricao_municipal"></div>
@@ -275,8 +275,8 @@
                         <div class="perfil-secao-head">
                             <span class="perfil-secao-icone"><i data-lucide="map-pin"></i></span>
                             <div>
-                                <h4>Endereço</h4>
-                                <p>Endereço do negócio ou residencial, como preferir.</p>
+                                <h4>EndereÃ§o</h4>
+                                <p>EndereÃ§o do negÃ³cio ou residencial, como preferir.</p>
                             </div>
                         </div>
 
@@ -296,7 +296,7 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="numero">Número <span class="perfil-opcional">opcional</span></label>
+                                <label for="numero">NÃºmero <span class="perfil-opcional">opcional</span></label>
                                 <input type="text" id="numero" maxlength="15">
                                 <div class="erro-campo" id="erro-numero"></div>
                             </div>
@@ -326,29 +326,29 @@
                                     <option value="">Selecione</option>
                                     <option value="AC">Acre</option>
                                     <option value="AL">Alagoas</option>
-                                    <option value="AP">Amapá</option>
+                                    <option value="AP">AmapÃ¡</option>
                                     <option value="AM">Amazonas</option>
                                     <option value="BA">Bahia</option>
-                                    <option value="CE">Ceará</option>
+                                    <option value="CE">CearÃ¡</option>
                                     <option value="DF">Distrito Federal</option>
-                                    <option value="ES">Espírito Santo</option>
-                                    <option value="GO">Goiás</option>
-                                    <option value="MA">Maranhão</option>
+                                    <option value="ES">EspÃ­rito Santo</option>
+                                    <option value="GO">GoiÃ¡s</option>
+                                    <option value="MA">MaranhÃ£o</option>
                                     <option value="MT">Mato Grosso</option>
                                     <option value="MS">Mato Grosso do Sul</option>
                                     <option value="MG">Minas Gerais</option>
-                                    <option value="PA">Pará</option>
-                                    <option value="PB">Paraíba</option>
-                                    <option value="PR">Paraná</option>
+                                    <option value="PA">ParÃ¡</option>
+                                    <option value="PB">ParaÃ­ba</option>
+                                    <option value="PR">ParanÃ¡</option>
                                     <option value="PE">Pernambuco</option>
-                                    <option value="PI">Piauí</option>
+                                    <option value="PI">PiauÃ­</option>
                                     <option value="RJ">Rio de Janeiro</option>
                                     <option value="RN">Rio Grande do Norte</option>
                                     <option value="RS">Rio Grande do Sul</option>
-                                    <option value="RO">Rondônia</option>
+                                    <option value="RO">RondÃ´nia</option>
                                     <option value="RR">Roraima</option>
                                     <option value="SC">Santa Catarina</option>
-                                    <option value="SP">São Paulo</option>
+                                    <option value="SP">SÃ£o Paulo</option>
                                     <option value="SE">Sergipe</option>
                                     <option value="TO">Tocantins</option>
                                 </select>
@@ -382,14 +382,14 @@
                             <div class="form-group perfil-campo-full">
                                 <label for="chave_pix">Chave Pix <span class="perfil-opcional">opcional</span></label>
                                 <input type="text" id="chave_pix" maxlength="120"
-                                    placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
+                                    placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatÃ³ria">
                                 <div class="erro-campo" id="erro-chave_pix"></div>
                             </div>
 
                             <div class="form-group perfil-campo-full">
-                                <label for="bio">Sobre o negócio <span class="perfil-opcional">opcional</span></label>
+                                <label for="bio">Sobre o negÃ³cio <span class="perfil-opcional">opcional</span></label>
                                 <textarea id="bio" rows="4" maxlength="500"
-                                    placeholder="Conte em poucas palavras o que você faz..."></textarea>
+                                    placeholder="Conte em poucas palavras o que vocÃª faz..."></textarea>
                                 <div class="erro-campo" id="erro-bio"></div>
                             </div>
                         </div>
@@ -398,10 +398,10 @@
                     <div class="perfil-acoes">
                         <span class="perfil-status" id="perfilStatus">
                             <i data-lucide="shield-check"></i>
-                            Seus dados ficam protegidos e visíveis apenas para você.
+                            Seus dados ficam protegidos e visÃ­veis apenas para vocÃª.
                         </span>
                         <button type="submit" class="btn-primary" id="btnSalvarPerfil">
-                            <i data-lucide="save"></i> Salvar alterações
+                            <i data-lucide="save"></i> Salvar alteraÃ§Ãµes
                         </button>
                     </div>
                 </form>

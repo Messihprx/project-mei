@@ -465,6 +465,7 @@ function atualizarCabecalho() {
             ? '<i data-lucide="gem"></i> Premium'
             : '<i data-lucide="sparkles"></i> Plano gratuito';
         planoEl.classList.toggle('premium', premium);
+        planoEl.classList.toggle('gratuito', !premium);
         if (window.lucide) lucide.createIcons();
     }
 
@@ -474,11 +475,17 @@ function atualizarCabecalho() {
     const status = String(perfilAtual?.assinatura_status || 'trial').toLowerCase();
     const situacaoEl = el('perfilSituacao');
     if (situacaoEl) {
-        situacaoEl.textContent = status === 'active'
-            ? 'Assinatura ativa'
-            : status === 'cancelled'
-                ? 'Cancelada'
-                : 'Período de teste';
+        situacaoEl.className = '';
+        if (status === 'active') {
+            situacaoEl.textContent = 'Assinatura ativa';
+            situacaoEl.classList.add('situacao-ativa');
+        } else if (status === 'cancelled') {
+            situacaoEl.textContent = 'Cancelada';
+            situacaoEl.classList.add('situacao-cancelada');
+        } else {
+            situacaoEl.textContent = 'Período de teste';
+            situacaoEl.classList.add('situacao-teste');
+        }
     }
 }
 

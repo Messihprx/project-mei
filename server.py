@@ -50,6 +50,12 @@ class CleanURLHandler(http.server.SimpleHTTPRequestHandler):
         # Se nao encontrar, deixa o handler padrao retornar 404
         return super().translate_path(path)
 
+    def guess_type(self, path):
+        base = super().guess_type(path)
+        if base == "text/html" or path.endswith(".html"):
+            return "text/html; charset=utf-8"
+        return base
+
     def end_headers(self):
         # Evita cache agressivo durante o desenvolvimento
         self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
