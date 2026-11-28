@@ -434,6 +434,7 @@ const contentEl = document.getElementById('content');
 const TITLES = {
   dashboard: ['Dashboard', 'Visão geral do sistema'],
   usuarios: ['Usuários', 'Gerencie os usuários cadastrados'],
+  avaliacoes: ['Avaliações', 'Aprove os depoimentos exibidos na página inicial'],
   assinaturas: ['Assinaturas', 'Gerencie as assinaturas do sistema'],
   pagamentos: ['Pagamentos', 'Acompanhe os pagamentos realizados'],
   contas: ['Contas Financeiras', 'Gerencie contas de todos os usuários'],
@@ -471,6 +472,7 @@ function renderPage(page) {
   const reg = {
     dashboard: renderDashboard,
     usuarios: renderUsuarios,
+    avaliacoes: renderAvaliacoes,
     assinaturas: renderAssinaturas,
     pagamentos: renderPagamentos,
     contas: renderContas,
@@ -817,6 +819,138 @@ function onUserSearch(value) {
 function onUserFilterPlan(value) {
   userFilterPlan = value;
   updateUsersTable();
+}
+
+/* Avaliações */
+
+async function renderAvaliacoes() {
+  contentEl.innerHTML = '<div class="loading">Carregando avaliações...</div>';
+
+  try {
+    const [avaliacoesRes, perfisRes] = await Promise.all([
+      supabase.from('avaliacoes').select('*').order('created_at', { ascending: false }),
+      supabase.from('perfis').select('id, nome_completo, email')
+    ]);
+
+    if (avaliacoesRes.error) throw avaliacoesRes.error;
+
+    const rows = avaliacoesRes.data || [];
+    const perfisMap = (perfisRes.data || []).reduce((mapa, perfil) => {
+      mapa[perfil.id] = perfil;
+      return mapa;
+    }, {});
+    const publicadas = rows.filter(r => r.exibir_landing).length;
+    const media = rows.length
+      ? (rows.reduce((soma, r) => soma + Number(r.nota || 0), 0) / rows.length).toFixed(1).replace('.', ',')
+      : '—';
+
+    const linha = (r) => {
+      const perfil = perfisMap[r.user_id];
+      return `
+      <tr>
+        <td>
+          <strong>${esc(r.nome_exibicao || perfil?.nome_completo || 'Sem nome')}</strong>
+          <div style="font-size:12px;color:var(--text-soft)">${esc(perfil?.email || '—')}</div>
+          ${r.segmento ? `<div style="font-size:12px;color:var(--text-soft)">${esc(r.segmento)}</div>` : ''}
+        </td>
+        <td><strong>${Number(r.nota).toFixed(1).replace('.', ',')}</strong> / 10</td>
+        <td style="max-width:340px;white-space:normal">${esc(r.comentario || '—')}</td>
+        <td>${r.solicita_exibir ? statusPill('s-active', 'Sim') : statusPill('s-cancelled', 'Não')}</td>
+        <td>${r.exibir_landing ? statusPill('s-active', 'Publicada') : statusPill('s-pending', 'Oculta')}</td>
+        <td>${new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
+        <td>
+          <button class="btn btn-secondary btn-sm" onclick="toggleAvaliacao('${r.id}', ${!r.exibir_landing})">
+            ${r.exibir_landing ? 'Ocultar' : 'Publicar'}
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="excluirAvaliacao('${r.id}')">Excluir</button>
+        </td>
+      </tr>`;
+    };
+
+    contentEl.innerHTML = `
+      <div class="page-head">
+        <div>
+          <div class="page-title">Avaliações</div>
+          <div class="page-desc">
+            ${rows.length} avaliação(ões) recebida(s). Só as publicadas aparecem na página inicial.
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-3" style="margin-bottom:20px">
+        <div class="card metric-card m-acc">
+          <div class="metric-label">Nota média</div>
+          <div class="metric-value">${media}</div>
+          <div class="metric-foot">De 0 a 10</div>
+        </div>
+        <div class="card metric-card m-pos">
+          <div class="metric-label">Publicadas</div>
+          <div class="metric-value">${publicadas}</div>
+          <div class="metric-foot">Visíveis na landing</div>
+        </div>
+        <div class="card metric-card">
+          <div class="metric-label">Aguardando</div>
+          <div class="metric-value">${rows.filter(r => r.solicita_exibir && !r.exibir_landing).length}</div>
+          <div class="metric-foot">Pedidos de exibição</div>
+        </div>
+      </div>
+
+      <div class="table-wrap table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Usuário</th>
+              <th>Nota</th>
+              <th>Comentário</th>
+              <th>Quer aparecer</th>
+              <th>Landing</th>
+              <th>Data</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.length
+              ? rows.map(linha).join('')
+              : '<tr><td colspan="7" style="text-align:center;padding:30px">Nenhuma avaliação ainda.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    contentEl.innerHTML = `<div class="loading err">${esc(e.message)}</div>`;
+  }
+}
+
+async function toggleAvaliacao(id, publicar) {
+  const { error } = await supabase
+    .from('avaliacoes')
+    .update({ exibir_landing: publicar })
+    .eq('id', id);
+
+  if (error) {
+    toast(error.message, 'err');
+    return;
+  }
+
+  toast(publicar ? 'Avaliação publicada na landing.' : 'Avaliação ocultada da landing.');
+  renderAvaliacoes();
+}
+
+async function excluirAvaliacao(id) {
+  if (!confirm('Excluir esta avaliação definitivamente?')) return;
+
+  const { error } = await supabase
+    .from('avaliacoes')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    toast(error.message, 'err');
+    return;
+  }
+
+  toast('Avaliação excluída.');
+  renderAvaliacoes();
 }
 
 async function renderUsuarios() {

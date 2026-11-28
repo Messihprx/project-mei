@@ -235,7 +235,7 @@ function handleAuthRedirect(session) {
         if (window.liberarPagina) window.liberarPagina();
         inicializarPagina(session);
     } else if (session && (paginaAtual === "login" || paginaAtual === "cadastro" || paginaAtual === "confirmar-email")) {
-        window.location.href = "./";
+        window.location.href = "dashboard";
     } else if (!session && isPaginaProtegida && !temHashTokens && initialSessionChecked) {
         // Sem sessão: a página continua escondida até sair daqui, para
         // não piscar conteúdo protegido antes de ir para o login.
@@ -504,7 +504,7 @@ if (formLogin) {
         if (error) {
             mostrarModal('Não foi possível entrar', traduzirErro(error.message));
         } else {
-            window.location.href = "./";
+            window.location.href = "dashboard";
         }
     });
 }
@@ -514,7 +514,7 @@ const loginGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { 
-            redirectTo: urlDoApp('./'),
+            redirectTo: urlDoApp('dashboard'),
             queryParams: {
                 access_type: 'offline',
                 prompt: 'select_account',

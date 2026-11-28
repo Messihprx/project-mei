@@ -10,4 +10,8 @@
 
 - futuramente fazer uma landing page
 
-prompt pra rodar: no dropdown, o "modo escuro" ou "modo claro" nao tem hover e o icone nao troca ao clicar e mudar o tema
+# TESTAR
+- Rotas
+- Landing page
+- Nova funcionalidade de depoimentos
+- Tela administrativa (testando os depoimentos)

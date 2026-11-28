@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('finmei_tema') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            } catch (e) { /* localStorage indisponível */ }
+        })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/auth-guard.js"></script>
+    <title>FinMEI | Gestão Financeira e Fluxo de Caixa para MEI</title>
+
+    <meta name="description"
+        content="Organize as finanças do seu MEI de forma inteligente. Controle vendas, gastos, clientes e gere relatórios de BI automaticamente com o FinMEI.">
+
+    <meta name="keywords"
+        content="MEI, gestão financeira, fluxo de caixa, microempreendedor, controle de vendas, BI para MEI">
+
+    <meta property="og:title" content="FinMEI - Fluxo Inteligente para Microempreendedores">
+    <meta property="og:description" content="Gerencie suas finanças em tempo real com relatórios avançados.">
+    <meta property="og:type" content="website">
+
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css?v=6">
+    <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <meta name="theme-color" content="#080c16">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <script>
+        // PWA: deixa o app instalável na tela inicial do celular e
+        // guarda CSS/JS em cache para abrir rápido na segunda visita.
+        // Dado financeiro nunca é cacheado (ver public/sw.js).
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+    </script>
+</head>
+
+<body class="dashboard-layout">
+
+
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">MEI</div>
+                <span>finMEI</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="dashboard" class="nav-item active">
+                <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
+            </a>
+            <a href="vendas" class="nav-item">
+                <i data-lucide="shopping-cart"></i> <span>Vendas</span>
+            </a>
+            <a href="gastos" class="nav-item">
+                <i data-lucide="trending-down"></i> <span>Gastos</span>
+            </a>
+            <a href="contas" class="nav-item">
+                <i data-lucide="wallet"></i> <span>Contas</span>
+            </a>
+            <a href="clientes" class="nav-item">
+                <i data-lucide="users"></i> <span>Clientes</span>
+            </a>
+            <a href="produtos" class="nav-item">
+                <i data-lucide="package"></i> <span>Produtos</span>
+            </a>
+            <a href="mei" class="nav-item">
+                <i data-lucide="clipboard-check"></i> <span>MEI</span>
+            </a>
+
+            <div class="sidebar-divider">ASSISTENTE</div>
+            <a href="ia" class="nav-item">
+                <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
+            </a>
+            <a href="avaliar" class="nav-item">
+                <i data-lucide="star"></i> <span>Avaliar o FinMEI</span>
+            </a>
+
+        </nav>
+
+        <div class="sidebar-plan-wrapper">
+            <div class="sidebar-plan-card" id="sidebarPlanCard">
+                <div class="plan-card-icon" id="sidebarPlanIcon">
+                    <i data-lucide="crown"></i>
+                </div>
+                <h4 id="sidebarPlanTitle">Seja Premium</h4>
+                <p id="sidebarPlanDesc">Mais recursos para fazer seu negócio crescer.</p>
+                <a href="planos" class="sidebar-plan-btn" id="sidebarPlanBtn">Ver Planos</a>
+            </div>
+        </div>
+
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+
+        <header class="top-bar top-bar-dashboard">
+            <div class="header-search-wrap">
+                <i data-lucide="search" class="header-search-icon"></i>
+                <input type="search" id="buscaGlobalHeader" class="header-search-input"
+                    placeholder="Buscar por vendas, clientes, produtos..." autocomplete="off"
+                    aria-label="Buscar no FinMEI">
+                <div class="header-search-results" id="headerSearchResults" hidden></div>
+            </div>
+            <div class="top-actions">
+                <a href="nova-venda" class="top-action-primary"><i data-lucide="plus"></i><span>Nova
+                        venda</span></a>
+                <a href="novo-cliente" class="top-action-secondary"><i data-lucide="user-plus"></i><span>Novo
+                        cliente</span></a>
+                <div class="user-info">
+                    <div class="profile-dropdown">
+                        <button class="profile-toggle profile-toggle-pill" onclick="toggleProfileDropdown(event)">
+                            <img id="fotoUsuario" src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                                referrerpolicy="no-referrer" alt="Perfil">
+                            <span id="nomePerfilHeader" class="profile-name">Usuário</span>
+                            <i data-lucide="chevron-down" class="profile-chevron"></i>
+                        </button>
+                        <div class="dropdown-menu" id="profileDropdown">
+                        <div class="dropdown-header">Minha Conta</div>
+                        <a href="perfil" class="dropdown-item">
+                            <i data-lucide="user-round"></i> <span>Meu perfil</span>
+                        </a>
+                        <a href="#" onclick="abrirImportacao()" class="dropdown-item">
+                            <i data-lucide="database-backup"></i> <span>Importar dados</span>
+                        </a>
+                        <a href="#" onclick="abrirRelatorioAnalitico()" class="dropdown-item">
+                            <i data-lucide="bar-chart-2"></i> <span>Relatórios Avançados</span>
+                        </a>
+                        <a href="avaliar" class="dropdown-item">
+                            <i data-lucide="star"></i> <span>Avaliar o FinMEI</span>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <button id="btnToggleTema" class="dropdown-item" onclick="toggleTema()">
+                            <i id="iconeTema" data-lucide="sun"></i>
+                            <span id="textoTema">Modo claro</span>
+                        </button>
+                        <a href="#" onclick="logout()" class="dropdown-item logout">
+                            <i data-lucide="log-out"></i> <span>Sair</span>
+                        </a>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="content-wrapper">
+            <div class="dashboard-hero">
+                <div class="page-header">
+                    <span class="page-kicker"><i data-lucide="sparkles"></i> Visão geral do negócio</span>
+                    <h2 id="nomeUsuario">Olá, Usuário</h2>
+                    <p>Aqui está um resumo do seu negócio como MEI.</p>
+                </div>
+
+                <div class="period-minimal-bar dashboard-filtros-mobile">
+                    <span class="period-pill-icon"><i data-lucide="calendar"></i></span>
+                    <select id="filtroTipoPeriodo" class="period-pill-select" aria-label="Período">
+                        <option value="month">Mês</option>
+                        <option value="year">Ano</option>
+                        <option value="all">Todo o período</option>
+                    </select>
+                    <div id="campoFiltroMes" class="period-pill-field">
+                        <input type="month" id="filtroMesDashboard" class="period-pill-input input-mes-dashboard" aria-label="Mês de análise">
+                    </div>
+                    <div id="campoFiltroAno" class="period-pill-field" hidden>
+                        <input type="number" id="filtroAnoDashboard" class="period-pill-input period-pill-year"
+                            min="1900" max="2100" step="1" inputmode="numeric" required aria-label="Ano de análise">
+                    </div>
+                    <span id="badgePeriodo" class="period-badge period-badge-minimal" hidden><span class="badge-dot"></span><span id="textoBadgePeriodo">Mês atual</span></span>
+                    <button id="btnLimparFiltro" class="period-pill-reset" title="Voltar para o mês atual">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span>Mês atual</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="section-head">
+                <div class="section-title">
+                    <i data-lucide="bar-chart-3"></i>
+                    <h4>Desempenho no período</h4>
+                </div>
+            </div>
+
+            <div class="resumo-cards">
+                <div class="metric-card metric-card-styled pos">
+                    <div class="metric-card-top">
+                        <div class="metric-icon-badge">
+                            <i data-lucide="trending-up"></i>
+                        </div>
+                        <div class="metric-title-group">
+                            <span class="metric-label">
+                                <span id="labelRecebidoDashboard">Recebido (Mês)</span>
+                            </span>
+                            <div class="metric-value-row">
+                                <h2 id="totalEntradas" class="metric-value">R$ 0,00</h2>
+                                <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
+                                    <path d="M2 22C10 22 14 14 22 15C30 16 34 8 42 10C50 12 54 4 62 3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div class="metric-variacao" id="variacaoRecebido">--</div>
+                        </div>
+                    </div>
+                    <div class="metric-foot"><i data-lucide="arrow-up-right"></i> Vendas já pagas</div>
+                </div>
+
+                <div class="metric-card metric-card-styled warn">
+                    <div class="metric-card-top">
+                        <div class="metric-icon-badge">
+                            <i data-lucide="clock"></i>
+                        </div>
+                        <div class="metric-title-group">
+                            <span class="metric-label">
+                                <span id="labelPendenteDashboard">A Receber (Mês)</span>
+                            </span>
+                            <div class="metric-value-row">
+                                <h2 id="totalSaidas" class="metric-value">R$ 0,00</h2>
+                                <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
+                                    <path d="M2 18C12 18 16 11 26 14C34 16 40 9 48 11C55 13 58 7 62 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div class="metric-variacao" id="variacaoReceber">--</div>
+                        </div>
+                    </div>
+                    <div class="metric-foot"><i data-lucide="hourglass"></i> Vendas aguardando pgto</div>
+                </div>
+
+                <div class="metric-card metric-card-styled neg">
+                    <div class="metric-card-top">
+                        <div class="metric-icon-badge">
+                            <i data-lucide="trending-down"></i>
+                        </div>
+                        <div class="metric-title-group">
+                            <span class="metric-label">
+                                <span id="labelDespesasDashboard">Despesas (Mês)</span>
+                            </span>
+                            <div class="metric-value-row">
+                                <h2 id="totalGastosDashboard" class="metric-value">R$ 0,00</h2>
+                                <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
+                                    <path d="M2 14C10 10 18 19 26 16C34 13 42 21 50 15C56 11 59 14 62 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div class="metric-variacao" id="variacaoDespesas">--</div>
+                        </div>
+                    </div>
+                    <div class="metric-foot"><i data-lucide="receipt"></i> Gastos operacionais</div>
+                </div>
+
+                <div class="metric-card metric-card-styled acc">
+                    <div class="metric-card-top">
+                        <div class="metric-icon-badge">
+                            <i data-lucide="target"></i>
+                        </div>
+                        <div class="metric-title-group">
+                            <span class="metric-label">
+                                <span id="labelLucroDashboard">Lucro Líquido (Mês)</span>
+                            </span>
+                            <div class="metric-value-row">
+                                <h2 id="lucroReal" class="metric-value">R$ 0,00</h2>
+                                <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
+                                    <path d="M2 23C11 20 18 16 26 17C35 18 42 9 50 7C56 5 59 4 62 2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div class="metric-variacao" id="variacaoLucro">--</div>
+                        </div>
+                    </div>
+                    <div class="metric-foot"><i data-lucide="sparkles"></i> Recebido - Gastos</div>
+                </div>
+            </div>
+
+            <div class="saldo-grid">
+                <div class="card highlight">
+                    <div>
+                        <span class="metric-label">Saldo geral disponível</span>
+                        <p class="saldo-card-desc">Patrimônio acumulado (entradas totais - gastos totais)</p>
+                    </div>
+                    <h1 id="saldoGeralTotal" class="big">R$ 0,00</h1>
+                </div>
+
+                <div class="card saldo-card">
+                    <span class="metric-label">Saldo consolidado</span>
+                    <p class="saldo-card-desc">Soma das contas classificadas como Negócio ou Misto</p>
+                    <h2 id="saldoConsolidadoDashboard" class="saldo-card-value">R$ 0,00</h2>
+                </div>
+            </div>
+
+            <!-- GRÁFICOS -->
+            <div class="graficos-grid">
+                <div class="card chart-card">
+                    <div class="chart-head">
+                        <span class="chart-title">Receitas × Despesas</span>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="chRevExp"></canvas>
+                    </div>
+                </div>
+
+                <div class="card chart-card">
+                    <div class="chart-head">
+                        <span class="chart-title">Evolução do Lucro</span>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="chProfit"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graficos-grid">
+                <div class="card chart-card">
+                    <div class="chart-head">
+                        <span class="chart-title">Distribuição de Vendas por Produto</span>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="chDonut"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="chart-title" id="tituloComparacao" style="margin-bottom: 14px;">Comparação com o Mês Anterior</div>
+                    <div class="insight" id="insightComparacao" style="margin-bottom: 14px;">
+                        <i data-lucide="info"></i>
+                        <div>Carregando comparação...</div>
+                    </div>
+                    <div id="comparacaoGrid" class="goal-grid" style="grid-template-columns: 1fr 1fr;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-bottom">
+                <section class="recentes" style="min-height: 400px;">
+                    <div class="fluxo-cabecalho fluxo-cabecalho-mobile"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <h3 class="titulo-fluxo chart-title" style="border: none; padding: 0;">Fluxo de Caixa
+                            Recente</h3>
+                        <a href="vendas" class="link-ver-vendas"
+                            style="font-size: 0.75rem; color: var(--cor-primaria); text-decoration: none; font-weight: 600; display: block; text-align: center; width: 100%;">Ver
+                            vendas</a>
+                    </div>
+                    <div id="listaMovimentacoes">
+                    </div>
+                </section>
+
+                <section class="recentes" style="min-height: 400px;">
+                    <h3 class="chart-title" id="tituloHistoricoPeriodo" style="border: none; padding: 0; margin-bottom: 1.5rem;">Histórico no tempo
+                    </h3>
+                    <div id="listaLucroMensal">
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="js/auth.js?v=6"></script>
+    <script type="module" src="js/dashboard.js?v=6"></script>
+    <script type="module" src="js/ai-fab.js"></script>
+    <script>
+        // Inicializa os ícones
+        lucide.createIcons();
+
+        // Dropdown do perfil
+        function toggleProfileDropdown(event) {
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.classList.toggle('active');
+            // Fechar se clicar fora
+            if (!event.target.closest('.profile-dropdown')) {
+                dropdown.classList.remove('active');
+            }
+        }
+
+        // Fechar dropdown ao clicar fora
+        document.addEventListener('click', (e) => {
+            const profileDropdown = document.querySelector('.profile-dropdown');
+            const profileToggle = document.querySelector('.profile-toggle');
+            if (profileDropdown && profileToggle) {
+                if (!e.target.closest('.profile-dropdown')) {
+                    profileDropdown.classList.remove('active');
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

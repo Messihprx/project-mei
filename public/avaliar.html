@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/auth-guard.js"></script>
+    <title>Avaliar o FinMEI | FinMEI</title>
+    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css?v=6">
+    <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+    <meta name="theme-color" content="#080c16">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <style>
+        .avaliar-wrap {
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        .avaliar-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px;
+        }
+
+        .avaliar-card h3 {
+            font-size: 1.15rem;
+            margin-bottom: 6px;
+        }
+
+        .avaliar-card .avaliar-sub {
+            color: var(--text2);
+            font-size: .9rem;
+            margin-bottom: 26px;
+            line-height: 1.6;
+        }
+
+        .avaliar-label {
+            display: block;
+            font-size: .8rem;
+            font-weight: 600;
+            color: var(--text2);
+            margin-bottom: 8px;
+        }
+
+        .avaliar-field {
+            margin-bottom: 22px;
+        }
+
+        .avaliar-field input[type="text"],
+        .avaliar-field textarea {
+            width: 100%;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: .92rem;
+            padding: 12px 14px;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        .avaliar-field input[type="text"]:focus,
+        .avaliar-field textarea:focus {
+            border-color: var(--primary);
+        }
+
+        .avaliar-field textarea {
+            min-height: 110px;
+            resize: vertical;
+        }
+
+        .avaliar-stars {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .avaliar-star {
+            position: relative;
+            width: 38px;
+            height: 38px;
+            flex: 0 0 38px;
+        }
+
+        .avaliar-star .half {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 50%;
+            z-index: 2;
+            cursor: pointer;
+            background: none;
+            border: 0;
+            padding: 0;
+        }
+
+        .avaliar-star .half.left {
+            left: 0;
+        }
+
+        .avaliar-star .half.right {
+            right: 0;
+        }
+
+        .avaliar-star .base,
+        .avaliar-star .fill {
+            position: absolute;
+            inset: 0;
+            display: flex;
+        }
+
+        .avaliar-star .base {
+            color: rgba(148, 163, 184, .25);
+        }
+
+        .avaliar-star .fill {
+            color: var(--yellow, #f59e0b);
+            overflow: hidden;
+            width: 0;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .avaliar-star svg {
+            width: 38px;
+            height: 38px;
+            flex: 0 0 38px;
+            fill: currentColor;
+        }
+
+        .avaliar-nota {
+            margin-left: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .avaliar-nota small {
+            color: var(--text3);
+            font-weight: 500;
+        }
+
+        .avaliar-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: .875rem;
+            color: var(--text2);
+            line-height: 1.5;
+            cursor: pointer;
+        }
+
+        .avaliar-check input {
+            margin-top: 3px;
+            accent-color: var(--primary);
+            width: 16px;
+            height: 16px;
+            flex: 0 0 16px;
+        }
+
+        .avaliar-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 26px;
+        }
+
+        .avaliar-status {
+            margin-top: 16px;
+            font-size: .85rem;
+            padding: 10px 14px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .avaliar-status.ok {
+            display: block;
+            background: rgba(16, 185, 129, .1);
+            border: 1px solid rgba(16, 185, 129, .25);
+            color: #34d399;
+        }
+
+        .avaliar-status.err {
+            display: block;
+            background: rgba(239, 68, 68, .1);
+            border: 1px solid rgba(239, 68, 68, .25);
+            color: #f87171;
+        }
+
+        .avaliar-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: .72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            padding: 5px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            color: var(--text2);
+            margin-bottom: 18px;
+        }
+
+        .avaliar-badge.on {
+            color: #34d399;
+            border-color: rgba(16, 185, 129, .3);
+            background: rgba(16, 185, 129, .1);
+        }
+
+        .avaliar-badge.wait {
+            color: #fbbf24;
+            border-color: rgba(245, 158, 11, .3);
+            background: rgba(245, 158, 11, .1);
+        }
+
+        @media (max-width: 600px) {
+            .avaliar-card {
+                padding: 22px;
+            }
+
+            .avaliar-star,
+            .avaliar-star svg {
+                width: 32px;
+                height: 32px;
+                flex-basis: 32px;
+            }
+        }
+    </style>
+</head>
+
+<body class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">MEI</div>
+                <span>finMEI</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="dashboard" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
+            </a>
+            <a href="vendas" class="nav-item">
+                <i data-lucide="shopping-cart"></i> <span>Vendas</span>
+            </a>
+            <a href="gastos" class="nav-item">
+                <i data-lucide="trending-down"></i> <span>Gastos</span>
+            </a>
+            <a href="contas" class="nav-item">
+                <i data-lucide="wallet"></i> <span>Contas</span>
+            </a>
+            <a href="clientes" class="nav-item">
+                <i data-lucide="users"></i> <span>Clientes</span>
+            </a>
+            <a href="produtos" class="nav-item">
+                <i data-lucide="package"></i> <span>Produtos</span>
+            </a>
+            <a href="mei" class="nav-item">
+                <i data-lucide="clipboard-check"></i> <span>MEI</span>
+            </a>
+
+            <div class="sidebar-divider">ASSISTENTE</div>
+            <a href="ia" class="nav-item">
+                <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
+            </a>
+            <a href="avaliar" class="nav-item active">
+                <i data-lucide="star"></i> <span>Avaliar o FinMEI</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-plan-wrapper">
+            <div class="sidebar-plan-card" id="sidebarPlanCard">
+                <div class="plan-card-icon" id="sidebarPlanIcon">
+                    <i data-lucide="crown"></i>
+                </div>
+                <h4 id="sidebarPlanTitle">Seja Premium</h4>
+                <p id="sidebarPlanDesc">Mais recursos para fazer seu negócio crescer.</p>
+                <a href="planos" class="sidebar-plan-btn" id="sidebarPlanBtn">Ver Planos</a>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <button id="btnMenuMobile" class="btn-menu-mobile">
+            <i data-lucide="menu"></i>
+        </button>
+
+        <header class="top-bar">
+            <div class="page-header">
+                <span class="page-kicker"><i data-lucide="star"></i> Sua opinião</span>
+                <h2>Avaliar o FinMEI</h2>
+                <p>Dê uma nota de 0 a 10 e conte como o sistema ajuda no seu dia a dia</p>
+            </div>
+            <div class="top-actions">
+                <a href="dashboard" class="top-action-secondary">
+                    <i data-lucide="arrow-left"></i><span>Voltar ao dashboard</span>
+                </a>
+            </div>
+        </header>
+
+        <section class="content-wrapper">
+            <div class="avaliar-wrap">
+                <div class="avaliar-card">
+                    <span class="avaliar-badge" id="statusBadge">Carregando...</span>
+                    <h3>Como está sua experiência?</h3>
+                    <p class="avaliar-sub">Sua avaliação ajuda a melhorar o FinMEI. As melhores respostas podem aparecer
+                        na página inicial — mas só depois da aprovação da nossa equipe.</p>
+
+                    <div class="avaliar-field">
+                        <span class="avaliar-label">Sua nota (meia estrela = 1 ponto)</span>
+                        <div class="avaliar-stars" id="starsWidget">
+                            <div class="avaliar-star" data-star="1">
+                                <span class="base"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.83 5.73 6.32.92-4.57 4.46 1.08 6.3L12 17.03l-5.66 2.98 1.08-6.3L2.85 9.25l6.32-.92L12 2.6z"/></svg></span>
+                                <span class="fill"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.83 5.73 6.32.92-4.57 4.46 1.08 6.3L12 17.03l-5.66 2.98 1.08-6.3L2.85 9.25l6.32-.92L12 2.6z"/></svg></span>
+                                <button type="button" class="half left" data-value="1" aria-label="1 ponto"></button>
+                                <button type="button" class="half right" data-value="2" aria-label="2 pontos"></button>
+                            </div>
+                            <div class="avaliar-star" data-star="2">
+                                <span class="base"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.83 5.73 6.32.92-4.57 4.46 1.08 6.3L12 17.03l-5.66 2.98 1.08-6.3L2.85 9.25l6.32-.92L12 2.6z"/></svg></span>
+                                <span class="fill"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.83 5.73 6.32.92-4.57 4.46 1.08 6.3L12 17.03l-5.66 2.98 1.08-6.3L2.85 9.25l6.32-.92L12 2.6z"/></svg></span>
+                                <button type="button" class="half left" data-value="3" aria-label="3 pontos"></button>
+                                <button type="button" class="half right" data-value="4" aria-label="4 pontos"></button>
+                            </div>
+                            <div class="avaliar-star" data-star="3">
+                                <span class="base"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.83 5.73 6.32.92-4.57 4.46 1.08 6.3L12 17.03l-5.66 2.98 1.08-6.3L2.85 9.25l6.32-.92L12 2.6z"/></svg></span>
+                                <span class="fill"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.83 5.73 6.32.92-4.57 4.46 1.08 6.3L12 17.03l-5.66 2.98 1.08-6.3L2.85 9.25l6.32-.92L12 2.6z"/></svg></span>
+                                <button type="button" class="half left" data-value="5" aria-label="5 pontos"></button>
+                                <button type="button" class="half right" data-value="6" aria-label="6 pontos"></button>
+                            </div>
+                            <div class="avaliar-star" data-star="4">
+                                <span class="base"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.83 5.73 6.32.92-4.57 4.46 1.08 6.3L12 17.03l-5.66 2.98 1.08-6.3L2.85 9.25l6.32-.92L12 2.6z"/></svg></span>
+                                <span class="fill"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.83 5.73 6.32.92-4.57 4.46 1.08 6.3L12 17.03l-5.66 2.98 1.08-6.3L2.85 9.25l6.32-.92L12 2.6z"/></svg></span>
+                                <button type="button" class="half left" data-value="7" aria-label="7 pontos"></button>
+                                <button type="button" class="half right" data-value="8" aria-label="8 pontos"></button>
+                            </div>
+                            <div class="avaliar-star" data-star="5">
+                                <span class="base"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.83 5.73 6.32.92-4.57 4.46 1.08 6.3L12 17.03l-5.66 2.98 1.08-6.3L2.85 9.25l6.32-.92L12 2.6z"/></svg></span>
+                                <span class="fill"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.83 5.73 6.32.92-4.57 4.46 1.08 6.3L12 17.03l-5.66 2.98 1.08-6.3L2.85 9.25l6.32-.92L12 2.6z"/></svg></span>
+                                <button type="button" class="half left" data-value="9" aria-label="9 pontos"></button>
+                                <button type="button" class="half right" data-value="10" aria-label="10 pontos"></button>
+                            </div>
+                            <span class="avaliar-nota"><span id="notaValor">0</span><small>/10</small></span>
+                        </div>
+                    </div>
+
+                    <div class="avaliar-field">
+                        <label class="avaliar-label" for="comentario">Conte sua experiência (opcional)</label>
+                        <textarea id="comentario" maxlength="500"
+                            placeholder="Ex.: antes eu controlava tudo em caderno e agora sei exatamente quanto lucro no mês..."></textarea>
+                    </div>
+
+                    <div class="avaliar-field">
+                        <label class="avaliar-label" for="nomeExibicao">Nome para exibir na página inicial</label>
+                        <input type="text" id="nomeExibicao" maxlength="60" placeholder="Seu nome ou do seu negócio">
+                    </div>
+
+                    <div class="avaliar-field">
+                        <label class="avaliar-label" for="segmento">Seu segmento (opcional)</label>
+                        <input type="text" id="segmento" maxlength="60" placeholder="Ex.: Confeiteira, Eletricista, Artesã">
+                    </div>
+
+                    <label class="avaliar-check">
+                        <input type="checkbox" id="solicitaExibir" checked>
+                        <span>Quero que minha avaliação possa aparecer na página inicial do FinMEI. A exibição depende da
+                            aprovação da equipe.</span>
+                    </label>
+
+                    <div class="avaliar-actions">
+                        <button type="button" class="btn-primary" id="btnSalvar">
+                            <i data-lucide="send"></i> Enviar avaliação
+                        </button>
+                        <button type="button" class="btn-secondary" id="btnExcluir" style="display:none">
+                            <i data-lucide="trash-2"></i> Excluir
+                        </button>
+                    </div>
+
+                    <div class="avaliar-status" id="statusMsg"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script type="module">
+        import { supabase } from './js/auth.js';
+
+        let nota = 0;
+        let existente = null;
+        let user = null;
+
+        const stars = document.querySelectorAll('.avaliar-star');
+        const notaValor = document.getElementById('notaValor');
+        const badge = document.getElementById('statusBadge');
+        const statusMsg = document.getElementById('statusMsg');
+        const btnSalvar = document.getElementById('btnSalvar');
+        const btnExcluir = document.getElementById('btnExcluir');
+
+        function pintar(valor) {
+            stars.forEach((star, i) => {
+                const cheio = Math.max(0, Math.min(1, (valor - i * 2) / 2));
+                star.querySelector('.fill').style.width = (cheio * 100) + '%';
+            });
+            notaValor.textContent = valor;
+        }
+
+        function mostrarStatus(texto, tipo) {
+            statusMsg.textContent = texto;
+            statusMsg.className = 'avaliar-status ' + (tipo || '');
+        }
+
+        stars.forEach(star => {
+            star.querySelectorAll('.half').forEach(btn => {
+                const valor = Number(btn.dataset.value);
+                btn.addEventListener('mouseenter', () => pintar(valor));
+                btn.addEventListener('mouseleave', () => pintar(nota));
+                btn.addEventListener('click', () => {
+                    nota = valor;
+                    pintar(nota);
+                });
+            });
+        });
+
+        function atualizarBadge() {
+            if (!existente) {
+                badge.textContent = 'Nova avaliação';
+                badge.className = 'avaliar-badge';
+                btnExcluir.style.display = 'none';
+                return;
+            }
+            btnExcluir.style.display = 'inline-flex';
+            if (existente.exibir_landing) {
+                badge.textContent = 'Publicada na página inicial';
+                badge.className = 'avaliar-badge on';
+            } else if (existente.solicita_exibir) {
+                badge.textContent = 'Aguardando aprovação';
+                badge.className = 'avaliar-badge wait';
+            } else {
+                badge.textContent = 'Avaliação salva';
+                badge.className = 'avaliar-badge';
+            }
+        }
+
+        async function carregar() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+            user = session.user;
+
+            const { data: perfil } = await supabase
+                .from('perfis')
+                .select('nome_completo')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            const { data, error } = await supabase
+                .from('avaliacoes')
+                .select('*')
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+            if (error) {
+                mostrarStatus('Não foi possível carregar sua avaliação: ' + error.message, 'err');
+            }
+
+            existente = data || null;
+            if (existente) {
+                nota = Number(existente.nota) || 0;
+                pintar(nota);
+                document.getElementById('comentario').value = existente.comentario || '';
+                document.getElementById('nomeExibicao').value = existente.nome_exibicao || '';
+                document.getElementById('segmento').value = existente.segmento || '';
+                document.getElementById('solicitaExibir').checked = existente.solicita_exibir !== false;
+            } else {
+                document.getElementById('nomeExibicao').value = perfil?.nome_completo || '';
+                pintar(0);
+            }
+            atualizarBadge();
+        }
+
+        btnSalvar.addEventListener('click', async () => {
+            if (!user) return;
+            if (nota < 1) {
+                mostrarStatus('Escolha uma nota de 1 a 10 antes de enviar.', 'err');
+                return;
+            }
+
+            btnSalvar.disabled = true;
+            mostrarStatus('Salvando...', '');
+
+            const payload = {
+                user_id: user.id,
+                nota,
+                comentario: document.getElementById('comentario').value.trim() || null,
+                nome_exibicao: document.getElementById('nomeExibicao').value.trim() || null,
+                segmento: document.getElementById('segmento').value.trim() || null,
+                solicita_exibir: document.getElementById('solicitaExibir').checked
+            };
+
+            const { data, error } = await supabase
+                .from('avaliacoes')
+                .upsert(payload, { onConflict: 'user_id' })
+                .select()
+                .maybeSingle();
+
+            btnSalvar.disabled = false;
+
+            if (error) {
+                mostrarStatus('Erro ao salvar: ' + error.message, 'err');
+                return;
+            }
+
+            existente = data || { ...existente, ...payload };
+            atualizarBadge();
+            mostrarStatus('Avaliação enviada! Obrigado por ajudar a melhorar o FinMEI.', 'ok');
+        });
+
+        btnExcluir.addEventListener('click', async () => {
+            if (!existente || !user) return;
+            if (!confirm('Tem certeza que deseja excluir sua avaliação?')) return;
+
+            const { error } = await supabase
+                .from('avaliacoes')
+                .delete()
+                .eq('user_id', user.id);
+
+            if (error) {
+                mostrarStatus('Erro ao excluir: ' + error.message, 'err');
+                return;
+            }
+
+            existente = null;
+            nota = 0;
+            pintar(0);
+            document.getElementById('comentario').value = '';
+            document.getElementById('solicitaExibir').checked = true;
+            atualizarBadge();
+            mostrarStatus('Avaliação excluída.', 'ok');
+        });
+
+        carregar();
+        if (window.lucide) lucide.createIcons();
+    </script>
+</body>
+
+</html>

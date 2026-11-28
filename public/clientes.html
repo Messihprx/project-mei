@@ -1,4 +1,4 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -12,9 +12,9 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <script>
-        // PWA: deixa o app instalÃ¡vel na tela inicial do celular e
-        // guarda CSS/JS em cache para abrir rÃ¡pido na segunda visita.
-        // Dado financeiro nunca Ã© cacheado (ver public/sw.js).
+        // PWA: deixa o app instalável na tela inicial do celular e
+        // guarda CSS/JS em cache para abrir rápido na segunda visita.
+        // Dado financeiro nunca é cacheado (ver public/sw.js).
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -32,7 +32,7 @@
             </div>
         </div>
         <nav class="sidebar-nav">
-            <a href="./" class="nav-item">
+            <a href="dashboard" class="nav-item">
                 <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
             </a>
             <a href="vendas" class="nav-item">
@@ -67,7 +67,7 @@
                     <i data-lucide="crown"></i>
                 </div>
                 <h4 id="sidebarPlanTitle">Seja Premium</h4>
-                <p id="sidebarPlanDesc">Mais recursos para fazer seu negÃ³cio crescer.</p>
+                <p id="sidebarPlanDesc">Mais recursos para fazer seu negócio crescer.</p>
                 <a href="planos" class="sidebar-plan-btn" id="sidebarPlanBtn">Ver Planos</a>
             </div>
         </div>
@@ -155,12 +155,12 @@
                     <div id="erro-editTelefone" class="erro-campo"></div>
                 </div>
                 <div class="form-group">
-                    <label>ObservaÃ§Ã£o</label>
+                    <label>Observação</label>
                     <textarea id="editObs" rows="3" style="width: 100%; background: var(--fundo-cor); border: 1px solid var(--borda-cor); color: white; border-radius: var(--radius-sm); padding: 0.75rem; margin-top: 0.4rem; font-family: inherit; resize: vertical;"></textarea>
                 </div>
                 <div id="erro-formEditarCliente" class="erro-campo erro-formulario"></div>
                 <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
-                    <button type="submit" class="btn-primary" style="flex: 1;">Salvar AlteraÃ§Ãµes</button>
+                    <button type="submit" class="btn-primary" style="flex: 1;">Salvar Alterações</button>
                     <button type="button" onclick="fecharModal()" class="btn-secondary" style="flex: 1;">Cancelar</button>
                 </div>
             </form>
@@ -172,7 +172,7 @@
     <script src="js/confirm-modal.js"></script>
     <script type="module" src="js/clientes.js"></script>
     <script>
-        // Inicializa Ã­cones do Lucide
+        // Inicializa ícones do Lucide
         lucide.createIcons();
     </script>
 

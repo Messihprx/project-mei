@@ -1,4 +1,4 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 
 <head>
@@ -555,7 +555,7 @@
             .main-content { margin-left: 0; width: 100%; padding: 0 !important; padding-top: 0 !important; }
             .chat-sessions-toggle { display: flex !important; }
             
-            /* Overlay para sessÃµes */
+            /* Overlay para sessões */
             .sessions-overlay {
                 display: none;
                 position: fixed;
@@ -570,9 +570,9 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <script>
-        // PWA: deixa o app instalÃ¡vel na tela inicial do celular e
-        // guarda CSS/JS em cache para abrir rÃ¡pido na segunda visita.
-        // Dado financeiro nunca Ã© cacheado (ver public/sw.js).
+        // PWA: deixa o app instalável na tela inicial do celular e
+        // guarda CSS/JS em cache para abrir rápido na segunda visita.
+        // Dado financeiro nunca é cacheado (ver public/sw.js).
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -592,7 +592,7 @@
         </div>
 
         <nav class="sidebar-nav">
-            <a href="./" class="nav-item">
+            <a href="dashboard" class="nav-item">
                 <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
             </a>
             <a href="vendas" class="nav-item">
@@ -627,7 +627,7 @@
                     <i data-lucide="crown"></i>
                 </div>
                 <h4 id="sidebarPlanTitle">Seja Premium</h4>
-                <p id="sidebarPlanDesc">Mais recursos para fazer seu negÃ³cio crescer.</p>
+                <p id="sidebarPlanDesc">Mais recursos para fazer seu negócio crescer.</p>
                 <a href="planos" class="sidebar-plan-btn" id="sidebarPlanBtn">Ver Planos</a>
             </div>
         </div>
@@ -640,7 +640,7 @@
             <i data-lucide="menu"></i>
         </button>
         
-        <!-- Overlay para sessÃµes mobile -->
+        <!-- Overlay para sessões mobile -->
         <div class="sessions-overlay" id="sessionsOverlay" onclick="document.getElementById('sessionsPanel').classList.remove('mobile-open');this.classList.remove('active')"></div>
         
         <div class="chat-layout">
@@ -667,7 +667,7 @@
                         </div>
                     </div>
                     <div class="chat-usage" id="chatUsage" style="display:none">
-                        Enviadas: <strong id="usageCount">0</strong> Â· Faltam: <strong id="usageRemaining">0</strong>
+                        Enviadas: <strong id="usageCount">0</strong> · Faltam: <strong id="usageRemaining">0</strong>
                     </div>
                 </div>
 
@@ -676,13 +676,13 @@
                         <div class="ai-icon-lg">
                             <i data-lucide="sparkles" style="width:36px;height:36px"></i>
                         </div>
-                        <h2>OlÃ¡! Sou o FinMEI IA</h2>
-                        <p>Seu assistente financeiro inteligente. Posso consultar suas vendas, gastos, criar registros e muito mais. Ã‰ sÃ³ pedir!</p>
+                        <h2>Olá! Sou o FinMEI IA</h2>
+                        <p>Seu assistente financeiro inteligente. Posso consultar suas vendas, gastos, criar registros e muito mais. É só pedir!</p>
                         <div class="chat-suggestions">
-                            <button onclick="sendSuggestion('Quanto eu faturei esse mÃªs?')">Quanto faturei esse mÃªs?</button>
+                            <button onclick="sendSuggestion('Quanto eu faturei esse mês?')">Quanto faturei esse mês?</button>
                             <button onclick="sendSuggestion('Cadastra um gasto de 80 reais em aluguel')">Cadastrar gasto</button>
-                            <button onclick="sendSuggestion('Me dÃ¡ um resumo do meu negÃ³cio')">Resumo do negÃ³cio</button>
-                            <button onclick="sendSuggestion('Quais sÃ£o meus top gastos?')">Top gastos</button>
+                            <button onclick="sendSuggestion('Me dá um resumo do meu negócio')">Resumo do negócio</button>
+                            <button onclick="sendSuggestion('Quais são meus top gastos?')">Top gastos</button>
                         </div>
                     </div>
                 </div>
@@ -692,7 +692,7 @@
                     <div class="chat-input-wrap">
                         <textarea
                             id="chatInput"
-                            placeholder="Pergunte algo sobre suas finanÃ§as..."
+                            placeholder="Pergunte algo sobre suas finanças..."
                             rows="1"
                             onkeydown="handleKeyDown(event)"
                         ></textarea>
@@ -706,7 +706,7 @@
         </div>
     </main>
 
-    <!-- Modal Renomear SessÃ£o -->
+    <!-- Modal Renomear Sessão -->
     <div id="renameModal" class="modal" style="display:none">
       <div class="modal-content" style="max-width:380px;padding:24px">
         <h3 style="margin:0 0 16px;font-size:16px;color:var(--texto-principal)">Renomear conversa</h3>
@@ -722,12 +722,12 @@
       </div>
     </div>
 
-        <!-- Modal Excluir SessÃ£o -->
+        <!-- Modal Excluir Sessão -->
         <div id="deleteSessionModal" class="modal delete-session-modal" style="display:none;z-index:10001">
             <div class="modal-content delete-session-content">
                 <div class="delete-session-icon"><i data-lucide="trash-2"></i></div>
                 <h3>Excluir conversa?</h3>
-                <p>Esta conversa e todas as mensagens dela serÃ£o removidas permanentemente.</p>
+                <p>Esta conversa e todas as mensagens dela serão removidas permanentemente.</p>
                 <div class="delete-session-actions">
                     <button type="button" class="delete-session-cancel" onclick="window._ia_cancelDeleteSession()">Cancelar</button>
                     <button type="button" class="delete-session-confirm" onclick="window._ia_confirmDeleteSession()">Excluir conversa</button>
@@ -741,7 +741,7 @@
     <script>
         lucide.createIcons();
 
-        // Toggle painel de sessÃµes mobile
+        // Toggle painel de sessões mobile
         document.getElementById('sessionsToggle')?.addEventListener('click', () => {
             const panel = document.getElementById('sessionsPanel');
             const overlay = document.getElementById('sessionsOverlay');
@@ -749,7 +749,7 @@
             overlay.classList.toggle('active');
         });
 
-        // Fechar sessÃµes no overlay
+        // Fechar sessões no overlay
         document.getElementById('sessionsOverlay')?.addEventListener('click', () => {
             document.getElementById('sessionsPanel').classList.remove('mobile-open');
             document.getElementById('sessionsOverlay').classList.remove('active');

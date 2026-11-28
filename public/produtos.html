@@ -1,4 +1,4 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -12,9 +12,9 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <script>
-        // PWA: deixa o app instalÃ¡vel na tela inicial do celular e
-        // guarda CSS/JS em cache para abrir rÃ¡pido na segunda visita.
-        // Dado financeiro nunca Ã© cacheado (ver public/sw.js).
+        // PWA: deixa o app instalável na tela inicial do celular e
+        // guarda CSS/JS em cache para abrir rápido na segunda visita.
+        // Dado financeiro nunca é cacheado (ver public/sw.js).
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -32,7 +32,7 @@
             </div>
         </div>
         <nav class="sidebar-nav">
-            <a href="./" class="nav-item">
+            <a href="dashboard" class="nav-item">
                 <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
             </a>
             <a href="vendas" class="nav-item">
@@ -67,7 +67,7 @@
                     <i data-lucide="crown"></i>
                 </div>
                 <h4 id="sidebarPlanTitle">Seja Premium</h4>
-                <p id="sidebarPlanDesc">Mais recursos para fazer seu negÃ³cio crescer.</p>
+                <p id="sidebarPlanDesc">Mais recursos para fazer seu negócio crescer.</p>
                 <a href="planos" class="sidebar-plan-btn" id="sidebarPlanBtn">Ver Planos</a>
             </div>
         </div>
@@ -80,7 +80,7 @@
         <header class="top-bar">
             <div class="page-header">
                 <h3>Meus Produtos</h3>
-                <p>Gerencie seu catÃ¡logo de produtos</p>
+                <p>Gerencie seu catálogo de produtos</p>
             </div>
             <div class="user-info">
                 <button onclick="abrirModalProduto()" class="btn-primary produto-btn-novo">
@@ -101,7 +101,7 @@
                 </div>
                 <div class="card-resumo card-verde">
                     <div class="card-resumo-header">
-                        <span class="card-resumo-label">Valor MÃ©dio</span>
+                        <span class="card-resumo-label">Valor Médio</span>
                         <div class="card-resumo-icon"><i data-lucide="dollar-sign"></i></div>
                     </div>
                     <h3 class="card-resumo-valor" id="cardMediaProdutos">R$ 0,00</h3>
@@ -140,10 +140,10 @@
             <form id="formNovoProduto">
                 <div class="input-group">
                     <label>Nome do Produto</label>
-                    <input type="text" id="nomeProduto" placeholder="Ex: Camiseta BÃ¡sica" required>
+                    <input type="text" id="nomeProduto" placeholder="Ex: Camiseta Básica" required>
                 </div>
                 <div class="input-group">
-                    <label>DescriÃ§Ã£o</label>
+                    <label>Descrição</label>
                     <textarea id="descProduto" rows="3" placeholder="Detalhes sobre o produto..." class="produto-textarea"></textarea>
                 </div>
                 <div class="produto-form-grid">
@@ -184,7 +184,7 @@
                     <input type="text" id="editNomeProduto" required>
                 </div>
                 <div class="input-group">
-                    <label>DescriÃ§Ã£o</label>
+                    <label>Descrição</label>
                     <textarea id="editDescProduto" rows="3" class="produto-textarea"></textarea>
                 </div>
                 <div class="produto-form-grid">
@@ -205,7 +205,7 @@
                         </div>
                     </div>
                 </div>
-                <button type="submit" class="btn-primary" style="margin-top: 1.2rem;">Salvar AlteraÃ§Ãµes</button>
+                <button type="submit" class="btn-primary" style="margin-top: 1.2rem;">Salvar Alterações</button>
             </form>
         </div>
     </div>

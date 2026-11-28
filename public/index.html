@@ -3,387 +3,2920 @@
 
 <head>
     <meta charset="UTF-8">
-    <script>
-        (function () {
-            try {
-                if (localStorage.getItem('finmei_tema') === 'light') {
-                    document.documentElement.setAttribute('data-theme', 'light');
-                }
-            } catch (e) { /* localStorage indisponível */ }
-        })();
-    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="js/auth-guard.js"></script>
-    <title>FinMEI | Gestão Financeira e Fluxo de Caixa para MEI</title>
-
+    <title>FinMEI | Gestão Financeira Inteligente para MEI</title>
     <meta name="description"
-        content="Organize as finanças do seu MEI de forma inteligente. Controle vendas, gastos, clientes e gere relatórios de BI automaticamente com o FinMEI.">
-
-    <meta name="keywords"
-        content="MEI, gestão financeira, fluxo de caixa, microempreendedor, controle de vendas, BI para MEI">
-
-    <meta property="og:title" content="FinMEI - Fluxo Inteligente para Microempreendedores">
-    <meta property="og:description" content="Gerencie suas finanças em tempo real com relatórios avançados.">
+        content="O sistema de gestão financeira completo para Microempreendedores Individuais. Controle vendas, gastos, clientes, fluxo de caixa e muito mais com FinMEI.">
+    <meta name="keywords" content="MEI, gestão financeira, controle de vendas, fluxo de caixa, microempreendedor">
+    <meta property="og:title" content="FinMEI | Gestão Financeira para MEI">
+    <meta property="og:description"
+        content="Organize seu MEI de forma inteligente. Vendas, gastos, clientes, IA e relatórios em um só lugar.">
     <meta property="og:type" content="website">
+    <link rel="icon" href="icon_mei.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sora:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
-    <link rel="icon" href="icon_mei.ico" type="image/x-icon">
-    <link rel="stylesheet" href="css/style.css?v=6">
-    <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <meta name="theme-color" content="#080c16">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #060a14;
+            --bg2: #0c1221;
+            --bg3: #111827;
+            --surface: rgba(255, 255, 255, 0.04);
+            --surface2: rgba(255, 255, 255, 0.07);
+            --border: rgba(255, 255, 255, 0.08);
+            --border2: rgba(255, 255, 255, 0.12);
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --primary-glow: rgba(59, 130, 246, 0.25);
+            --accent: #8b5cf6;
+            --accent2: #06b6d4;
+            --green: #10b981;
+            --yellow: #f59e0b;
+            --red: #ef4444;
+            --text: #f1f5f9;
+            --text2: #94a3b8;
+            --text3: #64748b;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --shadow-glow: 0 0 60px rgba(59, 130, 246, 0.15);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* ══════════════════════ NAVBAR ══════════════════════ */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 0 5%;
+            height: 68px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.3s, border-color 0.3s, backdrop-filter 0.3s;
+        }
+
+        .navbar.scrolled {
+            background: rgba(6, 10, 20, 0.85);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .nav-logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-logo-icon svg {
+            color: white;
+        }
+
+        .nav-logo-text {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .nav-logo-text span {
+            color: var(--primary);
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text2);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-nav-login {
+            color: var(--text2);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .btn-nav-login:hover {
+            color: var(--text);
+            background: var(--surface);
+        }
+
+        .btn-nav-cta {
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 9px 20px;
+            border-radius: var(--radius-sm);
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .btn-nav-cta:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* ══════════════════════ HERO ══════════════════════ */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 120px 5% 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animated gradient orbs */
+        .hero-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.4;
+            animation: orb-float 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .hero-orb-1 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.6) 0%, transparent 70%);
+            top: -150px;
+            left: -100px;
+            animation-delay: 0s;
+        }
+
+        .hero-orb-2 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.5) 0%, transparent 70%);
+            top: 100px;
+            right: -100px;
+            animation-delay: -3s;
+        }
+
+        .hero-orb-3 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.3) 0%, transparent 70%);
+            bottom: 50px;
+            left: 30%;
+            animation-delay: -5s;
+        }
+
+        @keyframes orb-float {
+
+            0%,
+            100% {
+                transform: translateY(0) scale(1);
+            }
+
+            50% {
+                transform: translateY(-30px) scale(1.05);
+            }
+        }
+
+        /* Grid pattern overlay */
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse 80% 50% at 50% 50%, black 40%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: var(--primary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 6px 16px;
+            border-radius: 999px;
+            margin-bottom: 28px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            position: relative;
+            z-index: 1;
+            animation: fade-up 0.6s ease both;
+        }
+
+        .hero-badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.7);
+            }
+        }
+
+        .hero-title {
+            font-family: 'Sora', sans-serif;
+            font-size: clamp(2.8rem, 7vw, 5.5rem);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            max-width: 900px;
+            position: relative;
+            z-index: 1;
+            animation: fade-up 0.6s ease 0.1s both;
+        }
+
+        .hero-title .gradient-text {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+            color: var(--text2);
+            max-width: 620px;
+            margin: 24px auto 0;
+            font-weight: 400;
+            line-height: 1.7;
+            position: relative;
+            z-index: 1;
+            animation: fade-up 0.6s ease 0.2s both;
+        }
+
+        .hero-ctas {
+            display: flex;
+            gap: 14px;
+            margin-top: 44px;
+            justify-content: center;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+            animation: fade-up 0.6s ease 0.3s both;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 700;
+            padding: 15px 32px;
+            border-radius: var(--radius-sm);
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(59, 130, 246, 0.55);
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            color: var(--text);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 15px 32px;
+            border-radius: var(--radius-sm);
+            backdrop-filter: blur(10px);
+            transition: background 0.2s, transform 0.15s;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .hero-stats {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            margin-top: 56px;
+            position: relative;
+            z-index: 1;
+            animation: fade-up 0.6s ease 0.4s both;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .hero-stat {
+            text-align: center;
+        }
+
+        .hero-stat-num {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-stat-label {
+            font-size: 0.8rem;
+            color: var(--text3);
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        .hero-stat-divider {
+            width: 1px;
+            height: 40px;
+            background: var(--border2);
+        }
+
+        /* Dashboard mockup */
+        .hero-mockup {
+            position: relative;
+            z-index: 1;
+            margin-top: 72px;
+            width: 100%;
+            max-width: 1050px;
+            animation: fade-up 0.8s ease 0.5s both;
+        }
+
+        .mockup-frame {
+            background: var(--bg2);
+            border: 1px solid var(--border2);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.05),
+                0 40px 120px rgba(0, 0, 0, 0.6),
+                0 0 100px rgba(59, 130, 246, 0.08);
+            position: relative;
+        }
+
+        .mockup-topbar {
+            height: 42px;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 8px;
+        }
+
+        .mockup-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .mockup-dot-r {
+            background: #ff5f57;
+        }
+
+        .mockup-dot-y {
+            background: #ffbd2e;
+        }
+
+        .mockup-dot-g {
+            background: #28c840;
+        }
+
+        .mockup-url {
+            margin-left: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-size: 0.72rem;
+            color: var(--text3);
+            flex: 1;
+            max-width: 320px;
+        }
+
+        .mockup-body {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            height: 420px;
+        }
+
+        .mockup-sidebar {
+            background: rgba(255, 255, 255, 0.02);
+            border-right: 1px solid var(--border);
+            padding: 20px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .mockup-sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px 16px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 8px;
+        }
+
+        .mockup-sidebar-logo-icon {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 8px;
+        }
+
+        .mockup-sidebar-logo-text {
+            font-family: 'Sora', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .mockup-nav-item {
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text3);
+        }
+
+        .mockup-nav-item.active {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--primary);
+        }
+
+        .mockup-nav-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            background: var(--border2);
+            flex-shrink: 0;
+        }
+
+        .mockup-nav-dot.blue {
+            background: rgba(59, 130, 246, 0.6);
+        }
+
+        .mockup-nav-line {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: var(--border);
+        }
+
+        .mockup-nav-line.active {
+            background: rgba(59, 130, 246, 0.4);
+        }
+
+        .mockup-content {
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .mockup-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .mockup-title-block {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .mockup-h {
+            width: 180px;
+            height: 16px;
+            border-radius: 6px;
+            background: var(--border2);
+        }
+
+        .mockup-h.sm {
+            width: 120px;
+            height: 10px;
+            background: var(--border);
+            margin-top: 2px;
+        }
+
+        .mockup-pill {
+            height: 32px;
+            width: 110px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+        }
+
+        .mockup-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .mockup-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .mockup-card-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+        }
+
+        .mockup-card-icon.blue {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .mockup-card-icon.purple {
+            background: rgba(139, 92, 246, 0.2);
+        }
+
+        .mockup-card-icon.red {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .mockup-card-icon.green {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .mockup-card-val {
+            width: 70px;
+            height: 14px;
+            border-radius: 4px;
+            background: var(--border2);
+        }
+
+        .mockup-card-sub {
+            width: 50px;
+            height: 8px;
+            border-radius: 3px;
+            background: var(--border);
+        }
+
+        .mockup-sparkline {
+            margin-top: auto;
+        }
+
+        .mockup-sparkline svg {
+            width: 100%;
+            height: 32px;
+        }
+
+        .mockup-row2 {
+            display: grid;
+            grid-template-columns: 1fr 220px;
+            gap: 10px;
+        }
+
+        .mockup-chart-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .mockup-chart-h {
+            width: 120px;
+            height: 10px;
+            border-radius: 4px;
+            background: var(--border2);
+            margin-bottom: 12px;
+        }
+
+        .mockup-chart-area {
+            height: 90px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mockup-chart-line {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        .mockup-pie-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mockup-fade-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 120px;
+            background: linear-gradient(to bottom, transparent, var(--bg));
+            pointer-events: none;
+        }
+
+        /* Animated line chart in mockup */
+        @keyframes draw-line {
+            from {
+                stroke-dashoffset: 1000;
+            }
+
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        .mockup-animated-line {
+            stroke-dasharray: 1000;
+            animation: draw-line 2s ease 1.5s both;
+        }
+
+        @keyframes fade-up {
+            from {
+                opacity: 0;
+                transform: translateY(24px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ══════════════════════ SECTION WRAPPER ══════════════════════ */
+        section {
+            padding: 100px 5%;
+        }
+
+        .section-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+        }
+
+        .section-label::before {
+            content: '';
+            width: 24px;
+            height: 2px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .section-title {
+            font-family: 'Sora', sans-serif;
+            font-size: clamp(1.9rem, 4vw, 2.8rem);
+            font-weight: 800;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+        }
+
+        .section-subtitle {
+            font-size: 1.05rem;
+            color: var(--text2);
+            max-width: 560px;
+            line-height: 1.7;
+        }
+
+        .section-header {
+            margin-bottom: 60px;
+        }
+
+        .section-header.center {
+            text-align: center;
+        }
+
+        .section-header.center .section-label {
+            justify-content: center;
+        }
+
+        .section-header.center .section-label::before {
+            display: none;
+        }
+
+        .section-header.center .section-label::after {
+            content: '';
+            width: 24px;
+            height: 2px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .section-header.center .section-subtitle {
+            margin: 0 auto;
+        }
+
+        /* ══════════════════════ SOCIAL PROOF STRIP ══════════════════════ */
+        .social-proof {
+            padding: 32px 5%;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            overflow: hidden;
+        }
+
+        .social-proof-inner {
+            display: flex;
+            align-items: center;
+            gap: 48px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .sp-label {
+            font-size: 0.85rem;
+            color: var(--text3);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .sp-divider {
+            width: 1px;
+            height: 24px;
+            background: var(--border2);
+        }
+
+        .sp-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text2);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .sp-item svg {
+            color: var(--primary);
+        }
+
+        .sp-stars {
+            display: flex;
+            gap: 2px;
+        }
+
+        .sp-stars svg {
+            color: var(--yellow);
+            width: 14px;
+            height: 14px;
+        }
+
+        /* ══════════════════════ FEATURES ══════════════════════ */
+        #funcionalidades {
+            background: var(--bg);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .feature-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .feature-card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 30px rgba(59, 130, 246, 0.08);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 18px;
+        }
+
+        .feature-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .fi-blue {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+
+        .fi-purple {
+            background: rgba(139, 92, 246, 0.15);
+            color: #8b5cf6;
+        }
+
+        .fi-green {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+
+        .fi-cyan {
+            background: rgba(6, 182, 212, 0.15);
+            color: #06b6d4;
+        }
+
+        .fi-yellow {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .fi-red {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        .fi-pink {
+            background: rgba(236, 72, 153, 0.15);
+            color: #ec4899;
+        }
+
+        .fi-indigo {
+            background: rgba(99, 102, 241, 0.15);
+            color: #6366f1;
+        }
+
+        .fi-teal {
+            background: rgba(20, 184, 166, 0.15);
+            color: #14b8a6;
+        }
+
+                /* ══════════════════════ MODERN FEATURES SECTION ══════════════════════ */
+        .features-section {
+            background: var(--bg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .features-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.06), transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.05), transparent 40%),
+                radial-gradient(circle at 50% 10%, rgba(6, 182, 212, 0.04), transparent 40%);
+            pointer-events: none;
+        }
+
+        .features-header {
+            max-width: 800px;
+            margin: 0 auto 80px;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .features-header .section-label {
+            justify-content: center;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .features-header .section-label::before {
+            content: none;
+        }
+
+        .features-header .section-label::after {
+            content: none;
+        }
+
+        .features-header .section-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin: 16px 0 20px;
+            line-height: 1.15;
+        }
+
+        .features-header .section-subtitle {
+            font-size: 1.1rem;
+            color: var(--text2);
+            line-height: 1.8;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto 120px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .feature-card {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 40px 32px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: default;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .feature-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 1px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 24px;
+            mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0) border-box;
+            -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0) border-box;
+            mask-composite: exclude;
+            -webkit-mask-composite: destination-out;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-12px) scale(1.02);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 
+                0 32px 64px -12px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(59, 130, 246, 0.2);
+            background: rgba(15, 23, 42, 0.7);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-card:hover::after {
+            opacity: 1;
+        }
+
+        .feature-card-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 5px 12px;
+            border-radius: 100px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 4;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid;
+        }
+
+        .feature-card-badge.free {
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.2);
+        }
+
+        .feature-card-badge.free-limit {
+            color: #a78bfa;
+            background: rgba(167, 139, 250, 0.1);
+            border-color: rgba(167, 139, 250, 0.2);
+        }
+
+        .feature-card-badge.premium {
+            color: #8b5cf6;
+            background: rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .feature-icon-wrap {
+            width: 72px;
+            height: 72px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 4;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4);
+            transition: all 0.4s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .feature-card:hover .feature-icon-wrap {
+            transform: scale(1.08) rotate(-3deg);
+            box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .feature-icon-wrap i {
+            width: 32px;
+            height: 32px;
+            z-index: 2;
+            position: relative;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .feature-icon-wrap.blue {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.1));
+            border-color: rgba(59, 130, 246, 0.4);
+        }
+        .feature-icon-wrap.blue i { color: var(--primary); }
+
+        .feature-icon-wrap.red {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.1));
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+        .feature-icon-wrap.red i { color: var(--red); }
+
+        .feature-icon-wrap.green {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.1));
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+        .feature-icon-wrap.green i { color: var(--green); }
+
+        .feature-icon-wrap.purple {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(139, 92, 246, 0.1));
+            border-color: rgba(139, 92, 246, 0.4);
+        }
+        .feature-icon-wrap.purple i { color: var(--accent); }
+
+        .feature-icon-wrap.cyan {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(6, 182, 212, 0.1));
+            border-color: rgba(6, 182, 212, 0.4);
+        }
+        .feature-icon-wrap.cyan i { color: var(--accent2); }
+
+        .feature-icon-wrap.indigo {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(99, 102, 241, 0.1));
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+        .feature-icon-wrap.indigo i { color: #6366f1; }
+
+        .feature-icon-wrap.yellow {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(245, 158, 11, 0.1));
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+        .feature-icon-wrap.yellow i { color: var(--yellow); }
+
+        .feature-icon-wrap.teal {
+            background: linear-gradient(135deg, rgba(20, 184, 166, 0.25), rgba(20, 184, 166, 0.1));
+            border-color: rgba(20, 184, 166, 0.4);
+        }
+        .feature-icon-wrap.teal i { color: #14b8a6; }
+
+        .feature-icon-wrap.pink {
+            background: linear-gradient(135deg, rgba(236, 72, 153, 0.25), rgba(236, 72, 153, 0.1));
+            border-color: rgba(236, 72, 153, 0.4);
+        }
+        .feature-icon-wrap.pink i { color: #ec4899; }
+
+        .feature-card h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin: 0 0 14px;
+            color: var(--text);
+            z-index: 4;
+            position: relative;
+            letter-spacing: -0.01em;
+        }
+
+        .feature-card p {
+            font-size: 0.9rem;
+            color: var(--text2);
+            line-height: 1.7;
+            margin: 0 0 24px;
+            z-index: 4;
+            position: relative;
+        }
+
+        /* Remove old feature-icon classes (no longer used) */
+        .feature-icon {
+            display: none;
+        }
+        .feature-badge {
+            display: none;
+        }
+
+        /* Hide old action links */
+        .feature-card-link {
+            display: none;
+        }
+
+        /* ══════════════════════ HOW IT WORKS ══════════════════════ */
+        #como-funciona {
+            background: radial-gradient(ellipse 80% 60% at 50% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 70%), var(--bg2);
+        }
+
+        .steps-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            position: relative;
+        }
+
+        .steps-row::before {
+            content: '';
+            position: absolute;
+            top: 44px;
+            left: calc(16.6% + 24px);
+            right: calc(16.6% + 24px);
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            opacity: 0.3;
+        }
+
+        .step-card {
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px 28px;
+            text-align: center;
+            position: relative;
+        }
+
+        .step-num {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Sora', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: white;
+            margin: 0 auto 20px;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+        }
+
+        .step-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .step-card p {
+            font-size: 0.875rem;
+            color: var(--text2);
+            line-height: 1.65;
+        }
+
+        /* ══════════════════════ PREMIUM SECTION ══════════════════════ */
+        #planos {
+            background: var(--bg);
+        }
+
+        .pricing-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .pricing-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 36px 32px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pricing-card.premium {
+            border-color: rgba(139, 92, 246, 0.4);
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(59, 130, 246, 0.05));
+        }
+
+        .pricing-card.premium::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+        }
+
+        .pricing-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 4px 12px;
+            border-radius: 999px;
+        }
+
+        .pricing-plan-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 12px;
+        }
+
+        .pricing-price {
+            font-family: 'Sora', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+
+        .pricing-price sup {
+            font-size: 1.2rem;
+            vertical-align: super;
+        }
+
+        .pricing-price span {
+            font-size: 1rem;
+            color: var(--text3);
+            font-weight: 400;
+        }
+
+        .pricing-price.free {
+            color: var(--text);
+        }
+
+        .pricing-price.premium-p {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .pricing-desc {
+            font-size: 0.875rem;
+            color: var(--text2);
+            margin-bottom: 28px;
+            line-height: 1.6;
+        }
+
+        .pricing-features {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .pricing-features li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.875rem;
+            color: var(--text2);
+        }
+
+        .pricing-features li svg {
+            color: var(--green);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .pricing-features li.disabled {
+            color: var(--text3);
+        }
+
+        .pricing-features li.disabled svg {
+            color: var(--border2);
+        }
+
+        .btn-pricing {
+            width: 100%;
+            padding: 13px;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+            transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
+        }
+
+        .btn-pricing.free-btn {
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            color: var(--text);
+        }
+
+        .btn-pricing.free-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .btn-pricing.premium-btn {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.35);
+        }
+
+        .btn-pricing.premium-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(59, 130, 246, 0.5);
+        }
+
+        /* ══════════════════════ AVALIAÇÕES / CARROSSEL ══════════════════════ */
+        #depoimentos {
+            background: var(--bg2);
+            overflow: hidden;
+        }
+
+        .reviews-summary {
+            display: inline-flex;
+            align-items: center;
+            gap: 14px;
+            margin-top: 22px;
+            padding: 10px 20px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: var(--bg3);
+        }
+
+        .reviews-summary strong {
+            font-size: 1.35rem;
+            line-height: 1;
+            color: var(--text);
+        }
+
+        .reviews-summary span {
+            font-size: 0.82rem;
+            color: var(--text2);
+        }
+
+        .reviews-summary .stars {
+            display: flex;
+            gap: 2px;
+        }
+
+        .reviews-carousel {
+            position: relative;
+            max-width: 1240px;
+            margin: 42px auto 0;
+            padding: 6px 0;
+            overflow: hidden;
+            cursor: grab;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: pan-y;
+            -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+        }
+
+        .reviews-carousel.dragging {
+            cursor: grabbing;
+        }
+
+        .reviews-track {
+            display: flex;
+            gap: 20px;
+            width: max-content;
+            will-change: transform;
+        }
+
+        .review-card {
+            flex: 0 0 340px;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 26px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transition: border-color 0.25s, transform 0.25s;
+        }
+
+        .review-card:hover {
+            border-color: var(--border2);
+            transform: translateY(-3px);
+        }
+
+        .review-stars {
+            display: flex;
+            gap: 2px;
+        }
+
+        .review-stars .star {
+            position: relative;
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            flex: 0 0 16px;
+        }
+
+        .review-stars .star svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+            display: block;
+        }
+
+        .review-stars .star-base {
+            color: rgba(148, 163, 184, 0.25);
+        }
+
+        .review-stars .star-fill {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            color: var(--yellow);
+            width: 0;
+        }
+
+        .review-quote {
+            font-size: 0.9rem;
+            color: var(--text2);
+            line-height: 1.7;
+            font-style: italic;
+            flex: 1;
+        }
+
+        .review-author {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .review-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .review-name {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .review-role {
+            font-size: 0.775rem;
+            color: var(--text3);
+        }
+
+        .reviews-empty {
+            text-align: center;
+            color: var(--text2);
+            padding: 30px 20px;
+        }
+
+        .reviews-cta {
+            text-align: center;
+            margin-top: 28px;
+            font-size: 0.85rem;
+            color: var(--text3);
+        }
+
+        .reviews-cta a {
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        @media (max-width: 640px) {
+            .review-card {
+                flex-basis: 280px;
+                padding: 22px;
+            }
+        }
+
+        /* ══════════════════════ FAQ ══════════════════════ */
+        #faq {
+            background: var(--bg);
+        }
+
+        .faq-list {
+            max-width: 760px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .faq-item {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+
+        .faq-item.open {
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .faq-question {
+            width: 100%;
+            padding: 18px 20px;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.15s;
+        }
+
+        .faq-question:hover {
+            background: var(--surface);
+        }
+
+        .faq-chevron {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+            transition: transform 0.25s;
+            color: var(--text3);
+        }
+
+        .faq-item.open .faq-chevron {
+            transform: rotate(180deg);
+            color: var(--primary);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease, padding 0.25s;
+        }
+
+        .faq-item.open .faq-answer {
+            max-height: 300px;
+        }
+
+        .faq-answer-inner {
+            padding: 0 20px 18px;
+            font-size: 0.875rem;
+            color: var(--text2);
+            line-height: 1.75;
+        }
+
+        /* ══════════════════════ CTA FINAL ══════════════════════ */
+        .cta-section {
+            padding: 100px 5%;
+            background: radial-gradient(ellipse 70% 70% at 50% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 70%), var(--bg2);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .cta-section h2 {
+            font-family: 'Sora', sans-serif;
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            margin-bottom: 18px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-section p {
+            font-size: 1.05rem;
+            color: var(--text2);
+            max-width: 500px;
+            margin: 0 auto 36px;
+            line-height: 1.7;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-note {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: var(--text3);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ══════════════════════ FOOTER ══════════════════════ */
+        footer {
+            background: var(--bg);
+            border-top: 1px solid var(--border);
+            padding: 60px 5% 32px;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 48px;
+        }
+
+        .footer-brand p {
+            font-size: 0.875rem;
+            color: var(--text3);
+            line-height: 1.7;
+            margin-top: 12px;
+            max-width: 280px;
+        }
+
+        .footer-col h4 {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .footer-col ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .footer-col ul li a {
+            color: var(--text3);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: color 0.2s;
+        }
+
+        .footer-col ul li a:hover {
+            color: var(--text);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid var(--border);
+            padding-top: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .footer-bottom p {
+            font-size: 0.8rem;
+            color: var(--text3);
+        }
+
+        .footer-legal {
+            font-size: 0.75rem;
+            color: var(--text3);
+            text-align: right;
+        }
+
+        /* Hamburger mobile */
+        .nav-hamburger {
+            display: none;
+            background: none;
+            border: 1px solid var(--border2);
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            color: var(--text);
+        }
+
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 68px;
+            left: 0;
+            right: 0;
+            background: rgba(6, 10, 20, 0.98);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 5%;
+            z-index: 999;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mobile-menu.open {
+            display: flex;
+        }
+
+        .mobile-menu a {
+            color: var(--text2);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            transition: color 0.2s;
+        }
+
+        .mobile-menu a:last-child {
+            border-bottom: none;
+        }
+
+        .mobile-menu a:hover {
+            color: var(--text);
+        }
+
+        /* ══════════════════════ RESPONSIVE ══════════════════════ */
+        @media (max-width: 1024px) {
+            .pricing-wrapper {
+                grid-template-columns: 1fr;
+                max-width: 480px;
+            }
+
+            .testimonials-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 32px;
+            }
+
+            .mockup-body {
+                grid-template-columns: 160px 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+
+            .nav-links,
+            .nav-actions {
+                display: none;
+            }
+
+            .nav-hamburger {
+                display: flex;
+            }
+
+            .steps-row {
+                grid-template-columns: 1fr;
+            }
+
+            .steps-row::before {
+                display: none;
+            }
+
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .mockup-sidebar {
+                display: none;
+            }
+
+            .mockup-body {
+                grid-template-columns: 1fr;
+            }
+
+            .mockup-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .mockup-row2 {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-brand {
+                order: -1;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-stats {
+                gap: 20px;
+            }
+
+            .hero-stat-divider {
+                display: none;
+            }
+
+            .mockup-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .pricing-wrapper {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ══════════════════════ NAVBAR ══════════════════════ -->
+    <nav class="navbar" id="navbar">
+        <a href="#" class="nav-logo">
+            <div class="nav-logo-icon"><i data-lucide="bar-chart-2" style="width:20px;height:20px;"></i></div>
+            <span class="nav-logo-text">Fin<span>MEI</span></span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="#funcionalidades">Funcionalidades</a></li>
+            <li><a href="#como-funciona">Como funciona</a></li>
+            <li><a href="#planos">Planos</a></li>
+            <li><a href="#faq">FAQ</a></li>
+        </ul>
+        <div class="nav-actions">
+            <a href="login" class="btn-nav-login">Entrar</a>
+            <a href="cadastro" class="btn-nav-cta">Começar grátis</a>
+        </div>
+        <button class="nav-hamburger" onclick="toggleMenu()" aria-label="Menu">
+            <i data-lucide="menu" style="width:20px;height:20px;"></i>
+        </button>
+    </nav>
+
+    <!-- Mobile menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="#funcionalidades" onclick="toggleMenu()">Funcionalidades</a>
+        <a href="#como-funciona" onclick="toggleMenu()">Como funciona</a>
+        <a href="#planos" onclick="toggleMenu()">Planos</a>
+        <a href="#faq" onclick="toggleMenu()">FAQ</a>
+        <a href="login" onclick="toggleMenu()">Entrar</a>
+        <a href="cadastro" onclick="toggleMenu()" style="color: var(--primary); font-weight: 700;">Começar grátis →</a>
+    </div>
+
+    <!-- ══════════════════════ HERO ══════════════════════ -->
+    <section class="hero" id="hero">
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-orb hero-orb-3"></div>
+
+        <div class="hero-badge">
+            <div class="hero-badge-dot"></div>
+            A gestão financeira que o MEI merece
+        </div>
+
+        <h1 class="hero-title">
+            Seu negócio sob<br>
+            <span class="gradient-text">controle total</span>
+        </h1>
+
+        <p class="hero-subtitle">
+            FinMEI é o sistema de gestão financeira completo para Microempreendedores. Controle vendas, gastos,
+            clientes, fluxo de caixa e muito mais — tudo em um só lugar, do jeito mais simples.
+        </p>
+
+        <div class="hero-ctas">
+            <a href="cadastro" class="btn-primary">
+                <i data-lucide="rocket" style="width:18px;height:18px;"></i>
+                Começar grátis agora
+            </a>
+            <a href="dashboard" class="btn-secondary">
+                <i data-lucide="log-in" style="width:18px;height:18px;"></i>
+                Acessar minha conta
+            </a>
+        </div>
+
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="hero-stat-num">100%</div>
+                <div class="hero-stat-label">Online e seguro</div>
+            </div>
+            <div class="hero-stat-divider"></div>
+            <div class="hero-stat">
+                <div class="hero-stat-num">MEI</div>
+                <div class="hero-stat-label">Feito para você</div>
+            </div>
+            <div class="hero-stat-divider"></div>
+            <div class="hero-stat">
+                <div class="hero-stat-num">IA</div>
+                <div class="hero-stat-label">Assistente inteligente</div>
+            </div>
+            <div class="hero-stat-divider"></div>
+            <div class="hero-stat">
+                <div class="hero-stat-num">0 planilhas</div>
+                <div class="hero-stat-label">Necessárias</div>
+            </div>
+        </div>
+
+        <!-- Dashboard Mockup -->
+        <div class="hero-mockup">
+            <div class="mockup-frame">
+                <div class="mockup-topbar">
+                    <div class="mockup-dot mockup-dot-r"></div>
+                    <div class="mockup-dot mockup-dot-y"></div>
+                    <div class="mockup-dot mockup-dot-g"></div>
+                    <div class="mockup-url">seunegocio.com.br/dashboard</div>
+                </div>
+                <div class="mockup-body">
+                    <div class="mockup-sidebar">
+                        <div class="mockup-sidebar-logo">
+                            <div class="mockup-sidebar-logo-icon"></div>
+                            <div class="mockup-sidebar-logo-text">FinMEI</div>
+                        </div>
+                        <div class="mockup-nav-item active">
+                            <div class="mockup-nav-dot blue"></div>
+                            <div class="mockup-nav-line active"></div>
+                        </div>
+                        <div class="mockup-nav-item">
+                            <div class="mockup-nav-dot"></div>
+                            <div class="mockup-nav-line"></div>
+                        </div>
+                        <div class="mockup-nav-item">
+                            <div class="mockup-nav-dot"></div>
+                            <div class="mockup-nav-line"></div>
+                        </div>
+                        <div class="mockup-nav-item">
+                            <div class="mockup-nav-dot"></div>
+                            <div class="mockup-nav-line"></div>
+                        </div>
+                        <div class="mockup-nav-item">
+                            <div class="mockup-nav-dot"></div>
+                            <div class="mockup-nav-line"></div>
+                        </div>
+                        <div class="mockup-nav-item">
+                            <div class="mockup-nav-dot"></div>
+                            <div class="mockup-nav-line"></div>
+                        </div>
+                    </div>
+                    <div class="mockup-content">
+                        <div class="mockup-header-row">
+                            <div class="mockup-title-block">
+                                <div class="mockup-h"></div>
+                                <div class="mockup-h sm"></div>
+                            </div>
+                            <div class="mockup-pill"></div>
+                        </div>
+                        <div class="mockup-cards">
+                            <div class="mockup-card">
+                                <div class="mockup-card-icon blue"></div>
+                                <div class="mockup-card-val"></div>
+                                <div class="mockup-card-sub"></div>
+                                <div class="mockup-sparkline">
+                                    <svg viewBox="0 0 80 32" fill="none">
+                                        <path d="M0 28 C20 24 40 10 80 4" stroke="#3b82f6" stroke-width="2"
+                                            stroke-linecap="round" class="mockup-animated-line" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="mockup-card">
+                                <div class="mockup-card-icon yellow" style="background:rgba(245,158,11,0.15);"></div>
+                                <div class="mockup-card-val"></div>
+                                <div class="mockup-card-sub"></div>
+                                <div class="mockup-sparkline">
+                                    <svg viewBox="0 0 80 32" fill="none">
+                                        <path d="M0 20 C20 22 40 26 80 20" stroke="#f59e0b" stroke-width="2"
+                                            stroke-linecap="round" class="mockup-animated-line" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="mockup-card">
+                                <div class="mockup-card-icon red"></div>
+                                <div class="mockup-card-val"></div>
+                                <div class="mockup-card-sub"></div>
+                                <div class="mockup-sparkline">
+                                    <svg viewBox="0 0 80 32" fill="none">
+                                        <path d="M0 10 C20 14 40 22 80 20" stroke="#ef4444" stroke-width="2"
+                                            stroke-linecap="round" class="mockup-animated-line" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="mockup-card">
+                                <div class="mockup-card-icon green"></div>
+                                <div class="mockup-card-val"></div>
+                                <div class="mockup-card-sub"></div>
+                                <div class="mockup-sparkline">
+                                    <svg viewBox="0 0 80 32" fill="none">
+                                        <path d="M0 26 C20 20 40 12 80 6" stroke="#10b981" stroke-width="2"
+                                            stroke-linecap="round" class="mockup-animated-line" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mockup-row2">
+                            <div class="mockup-chart-box">
+                                <div class="mockup-chart-h"></div>
+                                <div class="mockup-chart-area">
+                                    <svg width="100%" height="90" viewBox="0 0 400 90" preserveAspectRatio="none"
+                                        fill="none">
+                                        <defs>
+                                            <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.3" />
+                                                <stop offset="100%" stop-color="#3b82f6" stop-opacity="0" />
+                                            </linearGradient>
+                                        </defs>
+                                        <path d="M0 80 C50 70 80 50 130 40 C180 30 200 55 250 35 C300 15 340 10 400 5"
+                                            stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" fill="none"
+                                            class="mockup-animated-line" />
+                                        <path
+                                            d="M0 80 C50 70 80 50 130 40 C180 30 200 55 250 35 C300 15 340 10 400 5 L400 90 L0 90Z"
+                                            fill="url(#chartGrad)" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="mockup-pie-box">
+                                <svg width="90" height="90" viewBox="0 0 90 90">
+                                    <circle cx="45" cy="45" r="30" fill="none" stroke="#1e293b" stroke-width="16" />
+                                    <circle cx="45" cy="45" r="30" fill="none" stroke="#3b82f6" stroke-width="16"
+                                        stroke-dasharray="84 104" stroke-linecap="round"
+                                        transform="rotate(-90 45 45)" />
+                                    <circle cx="45" cy="45" r="30" fill="none" stroke="#8b5cf6" stroke-width="16"
+                                        stroke-dasharray="52 136" stroke-linecap="round" stroke-dashoffset="-84"
+                                        transform="rotate(-90 45 45)" />
+                                    <circle cx="45" cy="45" r="30" fill="none" stroke="#10b981" stroke-width="16"
+                                        stroke-dasharray="30 158" stroke-linecap="round" stroke-dashoffset="-136"
+                                        transform="rotate(-90 45 45)" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mockup-fade-bottom"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════ SOCIAL PROOF ══════════════════════ -->
+    <div class="social-proof">
+        <div class="social-proof-inner">
+            <span class="sp-label">Feito para MEI com</span>
+            <div class="sp-item">
+                <i data-lucide="shield-check" style="width:16px;height:16px;"></i>
+                Dados 100% seguros
+            </div>
+            <div class="sp-divider"></div>
+            <div class="sp-item">
+                <i data-lucide="zap" style="width:16px;height:16px;"></i>
+                Acesso instantâneo
+            </div>
+            <div class="sp-divider"></div>
+            <div class="sp-item">
+                <i data-lucide="wifi-off" style="width:16px;height:16px;"></i>
+                Funciona offline
+            </div>
+            <div class="sp-divider"></div>
+            <div class="sp-stars">
+                <i data-lucide="star"></i>
+                <i data-lucide="star"></i>
+                <i data-lucide="star"></i>
+                <i data-lucide="star"></i>
+                <i data-lucide="star"></i>
+            </div>
+            <div class="sp-item">Avaliação 5/5</div>
+        </div>
+    </div>
+
+        <!-- ══════════════════════ FEATURES ══════════════════════ -->
+    <section id="funcionalidades" class="features-section" aos="fade-up">
+        <div class="features-header center" aos="zoom-in" aos-delay="100">
+            <div class="section-label">Funcionalidades</div>
+            <h2 class="section-title">Tudo que seu MEI precisa,<br><span class="gradient-text">em um só lugar</span></h2>
+            <p class="section-subtitle">Pare de usar planilhas e cadernos. Controle total do seu negócio com poucos cliques,
+                do cadastro de clientes aos relatórios de BI.</p>
+        </div>
+
+        <div class="features-grid">
+            <!-- Card 1: Vendas -->
+            <div class="feature-card feature-card-blue" aos="fade-up" aos-delay="150">
+                <span class="feature-card-badge free">Grátis</span>
+                <div class="feature-icon-wrap blue">
+                    <i data-lucide="shopping-cart"></i>
+                </div>
+                <h3>Controle de Vendas</h3>
+                <p>Registre vendas rapidamente com itens, quantidades, valores e status de pagamento. Vincule ao cliente
+                    e à conta financeira.</p>
+            </div>
+
+            <!-- Card 2: Gastos -->
+            <div class="feature-card feature-card-red" aos="fade-up" aos-delay="200">
+                <span class="feature-card-badge free">Grátis</span>
+                <div class="feature-icon-wrap red">
+                    <i data-lucide="trending-down"></i>
+                </div>
+                <h3>Gestão de Gastos</h3>
+                <p>Categorize todas as suas despesas operacionais. Visualize onde seu dinheiro está indo e tome decisões
+                    mais inteligentes.</p>
+            </div>
+
+            <!-- Card 3: Clientes -->
+            <div class="feature-card feature-card-green" aos="fade-up" aos-delay="250">
+                <span class="feature-card-badge free">Grátis</span>
+                <div class="feature-icon-wrap green">
+                    <i data-lucide="users"></i>
+                </div>
+                <h3>Cadastro de Clientes</h3>
+                <p>Mantenha um histórico completo de cada cliente: contato, compras, pendências e muito mais em um único
+                    lugar.</p>
+            </div>
+
+            <!-- Card 4: Produtos -->
+            <div class="feature-card feature-card-purple" aos="fade-up" aos-delay="300">
+                <span class="feature-card-badge free-limit">Grátis · até 20</span>
+                <div class="feature-icon-wrap purple">
+                    <i data-lucide="package"></i>
+                </div>
+                <h3>Catálogo de Produtos</h3>
+                <p>Cadastre seus produtos e serviços com preços, categorias e disponibilidade. Use no PDV para vender
+                    mais rápido.</p>
+            </div>
+
+            <!-- Card 5: Contas -->
+            <div class="feature-card feature-card-cyan" aos="fade-up" aos-delay="350">
+                <span class="feature-card-badge free">Grátis</span>
+                <div class="feature-icon-wrap cyan">
+                    <i data-lucide="wallet"></i>
+                </div>
+                <h3>Contas Financeiras</h3>
+                <p>Gerencie múltiplas contas (caixa, banco, digital) com saldo em tempo real. Saiba exatamente quanto
+                    tem disponível.</p>
+            </div>
+
+            <!-- Card 6: Dashboard -->
+            <div class="feature-card feature-card-blue" aos="fade-up" aos-delay="400">
+                <span class="feature-card-badge free">Grátis</span>
+                <div class="feature-icon-wrap blue">
+                    <i data-lucide="layout-dashboard"></i>
+                </div>
+                <h3>Dashboard Inteligente</h3>
+                <p>Painel completo com KPIs, gráficos de faturamento, fluxo de caixa e resumo de atividades. Visão 360°
+                    do negócio.</p>
+            </div>
+
+            <!-- Card 7: IA -->
+            <div class="feature-card feature-card-purple" aos="fade-up" aos-delay="450">
+                <span class="feature-card-badge free-limit">Grátis · 10 msgs/dia</span>
+                <div class="feature-icon-wrap purple">
+                    <i data-lucide="bot"></i>
+                </div>
+                <h3>FinMEI IA</h3>
+                <p>Assistente de inteligência artificial que responde dúvidas sobre seu negócio, analisa dados e sugere
+                    melhorias.</p>
+            </div>
+
+            <!-- Card 8: BI -->
+            <div class="feature-card feature-card-indigo" aos="fade-up" aos-delay="500">
+                <span class="feature-card-badge premium">Premium</span>
+                <div class="feature-icon-wrap indigo">
+                    <i data-lucide="bar-chart-3"></i>
+                </div>
+                <h3>Relatórios de BI</h3>
+                <p>Relatórios avançados com análise de faturamento por período, categorias, produtos mais vendidos e
+                    lucratividade.</p>
+            </div>
+
+            <!-- Card 9: WhatsApp -->
+            <div class="feature-card feature-card-green" aos="fade-up" aos-delay="550">
+                <span class="feature-card-badge free">Grátis</span>
+                <div class="feature-icon-wrap green">
+                    <i data-lucide="message-circle"></i>
+                </div>
+                <h3>Cobrança pelo WhatsApp</h3>
+                <p>Clientes com pagamento pendente? Envie uma mensagem de cobrança pelo WhatsApp com um clique direto do
+                    sistema.</p>
+            </div>
+
+            <!-- Card 10: Comprovantes -->
+            <div class="feature-card feature-card-yellow" aos="fade-up" aos-delay="600">
+                <span class="feature-card-badge free">Grátis</span>
+                <div class="feature-icon-wrap yellow">
+                    <i data-lucide="receipt"></i>
+                </div>
+                <h3>Comprovantes de Venda</h3>
+                <p>Gere comprovantes profissionais em PDF após cada venda. Com desconto, dados do cliente e resumo
+                    detalhado dos itens.</p>
+            </div>
+
+            <!-- Card 11: CSV -->
+            <div class="feature-card feature-card-teal" aos="fade-up" aos-delay="650">
+                <span class="feature-card-badge premium">Premium</span>
+                <div class="feature-icon-wrap teal">
+                    <i data-lucide="download"></i>
+                </div>
+                <h3>Exportação CSV</h3>
+                <p>Exporte seus dados de vendas, gastos e clientes em planilhas CSV para análises externas ou controle
+                    adicional.</p>
+            </div>
+
+            <!-- Card 12: PDV -->
+            <div class="feature-card feature-card-pink" aos="fade-up" aos-delay="700">
+                <span class="feature-card-badge free">Grátis</span>
+                <div class="feature-icon-wrap pink">
+                    <i data-lucide="smartphone"></i>
+                </div>
+                <h3>PDV na Palma da Mão</h3>
+                <p>Ponto de venda moderno com carrinho de compras, busca de produtos, descontos e finalização rápida.
+                    Funciona em qualquer dispositivo.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════ HOW IT WORKS ══════════════════════ -->
+    <section id="como-funciona">
+        <div class="section-header center">
+            <div class="section-label">Como funciona</div>
+            <h2 class="section-title">Comece em menos de 5 minutos</h2>
+            <p class="section-subtitle">Não precisa instalar nada. Tudo funciona direto no navegador, em qualquer
+                dispositivo.</p>
+        </div>
+        <div class="steps-row">
+            <div class="step-card">
+                <div class="step-num">1</div>
+                <h3>Crie sua conta grátis</h3>
+                <p>Cadastre-se com seu e-mail ou conta Google em menos de 1 minuto. Sem cartão de crédito, sem
+                    burocracia.</p>
+            </div>
+            <div class="step-card">
+                <div class="step-num">2</div>
+                <h3>Configure seu negócio</h3>
+                <p>Adicione seus produtos, crie suas contas financeiras e cadastre seus primeiros clientes. É rápido e
+                    intuitivo.</p>
+            </div>
+            <div class="step-card">
+                <div class="step-num">3</div>
+                <h3>Gerencie e cresça</h3>
+                <p>Registre vendas, controle gastos e acompanhe seu desempenho em tempo real. Decisões melhores, negócio
+                    maior.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════ PRICING ══════════════════════ -->
+    <section id="planos">
+        <div class="section-header center">
+            <div class="section-label">Planos</div>
+            <h2 class="section-title">Simples e transparente</h2>
+            <p class="section-subtitle">Comece grátis e faça upgrade quando precisar de mais poder para o seu negócio.
+            </p>
+        </div>
+        <div class="pricing-wrapper">
+            <div class="pricing-card">
+                <div class="pricing-plan-name">Plano Gratuito</div>
+                <div class="pricing-price free"><sup>R$</sup>0<span>/mês</span></div>
+                <p class="pricing-desc">Tudo que você precisa para começar a organizar seu MEI agora mesmo.</p>
+                <ul class="pricing-features">
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> Dashboard completo com KPIs</li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> Controle de vendas e gastos</li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> Cadastro de clientes e produtos</li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> Gestão de contas financeiras</li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> PDV com carrinho de compras</li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> Cobrança pelo WhatsApp</li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> Comprovantes de venda em PDF</li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> Assistente FinMEI IA</li>
+                    <li class="disabled"><i data-lucide="x" style="width:16px;height:16px;"></i> Relatórios de BI avançados</li>
+                    <li class="disabled"><i data-lucide="x" style="width:16px;height:16px;"></i> Exportação CSV</li>
+                    <li class="disabled"><i data-lucide="x" style="width:16px;height:16px;"></i> Suporte prioritário</li>
+                </ul>
+                <a href="cadastro" class="btn-pricing free-btn">Criar conta grátis</a>
+            </div>
+            <div class="pricing-card premium">
+                <div class="pricing-badge">Mais popular</div>
+                <div class="pricing-plan-name">Plano Premium</div>
+                <div class="pricing-price premium-p"><sup>R$</sup>15<span>,90/mês</span></div>
+                <p class="pricing-desc">Para MEIs que querem levar a gestão a sério e tomar decisões baseadas em dados.
+                </p>
+                <ul class="pricing-features">
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> <strong>Tudo do plano
+                            gratuito</strong></li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> Relatórios de BI avançados</li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> Exportação de dados em CSV</li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> Suporte prioritário</li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> Acesso antecipado a novidades</li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> Badge Premium no sistema</li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> Produtos ilimitados (grátis: até 20)</li>
+                    <li><i data-lucide="check" style="width:16px;height:16px;"></i> IA: 50 msgs/dia (grátis: 10/dia)</li>
+                </ul>
+                <a href="planos" class="btn-pricing premium-btn">Assinar Premium</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════ AVALIAÇÕES / CARROSSEL ══════════════════════ -->
+    <section id="depoimentos" style="display:none">
+        <div class="section-header center">
+            <div class="section-label">Avaliações</div>
+            <h2 class="section-title">Quem usa,<br>recomenda</h2>
+            <p class="section-subtitle">Notas reais de empreendedores que organizaram a gestão do negócio com o FinMEI.</p>
+            <div class="reviews-summary" id="reviewsSummary" hidden>
+                <strong id="reviewsAverage">0,0</strong>
+                <div class="stars" id="reviewsAverageStars"></div>
+                <span id="reviewsCount">0 avaliações</span>
+            </div>
+        </div>
+        <div class="reviews-carousel" id="reviewsCarousel">
+            <div class="reviews-track" id="reviewsTrack"></div>
+        </div>
+        <div class="reviews-cta">
+            Já usa o FinMEI? <a href="avaliar">Deixe sua avaliação</a>
+        </div>
+    </section>
+
+    <!-- ══════════════════════ FAQ ══════════════════════ -->
+    <section id="faq">
+        <div class="section-header center">
+            <div class="section-label">Dúvidas frequentes</div>
+            <h2 class="section-title">Perguntas e respostas</h2>
+            <p class="section-subtitle">Tem alguma dúvida? Provavelmente ela está aqui.</p>
+        </div>
+        <div class="faq-list">
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    O FinMEI é realmente gratuito?
+                    <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">Sim! O plano gratuito tem acesso a todas as funcionalidades
+                        principais: controle de vendas, gastos, clientes, produtos (até 20), contas financeiras, PDV,
+                        cobrança pelo WhatsApp, comprovantes e a FinMEI IA (10 mensagens por dia). Sem cartão de
+                        crédito e sem limite de tempo para usar.</div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    Quanto custa o plano Premium?
+                    <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">O plano Premium custa <strong>R$ 15,90 por mês</strong>. Com ele você
+                        libera produtos ilimitados, 50 mensagens por dia com a FinMEI IA, relatórios de BI avançados,
+                        exportação em CSV e suporte prioritário.</div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    Como funciona o pagamento?
+                    <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">O pagamento é feito pelo Mercado Pago. Você pode pagar com
+                        <strong>PIX</strong> (avulso, 30 dias, renova manualmente) ou <strong>cartão de crédito</strong>
+                        (assinatura recorrente, cobra todo mês automaticamente). Ao cancelar, o acesso Premium vale até
+                        o fim do período já pago.</div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    Preciso instalar algum programa?
+                    <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">Não! O FinMEI funciona 100% pelo navegador (Chrome, Safari, Firefox).
+                        Acesse de qualquer computador, tablet ou celular. Ele também pode ser instalado como app no seu
+                        dispositivo pelo próprio navegador (PWA), e funciona offline!</div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    Meus dados financeiros estão seguros?
+                    <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">Absolutamente. Usamos a infraestrutura do Supabase (banco de dados
+                        PostgreSQL em nuvem com criptografia de ponta a ponta). Seus dados são seus — nunca
+                        compartilhamos com terceiros. Cada usuário só vê seus próprios dados.</div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    O FinMEI emite nota fiscal ou DAS?
+                    <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">Não. O FinMEI é um sistema de gestão financeira interna — não tem
+                        valor fiscal e não emite NF-e ou NFS-e. Os comprovantes de venda são documentos internos para
+                        controle. Para emissão de notas fiscais, utilize o sistema da Prefeitura ou o Portal do
+                        Empreendedor.</div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    Posso cancelar o Premium a qualquer momento?
+                    <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">Sim, sem fidelidade e sem multa. Você pode cancelar quando quiser e
+                        continuará com acesso Premium até o fim do período pago. Depois, voltará automaticamente para o
+                        plano gratuito com todos os seus dados preservados.</div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    O que é a FinMEI IA?
+                    <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">É o assistente de inteligência artificial integrado ao FinMEI. Você
+                        pode fazer perguntas sobre seu negócio, pedir análises, criar clientes, vendas e gastos por
+                        conversa, e muito mais — tudo em linguagem natural. Plano gratuito: 10 msgs/dia. Premium: 50
+                        msgs/dia.</div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    Posso testar o Premium antes de assinar?
+                    <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">Sim. Quando você assina o Premium, há um período de teste gratuito.
+                        Durante esse período você acessa todos os recursos Premium. Depois do teste, a cobrança começa
+                        automaticamente no cartão ou você pode renovar via PIX.</div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    O FinMEI serve para qualquer tipo de MEI?
+                    <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6" />
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">Sim. O FinMEI é feito para qualquer Microempreendedor Individual —
+                        prestador de serviço, comércio, indústria ou artesão. Você cadastra seus próprios produtos,
+                        clientes e contas financeiras do jeito que o seu negócio precisa.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════ CTA FINAL ══════════════════════ -->
+    <div class="cta-section">
+        <h2>Pronto para organizar<br><span
+                style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">seu
+                MEI de vez?</span></h2>
+        <p>Junte-se a milhares de microempreendedores que já controlam suas finanças com o FinMEI. Comece hoje, grátis.
+        </p>
+        <div class="cta-buttons">
+            <a href="cadastro" class="btn-primary">
+                <i data-lucide="rocket" style="width:18px;height:18px;"></i>
+                Criar conta grátis
+            </a>
+            <a href="login" class="btn-secondary">
+                <i data-lucide="log-in" style="width:18px;height:18px;"></i>
+                Já tenho conta
+            </a>
+        </div>
+        <p class="cta-note">✓ Sem cartão de crédito &nbsp;·&nbsp; ✓ Acesso imediato &nbsp;·&nbsp; ✓ Dados 100% seus</p>
+    </div>
+
+    <!-- ══════════════════════ FOOTER ══════════════════════ -->
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <a href="#" class="nav-logo" style="margin-bottom: 0;">
+                    <div class="nav-logo-icon"><i data-lucide="bar-chart-2" style="width:18px;height:18px;"></i></div>
+                    <span class="nav-logo-text">Fin<span>MEI</span></span>
+                </a>
+                <p>O sistema de gestão financeira completo para Microempreendedores Individuais. Simples, poderoso e
+                    gratuito.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Produto</h4>
+                <ul>
+                    <li><a href="#funcionalidades">Funcionalidades</a></li>
+                    <li><a href="#planos">Planos e preços</a></li>
+                    <li><a href="#como-funciona">Como funciona</a></li>
+                    <li><a href="dashboard">Acessar sistema</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Conta</h4>
+                <ul>
+                    <li><a href="cadastro">Criar conta grátis</a></li>
+                    <li><a href="login">Entrar</a></li>
+                    <li><a href="recuperar">Recuperar senha</a></li>
+                    <li><a href="planos">Assinar Premium</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a href="#">Termos de uso</a></li>
+                    <li><a href="#">Privacidade</a></li>
+                    <li><a href="#">Sem valor fiscal</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2026 FinMEI · Todos os direitos reservados</p>
+            <p class="footer-legal">Este sistema não emite documentos com valor fiscal. <br>Os comprovantes são para
+                controle interno.</p>
+        </div>
+    </footer>
+
     <script>
-        // PWA: deixa o app instalável na tela inicial do celular e
-        // guarda CSS/JS em cache para abrir rápido na segunda visita.
-        // Dado financeiro nunca é cacheado (ver public/sw.js).
+        // Init Lucide icons
+        lucide.createIcons();
+
+        // Navbar scroll effect
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('scrolled', window.scrollY > 20);
+        });
+
+        // Mobile menu
+        function toggleMenu() {
+            document.getElementById('mobileMenu').classList.toggle('open');
+        }
+
+        // FAQ accordion
+        function toggleFaq(btn) {
+            const item = btn.closest('.faq-item');
+            const isOpen = item.classList.contains('open');
+            // Close all
+            document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+            if (!isOpen) item.classList.add('open');
+        }
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                const target = document.querySelector(a.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Intersection Observer for fade-in animations on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.feature-card, .step-card, .testimonial-card, .pricing-card, .faq-item').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            observer.observe(el);
+        });
+
+        // Service worker registration
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(() => {});
+            navigator.serviceWorker.register('sw.js').catch(() => { });
+        }
+
+    </script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        if (window.AOS) {
+            AOS.init({
+                duration: 800,
+                once: true,
+                offset: 100,
+                easing: 'ease-out-cubic'
             });
         }
     </script>
-</head>
-
-<body class="dashboard-layout">
-
-
-
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo-area">
-                <div class="logo-icon">MEI</div>
-                <span>finMEI</span>
-            </div>
-        </div>
-
-        <nav class="sidebar-nav">
-            <a href="./" class="nav-item active">
-                <i data-lucide="layout-dashboard"></i> <span>Dashboard</span>
-            </a>
-            <a href="vendas" class="nav-item">
-                <i data-lucide="shopping-cart"></i> <span>Vendas</span>
-            </a>
-            <a href="gastos" class="nav-item">
-                <i data-lucide="trending-down"></i> <span>Gastos</span>
-            </a>
-            <a href="contas" class="nav-item">
-                <i data-lucide="wallet"></i> <span>Contas</span>
-            </a>
-            <a href="clientes" class="nav-item">
-                <i data-lucide="users"></i> <span>Clientes</span>
-            </a>
-            <a href="produtos" class="nav-item">
-                <i data-lucide="package"></i> <span>Produtos</span>
-            </a>
-            <a href="mei" class="nav-item">
-                <i data-lucide="clipboard-check"></i> <span>MEI</span>
-            </a>
-
-            <div class="sidebar-divider">ASSISTENTE</div>
-            <a href="ia" class="nav-item">
-                <i data-lucide="sparkles"></i> <span>FinMEI IA</span>
-            </a>
-
-        </nav>
-
-        <div class="sidebar-plan-wrapper">
-            <div class="sidebar-plan-card" id="sidebarPlanCard">
-                <div class="plan-card-icon" id="sidebarPlanIcon">
-                    <i data-lucide="crown"></i>
-                </div>
-                <h4 id="sidebarPlanTitle">Seja Premium</h4>
-                <p id="sidebarPlanDesc">Mais recursos para fazer seu negócio crescer.</p>
-                <a href="planos" class="sidebar-plan-btn" id="sidebarPlanBtn">Ver Planos</a>
-            </div>
-        </div>
-
-    </aside>
-
-    <main class="main-content">
-        <button id="btnMenuMobile" class="btn-menu-mobile">
-            <i data-lucide="menu"></i>
-        </button>
-
-        <header class="top-bar top-bar-dashboard">
-            <div class="header-search-wrap">
-                <i data-lucide="search" class="header-search-icon"></i>
-                <input type="search" id="buscaGlobalHeader" class="header-search-input"
-                    placeholder="Buscar por vendas, clientes, produtos..." autocomplete="off"
-                    aria-label="Buscar no FinMEI">
-                <div class="header-search-results" id="headerSearchResults" hidden></div>
-            </div>
-            <div class="top-actions">
-                <a href="nova-venda" class="top-action-primary"><i data-lucide="plus"></i><span>Nova
-                        venda</span></a>
-                <a href="novo-cliente" class="top-action-secondary"><i data-lucide="user-plus"></i><span>Novo
-                        cliente</span></a>
-                <div class="user-info">
-                    <div class="profile-dropdown">
-                        <button class="profile-toggle profile-toggle-pill" onclick="toggleProfileDropdown(event)">
-                            <img id="fotoUsuario" src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                                referrerpolicy="no-referrer" alt="Perfil">
-                            <span id="nomePerfilHeader" class="profile-name">Usuário</span>
-                            <i data-lucide="chevron-down" class="profile-chevron"></i>
-                        </button>
-                        <div class="dropdown-menu" id="profileDropdown">
-                        <div class="dropdown-header">Minha Conta</div>
-                        <a href="perfil" class="dropdown-item">
-                            <i data-lucide="user-round"></i> <span>Meu perfil</span>
-                        </a>
-                        <a href="#" onclick="abrirImportacao()" class="dropdown-item">
-                            <i data-lucide="database-backup"></i> <span>Importar dados</span>
-                        </a>
-                        <a href="#" onclick="abrirRelatorioAnalitico()" class="dropdown-item">
-                            <i data-lucide="bar-chart-2"></i> <span>Relatórios Avançados</span>
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <button id="btnToggleTema" class="dropdown-item" onclick="toggleTema()">
-                            <i id="iconeTema" data-lucide="sun"></i>
-                            <span id="textoTema">Modo claro</span>
-                        </button>
-                        <a href="#" onclick="logout()" class="dropdown-item logout">
-                            <i data-lucide="log-out"></i> <span>Sair</span>
-                        </a>
-                    </div>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <section class="content-wrapper">
-            <div class="dashboard-hero">
-                <div class="page-header">
-                    <span class="page-kicker"><i data-lucide="sparkles"></i> Visão geral do negócio</span>
-                    <h2 id="nomeUsuario">Olá, Usuário</h2>
-                    <p>Aqui está um resumo do seu negócio como MEI.</p>
-                </div>
-
-                <div class="period-minimal-bar dashboard-filtros-mobile">
-                    <span class="period-pill-icon"><i data-lucide="calendar"></i></span>
-                    <select id="filtroTipoPeriodo" class="period-pill-select" aria-label="Período">
-                        <option value="month">Mês</option>
-                        <option value="year">Ano</option>
-                        <option value="all">Todo o período</option>
-                    </select>
-                    <div id="campoFiltroMes" class="period-pill-field">
-                        <input type="month" id="filtroMesDashboard" class="period-pill-input input-mes-dashboard" aria-label="Mês de análise">
-                    </div>
-                    <div id="campoFiltroAno" class="period-pill-field" hidden>
-                        <input type="number" id="filtroAnoDashboard" class="period-pill-input period-pill-year"
-                            min="1900" max="2100" step="1" inputmode="numeric" required aria-label="Ano de análise">
-                    </div>
-                    <span id="badgePeriodo" class="period-badge period-badge-minimal" hidden><span class="badge-dot"></span><span id="textoBadgePeriodo">Mês atual</span></span>
-                    <button id="btnLimparFiltro" class="period-pill-reset" title="Voltar para o mês atual">
-                        <i data-lucide="rotate-ccw"></i>
-                        <span>Mês atual</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="section-head">
-                <div class="section-title">
-                    <i data-lucide="bar-chart-3"></i>
-                    <h4>Desempenho no período</h4>
-                </div>
-            </div>
-
-            <div class="resumo-cards">
-                <div class="metric-card metric-card-styled pos">
-                    <div class="metric-card-top">
-                        <div class="metric-icon-badge">
-                            <i data-lucide="trending-up"></i>
-                        </div>
-                        <div class="metric-title-group">
-                            <span class="metric-label">
-                                <span id="labelRecebidoDashboard">Recebido (Mês)</span>
-                            </span>
-                            <div class="metric-value-row">
-                                <h2 id="totalEntradas" class="metric-value">R$ 0,00</h2>
-                                <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
-                                    <path d="M2 22C10 22 14 14 22 15C30 16 34 8 42 10C50 12 54 4 62 3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                                </svg>
-                            </div>
-                            <div class="metric-variacao" id="variacaoRecebido">--</div>
-                        </div>
-                    </div>
-                    <div class="metric-foot"><i data-lucide="arrow-up-right"></i> Vendas já pagas</div>
-                </div>
-
-                <div class="metric-card metric-card-styled warn">
-                    <div class="metric-card-top">
-                        <div class="metric-icon-badge">
-                            <i data-lucide="clock"></i>
-                        </div>
-                        <div class="metric-title-group">
-                            <span class="metric-label">
-                                <span id="labelPendenteDashboard">A Receber (Mês)</span>
-                            </span>
-                            <div class="metric-value-row">
-                                <h2 id="totalSaidas" class="metric-value">R$ 0,00</h2>
-                                <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
-                                    <path d="M2 18C12 18 16 11 26 14C34 16 40 9 48 11C55 13 58 7 62 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                                </svg>
-                            </div>
-                            <div class="metric-variacao" id="variacaoReceber">--</div>
-                        </div>
-                    </div>
-                    <div class="metric-foot"><i data-lucide="hourglass"></i> Vendas aguardando pgto</div>
-                </div>
-
-                <div class="metric-card metric-card-styled neg">
-                    <div class="metric-card-top">
-                        <div class="metric-icon-badge">
-                            <i data-lucide="trending-down"></i>
-                        </div>
-                        <div class="metric-title-group">
-                            <span class="metric-label">
-                                <span id="labelDespesasDashboard">Despesas (Mês)</span>
-                            </span>
-                            <div class="metric-value-row">
-                                <h2 id="totalGastosDashboard" class="metric-value">R$ 0,00</h2>
-                                <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
-                                    <path d="M2 14C10 10 18 19 26 16C34 13 42 21 50 15C56 11 59 14 62 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                                </svg>
-                            </div>
-                            <div class="metric-variacao" id="variacaoDespesas">--</div>
-                        </div>
-                    </div>
-                    <div class="metric-foot"><i data-lucide="receipt"></i> Gastos operacionais</div>
-                </div>
-
-                <div class="metric-card metric-card-styled acc">
-                    <div class="metric-card-top">
-                        <div class="metric-icon-badge">
-                            <i data-lucide="target"></i>
-                        </div>
-                        <div class="metric-title-group">
-                            <span class="metric-label">
-                                <span id="labelLucroDashboard">Lucro Líquido (Mês)</span>
-                            </span>
-                            <div class="metric-value-row">
-                                <h2 id="lucroReal" class="metric-value">R$ 0,00</h2>
-                                <svg class="metric-sparkline" viewBox="0 0 64 28" fill="none" aria-hidden="true">
-                                    <path d="M2 23C11 20 18 16 26 17C35 18 42 9 50 7C56 5 59 4 62 2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                                </svg>
-                            </div>
-                            <div class="metric-variacao" id="variacaoLucro">--</div>
-                        </div>
-                    </div>
-                    <div class="metric-foot"><i data-lucide="sparkles"></i> Recebido - Gastos</div>
-                </div>
-            </div>
-
-            <div class="saldo-grid">
-                <div class="card highlight">
-                    <div>
-                        <span class="metric-label">Saldo geral disponível</span>
-                        <p class="saldo-card-desc">Patrimônio acumulado (entradas totais - gastos totais)</p>
-                    </div>
-                    <h1 id="saldoGeralTotal" class="big">R$ 0,00</h1>
-                </div>
-
-                <div class="card saldo-card">
-                    <span class="metric-label">Saldo consolidado</span>
-                    <p class="saldo-card-desc">Soma das contas classificadas como Negócio ou Misto</p>
-                    <h2 id="saldoConsolidadoDashboard" class="saldo-card-value">R$ 0,00</h2>
-                </div>
-            </div>
-
-            <!-- GRÁFICOS -->
-            <div class="graficos-grid">
-                <div class="card chart-card">
-                    <div class="chart-head">
-                        <span class="chart-title">Receitas × Despesas</span>
-                    </div>
-                    <div class="chart-box">
-                        <canvas id="chRevExp"></canvas>
-                    </div>
-                </div>
-
-                <div class="card chart-card">
-                    <div class="chart-head">
-                        <span class="chart-title">Evolução do Lucro</span>
-                    </div>
-                    <div class="chart-box">
-                        <canvas id="chProfit"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="graficos-grid">
-                <div class="card chart-card">
-                    <div class="chart-head">
-                        <span class="chart-title">Distribuição de Vendas por Produto</span>
-                    </div>
-                    <div class="chart-box">
-                        <canvas id="chDonut"></canvas>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="chart-title" id="tituloComparacao" style="margin-bottom: 14px;">Comparação com o Mês Anterior</div>
-                    <div class="insight" id="insightComparacao" style="margin-bottom: 14px;">
-                        <i data-lucide="info"></i>
-                        <div>Carregando comparação...</div>
-                    </div>
-                    <div id="comparacaoGrid" class="goal-grid" style="grid-template-columns: 1fr 1fr;">
-                    </div>
-                </div>
-            </div>
-
-            <div class="dashboard-bottom">
-                <section class="recentes" style="min-height: 400px;">
-                    <div class="fluxo-cabecalho fluxo-cabecalho-mobile"
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
-                        <h3 class="titulo-fluxo chart-title" style="border: none; padding: 0;">Fluxo de Caixa
-                            Recente</h3>
-                        <a href="vendas" class="link-ver-vendas"
-                            style="font-size: 0.75rem; color: var(--cor-primaria); text-decoration: none; font-weight: 600; display: block; text-align: center; width: 100%;">Ver
-                            vendas</a>
-                    </div>
-                    <div id="listaMovimentacoes">
-                    </div>
-                </section>
-
-                <section class="recentes" style="min-height: 400px;">
-                    <h3 class="chart-title" id="tituloHistoricoPeriodo" style="border: none; padding: 0; margin-bottom: 1.5rem;">Histórico no tempo
-                    </h3>
-                    <div id="listaLucroMensal">
-                    </div>
-                </section>
-            </div>
-        </section>
-    </main>
-
-    <script type="module" src="js/auth.js?v=6"></script>
-    <script type="module" src="js/dashboard.js?v=6"></script>
-    <script type="module" src="js/ai-fab.js"></script>
     <script>
-        // Inicializa os ícones
-        lucide.createIcons();
+        /* Avaliações aprovadas no admin → carrossel da landing */
+        (function () {
+            const SUPABASE_URL = 'https://grszaitpgnyrbxktxauc.supabase.co';
+            const SUPABASE_KEY = 'sb_publishable_6Ndppbw2HKqwb0x9s3TN5A_Uhm3Oa1F';
+            const STAR_PATH = 'M12 2.6l2.83 5.73 6.32.92-4.57 4.46 1.08 6.3L12 17.03l-5.66 2.98 1.08-6.3L2.85 9.25l6.32-.92L12 2.6z';
+            const AVATAR_COLORS = [
+                ['#3b82f6', '#2563eb'],
+                ['#8b5cf6', '#7c3aed'],
+                ['#10b981', '#059669'],
+                ['#f59e0b', '#d97706'],
+                ['#ec4899', '#db2777'],
+                ['#06b6d4', '#0891b2']
+            ];
 
-        // Dropdown do perfil
-        function toggleProfileDropdown(event) {
-            const dropdown = document.getElementById('profileDropdown');
-            dropdown.classList.toggle('active');
-            // Fechar se clicar fora
-            if (!event.target.closest('.profile-dropdown')) {
-                dropdown.classList.remove('active');
+            const section = document.getElementById('depoimentos');
+            const track = document.getElementById('reviewsTrack');
+            const carousel = document.getElementById('reviewsCarousel');
+            if (!section || !track || !carousel) return;
+
+            function esc(value) {
+                return String(value == null ? '' : value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
             }
-        }
 
-        // Fechar dropdown ao clicar fora
-        document.addEventListener('click', (e) => {
-            const profileDropdown = document.querySelector('.profile-dropdown');
-            const profileToggle = document.querySelector('.profile-toggle');
-            if (profileDropdown && profileToggle) {
-                if (!e.target.closest('.profile-dropdown')) {
-                    profileDropdown.classList.remove('active');
+            function starsHtml(nota) {
+                const pontos = Math.max(0, Math.min(10, Number(nota) || 0));
+                let html = '<div class="review-stars">';
+                for (let i = 0; i < 5; i++) {
+                    const fill = Math.max(0, Math.min(1, (pontos - i * 2) / 2)) * 100;
+                    html += '<span class="star">' +
+                        '<svg class="star-base" viewBox="0 0 24 24"><path d="' + STAR_PATH + '"/></svg>' +
+                        '<span class="star-fill" style="width:' + fill + '%">' +
+                        '<svg viewBox="0 0 24 24"><path d="' + STAR_PATH + '"/></svg>' +
+                        '</span></span>';
+                }
+                return html + '</div>';
+            }
+
+            function initials(name) {
+                const parts = String(name || 'Cliente FinMEI').trim().split(/\s+/).filter(Boolean);
+                return ((parts[0] || 'C')[0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+            }
+
+            function cardHtml(item, index) {
+                const cor = AVATAR_COLORS[index % AVATAR_COLORS.length];
+                const nome = esc(item.nome || 'Cliente FinMEI');
+                const nota = Number(item.nota) || 0;
+                const segmento = esc(item.segmento || 'Cliente FinMEI');
+                const comentario = item.comentario
+                    ? esc(item.comentario)
+                    : 'Avaliou o FinMEI com nota ' + String(nota).replace('.', ',') + '/10.';
+
+                return '<div class="review-card">' +
+                    starsHtml(nota) +
+                    '<p class="review-quote">&ldquo;' + comentario + '&rdquo;</p>' +
+                    '<div class="review-author">' +
+                    '<div class="review-avatar" style="background:linear-gradient(135deg,' + cor[0] + ',' + cor[1] + ')">' +
+                    esc(initials(item.nome)) + '</div>' +
+                    '<div><div class="review-name">' + nome + '</div>' +
+                    '<div class="review-role">' + segmento + '</div></div>' +
+                    '</div></div>';
+            }
+
+            async function carregar() {
+                try {
+                    const resposta = await fetch(SUPABASE_URL + '/rest/v1/rpc/avaliacoes_landing', {
+                        method: 'POST',
+                        headers: {
+                            apikey: SUPABASE_KEY,
+                            Authorization: 'Bearer ' + SUPABASE_KEY,
+                            'Content-Type': 'application/json'
+                        },
+                        body: '{}'
+                    });
+
+                    if (!resposta.ok) return;
+                    const dados = await resposta.json();
+                    if (!Array.isArray(dados) || !dados.length) return;
+
+                    section.style.display = '';
+                    if (window.AOS) AOS.refresh();
+
+                    const media = dados.reduce(function (soma, item) { return soma + Number(item.nota || 0); }, 0) / dados.length;
+                    document.getElementById('reviewsAverage').textContent = media.toFixed(1).replace('.', ',');
+                    document.getElementById('reviewsAverageStars').innerHTML = starsHtml(media);
+                    document.getElementById('reviewsCount').textContent =
+                        dados.length + (dados.length === 1 ? ' avaliação' : ' avaliações');
+                    document.getElementById('reviewsSummary').hidden = false;
+
+                    const base = dados.map(cardHtml).join('');
+                    track.innerHTML = base;
+
+                    const gap = 20;
+                    const unidade = track.scrollWidth + gap;
+                    const copias = Math.max(2, Math.ceil((carousel.clientWidth * 2) / unidade) + 1);
+                    track.innerHTML = new Array(copias).fill(base).join('');
+
+                    let offset = 0;
+                    let pausado = false;
+                    let arrastando = false;
+                    let inicioX = 0;
+                    let offsetInicial = 0;
+
+                    function aplicar() {
+                        track.style.transform = 'translate3d(' + (-offset) + 'px,0,0)';
+                    }
+
+                    function animar() {
+                        if (!pausado && !arrastando) {
+                            offset += 0.4;
+                            if (offset >= unidade) offset -= unidade;
+                            aplicar();
+                        }
+                        requestAnimationFrame(animar);
+                    }
+
+                    carousel.addEventListener('mouseenter', function () { pausado = true; });
+                    carousel.addEventListener('mouseleave', function () { if (!arrastando) pausado = false; });
+
+                    carousel.addEventListener('pointerdown', function (evento) {
+                        arrastando = true;
+                        pausado = true;
+                        inicioX = evento.clientX;
+                        offsetInicial = offset;
+                        carousel.classList.add('dragging');
+                        carousel.setPointerCapture(evento.pointerId);
+                    });
+
+                    carousel.addEventListener('pointermove', function (evento) {
+                        if (!arrastando) return;
+                        offset = offsetInicial - (evento.clientX - inicioX);
+                        offset = ((offset % unidade) + unidade) % unidade;
+                        aplicar();
+                    });
+
+                    function soltar() {
+                        if (!arrastando) return;
+                        arrastando = false;
+                        carousel.classList.remove('dragging');
+                        pausado = false;
+                    }
+
+                    carousel.addEventListener('pointerup', soltar);
+                    carousel.addEventListener('pointercancel', soltar);
+                    carousel.addEventListener('dragstart', function (evento) { evento.preventDefault(); });
+
+                    requestAnimationFrame(animar);
+                } catch (erro) {
+                    /* Sem avaliações aprovadas: a seção permanece oculta. */
                 }
             }
-        });
+
+            carregar();
+        })();
     </script>
+
 </body>
 
 </html>

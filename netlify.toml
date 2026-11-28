@@ -113,6 +113,21 @@
   status = 200
 
 [[redirects]]
+  from = "/dashboard"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/perfil"
+  to = "/perfil.html"
+  status = 200
+
+[[redirects]]
+  from = "/avaliar"
+  to = "/avaliar.html"
+  status = 200
+
+[[redirects]]
   from = "/index"
   to = "/index.html"
   status = 200
