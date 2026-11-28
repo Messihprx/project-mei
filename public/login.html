@@ -4,100 +4,535 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - FinMEI fluxo inteligente</title>
+    <title>Login - FinMEI</title>
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=7">
     <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
     <meta name="theme-color" content="#080c16">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <script>
-        // PWA: deixa o app instalável na tela inicial do celular e
-        // guarda CSS/JS em cache para abrir rápido na segunda visita.
-        // Dado financeiro nunca é cacheado (ver public/sw.js).
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(() => {});
-            });
+    <style>
+        /* ============================================
+           LOGIN — visual profissional e premium
+           ============================================ */
+        .login-page {
+            background: var(--fundo-cor);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+            position: relative;
+            overflow: hidden;
         }
-    </script>
+
+        /* brilho de fundo */
+        .login-page::before {
+            content: '';
+            position: absolute;
+            top: -10%;
+            left: 10%;
+            width: 600px;
+            height: 600px;
+            background:
+                radial-gradient(circle at 30% 30%, rgba(59, 130, 246, .14), transparent 55%),
+                radial-gradient(circle at 70% 70%, rgba(16, 185, 129, .08), transparent 55%);
+            filter: blur(60px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .login-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 1040px;
+            height: 740px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            box-sizing: border-box;
+        }
+
+        .login-card {
+            display: flex;
+            background: rgba(15, 22, 38, .72);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(148, 163, 184, .10);
+            border-radius: 32px;
+            box-shadow:
+                0 40px 100px -30px rgba(0, 0, 0, .85),
+                0 0 0 1px rgba(255, 255, 255, .03);
+            overflow: hidden;
+        }
+
+        /* ---------- painel esquerdo (branding) ---------- */
+        .login-branding {
+            flex: 0 0 460px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem 3rem;
+            position: relative;
+            overflow: hidden;
+            border-right: 1px solid rgba(148, 163, 184, .08);
+        }
+
+        .login-branding::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: -10%;
+            width: 130%;
+            height: 130%;
+            background:
+                radial-gradient(ellipse at 40% 40%, rgba(59, 130, 246, .12), transparent 60%),
+                radial-gradient(ellipse at 80% 80%, rgba(16, 185, 129, .06), transparent 50%);
+            pointer-events: none;
+            animation: brandingPulse 7s ease-in-out infinite alternate;
+        }
+
+        @keyframes brandingPulse {
+            0% { transform: scale(1); opacity: .7; }
+            100% { transform: scale(1.06); opacity: 1; }
+        }
+
+        .brand-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            max-width: 320px;
+        }
+
+        .brand-logo {
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, var(--cor-primaria), #1d4ed8);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #fff;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 12px 40px rgba(59, 130, 246, .45);
+            letter-spacing: 1px;
+        }
+
+        .brand-title {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff, #9aa8bd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.6rem;
+            letter-spacing: -0.5px;
+            line-height: 1.15;
+        }
+
+        .brand-subtitle {
+            color: var(--texto-secundario);
+            font-size: 0.92rem;
+            line-height: 1.65;
+            margin-bottom: 2.2rem;
+        }
+
+        .brand-trust {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: var(--texto-secundario);
+            padding: 10px 16px;
+            border: 1px solid rgba(148, 163, 184, .12);
+            border-radius: 999px;
+            background: rgba(19, 28, 46, .4);
+        }
+
+        .brand-trust i {
+            width: 13px;
+            height: 13px;
+            color: var(--cor-sucesso);
+        }
+
+        /* ---------- painel direito (formulário) ---------- */
+        .login-form-panel {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 2.5rem;
+            max-width: 460px;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 390px;
+            animation: fadeSlideUp 0.6s ease-out;
+        }
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2.2rem;
+        }
+
+        .login-header .brand-icon-small {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--cor-primaria), #1d4ed8);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #fff;
+            margin: 0 auto 1rem;
+            box-shadow: 0 8px 28px rgba(59, 130, 246, .4);
+        }
+
+        .login-header h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--texto-principal);
+            margin-bottom: 0.4rem;
+            letter-spacing: -0.5px;
+        }
+
+        .login-header p {
+            color: var(--texto-secundario);
+            font-size: 0.88rem;
+        }
+
+        /* ---------- campos ---------- */
+        .login-input-group {
+            margin-bottom: 1.15rem;
+            position: relative;
+        }
+
+        .login-input-group label {
+            display: block;
+            font-size: 0.76rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--texto-secundario);
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .login-input-group .input-wrapper {
+            position: relative;
+        }
+
+        .login-input-group input {
+            width: 100%;
+            padding: 0.92rem 1rem 0.92rem 42px;
+            border: 1px solid var(--borda-cor);
+            border-radius: 12px;
+            background: rgba(8, 12, 22, .55);
+            color: var(--texto-principal);
+            font-size: 0.92rem;
+            font-family: inherit;
+            transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+            box-sizing: border-box;
+        }
+
+        .login-input-group input::placeholder {
+            color: var(--texto-faint);
+        }
+
+        .login-input-group input:focus {
+            outline: none;
+            border-color: var(--cor-primaria);
+            background: rgba(8, 12, 22, .75);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, .18), inset 0 0 14px rgba(59, 130, 246, .04);
+        }
+
+        .login-input-group .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: var(--texto-faint);
+            pointer-events: none;
+        }
+
+        .login-input-group .input-icon.user { left: 14px; }
+        .login-input-group .input-icon.lock { left: 14px; }
+
+        .input-senha-container {
+            position: relative;
+        }
+
+        .btn-ver-senha {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: var(--texto-faint);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3;
+        }
+
+        .btn-ver-senha svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .btn-ver-senha:hover { color: var(--texto-principal); }
+
+        .login-input-group .esqueceu {
+            display: block;
+            text-align: right;
+            margin-top: 6px;
+            font-size: 0.78rem;
+            color: var(--cor-primaria-strong);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-input-group .esqueceu:hover { text-decoration: underline; }
+
+        /* ---------- botões ---------- */
+        .btn-login {
+            width: 100%;
+            background: linear-gradient(135deg, var(--cor-primaria), #2563eb);
+            color: #fff;
+            padding: 0.95rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+            margin-top: 0.5rem;
+            box-shadow: 0 12px 32px -12px rgba(59, 130, 246, .65);
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.08);
+            box-shadow: 0 16px 40px -14px rgba(99, 102, 241, .75);
+        }
+
+        .btn-login:active { transform: translateY(0); }
+
+        .btn-login:disabled {
+            opacity: .65;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .divisor-ou {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 1.6rem 0;
+            color: var(--texto-faint);
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .divisor-ou::before,
+        .divisor-ou::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(148, 163, 184, .12);
+        }
+
+        .btn-google {
+            width: 100%;
+            background: rgba(19, 28, 46, .5);
+            border: 1px solid rgba(148, 163, 184, .18);
+            color: var(--texto-principal);
+            padding: 0.88rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all .18s ease;
+            box-sizing: border-box;
+        }
+
+        .btn-google:hover {
+            background: rgba(19, 28, 46, .7);
+            border-color: var(--cor-primaria);
+            transform: translateY(-1px);
+        }
+
+        .btn-google img { width: 18px; height: 18px; }
+
+        .cadastro-link {
+            margin-top: 1.5rem;
+            text-align: center;
+            color: var(--texto-secundario);
+            font-size: 0.88rem;
+        }
+
+        .cadastro-link a {
+            color: var(--cor-primaria-strong);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .cadastro-link a:hover { text-decoration: underline; }
+
+        /* feedback */
+        .login-feedback {
+            margin-bottom: 1rem;
+            padding: 0.95rem 1.1rem;
+            border-radius: 10px;
+            font-size: 0.84rem;
+            line-height: 1.5;
+            display: none;
+            animation: fadeIn .25s ease;
+        }
+
+        .login-feedback.err {
+            display: block;
+            color: #fca5a5;
+            background: rgba(244, 63, 94, .09);
+            border: 1px solid rgba(244, 63, 94, .2);
+        }
+
+        .login-feedback.ok {
+            display: block;
+            color: #6ee7b7;
+            background: rgba(16, 185, 129, .09);
+            border: 1px solid rgba(16, 185, 129, .2);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ---------- responsivo ---------- */
+        @media (max-width: 900px) {
+            .login-card {
+                flex-direction: column;
+                height: auto;
+                border-radius: 28px;
+            }
+
+            .login-branding {
+                flex: none;
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid rgba(148, 163, 184, .08);
+                padding: 2.5rem 2rem;
+            }
+
+            .login-form-panel {
+                padding: 2.2rem 1.8rem;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .login-container { height: auto; padding: 0 16px; }
+            .login-branding { padding: 2rem 1.6rem; }
+            .brand-title { font-size: 1.6rem; }
+        }
+    </style>
 </head>
 
 <body class="login-page">
     <div class="login-container">
         <div class="login-card">
-    <!-- Branding Panel -->
-    <div class="login-branding">
-        <div class="brand-content">
-            <div class="brand-logo">MEI</div>
-            <h2 class="brand-title">FinMEI</h2>
-            <p class="brand-subtitle">A plataforma inteligente que transforma a gestão financeira do seu negócio.</p>
-            <div class="brand-features">
-                <div class="brand-feature">
-                    <i data-lucide="check-circle"></i>
-                    <span>Dashboard com gráficos em tempo real</span>
-                </div>
-                <div class="brand-feature">
-                    <i data-lucide="check-circle"></i>
-                    <span>Controle completo de vendas e despesas</span>
-                </div>
-                <div class="brand-feature">
-                    <i data-lucide="check-circle"></i>
-                    <span>Relatórios avançados de BI</span>
-                </div>
-                <div class="brand-feature">
-                    <i data-lucide="check-circle"></i>
-                    <span>Gestão de clientes integrada</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Login Form -->
-    <div class="login-form-panel">
-        <div class="login-wrapper">
-            <div class="login-header">
-                <div class="brand-icon-small">MEI</div>
-                <h1>Bem-vindo de volta</h1>
-                <p>Acesse sua conta para continuar.</p>
-            </div>
-
-            <form id="formLogin">
-                <div class="input-group">
-                    <label>Email</label>
-                    <input type="email" id="emailLogin" placeholder="seu@email.com" required>
-                </div>
-
-                <div class="input-group">
-                    <label>Senha</label>
-                    <div class="input-senha-container">
-                        <input type="password" id="senhaLogin" placeholder="Sua senha" required>
-                        <button type="button" class="btn-ver-senha" onclick="togglePassword('senhaLogin')" tabindex="-1">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                        </button>
+            <!-- Painel esquerdo: branding -->
+            <aside class="login-branding">
+                <div class="brand-content">
+                    <div class="brand-logo">MEI</div>
+                    <h1 class="brand-title">FinMEI</h1>
+                    <p class="brand-subtitle">A plataforma inteligente que transforma a gestão financeira do seu negócio de forma simples e segura.</p>
+                    <div class="brand-trust">
+                        <i data-lucide="shield-check"></i>
+                        <span>Seus dados protegidos com criptografia</span>
                     </div>
-                    <a href="recuperar" style="font-size: 0.78rem; color: var(--cor-primaria); text-decoration: none; display: block; margin-top: 6px; font-weight: 500;">Esqueceu sua senha?</a>
                 </div>
+            </aside>
 
-                <button type="submit" class="btn-login">Entrar</button>
+            <!-- Painel direito: formulário -->
+            <div class="login-form-panel">
+                <div class="login-wrapper">
+                    <div class="login-header">
+                        <div class="brand-icon-small">MEI</div>
+                        <h1>Bem-vindo de volta</h1>
+                        <p>Acesse sua conta para continuar</p>
+                    </div>
 
-                <div style="text-align: center; margin: 14px 0; color: var(--texto-faint); font-size: 0.82rem; position: relative;">
-                    <span style="background: var(--fundo-card-solid); padding: 0 12px; position: relative; z-index: 1;">ou</span>
-                    <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--borda-cor);"></div>
+                    <div class="login-feedback login-feedback err" id="loginErro"></div>
+
+                    <form id="formLogin" novalidate>
+                        <div class="login-input-group">
+                            <label for="emailLogin">E-mail</label>
+                            <div class="input-wrapper">
+                                <i data-lucide="mail" class="input-icon user"></i>
+                                <input type="email" id="emailLogin" placeholder="seu@email.com" required autocomplete="email">
+                            </div>
+                        </div>
+
+                        <div class="login-input-group">
+                            <label for="senhaLogin">Senha</label>
+                            <div class="input-wrapper input-senha-container">
+                                <i data-lucide="lock" class="input-icon lock"></i>
+                                <input type="password" id="senhaLogin" placeholder="Sua senha" required autocomplete="current-password">
+                                <button type="button" class="btn-ver-senha" onclick="togglePassword('senhaLogin')" tabindex="-1">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </button>
+                            </div>
+                            <a href="recuperar" class="esqueceu">Esqueceu sua senha?</a>
+                        </div>
+
+                        <button type="submit" class="btn-login" id="btnLogin">Entrar</button>
+
+                        <div class="divisor-ou">ou</div>
+
+                        <button type="button" onclick="loginGoogle()" class="btn-google" id="btnGoogle">
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                            Entrar com Google
+                        </button>
+                    </form>
+
+                    <p class="cadastro-link">
+                        Novo por aqui? <a href="cadastro">Crie sua conta</a>
+                    </p>
                 </div>
-
-                <button type="button" onclick="loginGoogle()" class="btn-google" id="btnGoogle">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18">
-                    Entrar com Google
-                </button>
-
-                <p class="cadastro-link">
-                    Novo por aqui? <a href="cadastro">Crie sua conta</a>
-                </p>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -109,6 +544,33 @@
             input.type = input.type === "password" ? "text" : "password";
             btn.classList.toggle('slash');
         }
+
+        const formLogin = document.getElementById('formLogin');
+        const btnLogin = document.getElementById('btnLogin');
+        const feedback = document.getElementById('loginErro');
+
+        formLogin.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('emailLogin').value.trim();
+            const senha = document.getElementById('senhaLogin').value;
+
+            feedback.style.display = 'none';
+            btnLogin.disabled = true;
+            btnLogin.textContent = 'Entrando...';
+
+            try {
+                const { supabase } = await import('./js/auth.js');
+                const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+                if (error) throw error;
+                window.location.href = 'dashboard';
+            } catch (err) {
+                feedback.textContent = err.message || 'Erro ao fazer login.';
+                feedback.style.display = 'block';
+                btnLogin.disabled = false;
+                btnLogin.textContent = 'Entrar';
+            }
+        });
+
         lucide.createIcons();
     </script>
 </body>
