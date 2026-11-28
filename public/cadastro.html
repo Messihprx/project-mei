@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastro - FinMEI fluxo inteligente</title>
+    <title>Criar conta | FinMEI</title>
     <link rel="icon" href="icon_mei.ico" type="image/x-icon">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=8">
     <script src="https://unpkg.com/lucide@0.544.0/dist/umd/lucide.min.js"></script>
     <meta name="theme-color" content="#080c16">
     <link rel="manifest" href="manifest.json">
@@ -23,89 +23,153 @@
     </script>
 </head>
 
-<body class="login-page">
-    <!-- Branding Panel -->
-    <div class="login-branding">
-        <div class="brand-content">
-            <div class="brand-logo">MEI</div>
-            <h2 class="brand-title">Comece agora</h2>
-            <p class="brand-subtitle">Crie sua conta gratuita e comece a organizar suas finanças hoje mesmo.</p>
-            <div class="brand-features">
-                <div class="brand-feature">
-                    <i data-lucide="check-circle"></i>
-                    <span>14 dias grátis para testar</span>
-                </div>
-                <div class="brand-feature">
-                    <i data-lucide="check-circle"></i>
-                    <span>Sem necessidade de cartão de crédito</span>
-                </div>
-                <div class="brand-feature">
-                    <i data-lucide="check-circle"></i>
-                    <span>Cancele quando quiser</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Cadastro Form -->
-    <div class="login-form-panel">
-        <div class="login-wrapper">
-            <div class="login-header">
-                <div class="brand-icon-small">MEI</div>
-                <h1>Crie sua conta</h1>
-                <p>Preencha os dados abaixo para começar.</p>
+<body class="auth-split-page">
+    <div class="auth-split-layout">
+        <!-- Metade esquerda: Branding e benefícios -->
+        <aside class="auth-split-left">
+            <div class="auth-split-topbar">
+                <a href="index.html" class="auth-brand-link">
+                    <span class="auth-brand-badge">MEI</span>
+                    <span class="auth-brand-name">FinMEI</span>
+                </a>
+                <span class="auth-top-pill">14 dias grátis</span>
             </div>
 
-            <form id="formCadastro">
-                <div class="input-group">
-                    <label>Nome Completo</label>
-                    <input type="text" id="nomeCadastro" placeholder="Seu nome e sobrenome" required>
-                    <div id="erro-nomeCadastro" class="erro-campo"></div>
-                </div>
+            <div class="auth-split-hero">
+                <h2>Comece a organizar seu MEI <span>hoje mesmo</span>.</h2>
+                <p>Crie sua conta gratuita em segundos e tenha clareza total sobre entradas, saídas e lucros.</p>
 
-                <div class="input-group">
-                    <label>Email</label>
-                    <input type="email" id="emailCadastro" placeholder="seu@email.com" required>
-                    <div id="erro-emailCadastro" class="erro-campo"></div>
-                </div>
-
-                <div class="input-group">
-                    <label>Senha</label>
-                    <div class="input-senha-container">
-                        <input type="password" id="senhaCadastro" placeholder="Mín. 8 caracteres" required>
-                        <button type="button" class="btn-ver-senha" onclick="togglePassword('senhaCadastro')" tabindex="-1">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                        </button>
+                <div class="auth-preview-card" aria-hidden="true">
+                    <div class="auth-preview-head">
+                        <span class="auth-preview-label">Conta MEI pronta</span>
+                        <span class="auth-preview-badge">Sem cartão</span>
                     </div>
-                    <div id="erro-senhaCadastro" class="erro-campo"></div>
-                </div>
-
-                <div class="input-group">
-                    <label>Confirmar Senha</label>
-                    <div class="input-senha-container">
-                        <input type="password" id="senhaConfirmar" placeholder="Repita a senha" required>
-                        <button type="button" class="btn-ver-senha" onclick="togglePassword('senhaConfirmar')" tabindex="-1">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                        </button>
+                    <div class="auth-preview-metrics">
+                        <div class="auth-preview-stat">
+                            <small>Teste completo</small>
+                            <strong>14 dias grátis</strong>
+                        </div>
+                        <div class="auth-preview-stat">
+                            <small>Configuração</small>
+                            <strong>&lt; 1 minuto</strong>
+                        </div>
                     </div>
-                    <div id="erro-senhaConfirmar" class="erro-campo"></div>
                 </div>
 
-                <div id="erro-formCadastro" class="erro-campo erro-formulario"></div>
+                <div class="auth-feature-list">
+                    <div class="auth-feature-row">
+                        <i data-lucide="check-circle-2"></i>
+                        <span>14 dias grátis para testar todos os recursos</span>
+                    </div>
+                    <div class="auth-feature-row">
+                        <i data-lucide="check-circle-2"></i>
+                        <span>Sem necessidade de cartão de crédito</span>
+                    </div>
+                    <div class="auth-feature-row">
+                        <i data-lucide="check-circle-2"></i>
+                        <span>Cancele quando quiser com um clique</span>
+                    </div>
+                </div>
+            </div>
 
-                <button type="submit" class="btn-login">Finalizar Cadastro</button>
+            <div class="auth-split-bottom">
+                <span class="auth-trust-inline">
+                    <i data-lucide="shield-check"></i>
+                    Dados protegidos com criptografia
+                </span>
+                <span>FinMEI &copy; 2026</span>
+            </div>
+        </aside>
 
-                <p class="cadastro-link">
-                    Já tem uma conta? <a href="login">Faça login</a>
-                </p>
-            </form>
-        </div>
+        <!-- Metade direita: Formulário de cadastro -->
+        <main class="auth-split-right">
+            <div class="auth-form-container">
+                <div class="auth-mobile-header">
+                    <a href="index.html" class="auth-brand-link">
+                        <span class="auth-brand-badge">MEI</span>
+                        <span class="auth-brand-name">FinMEI</span>
+                    </a>
+                </div>
+
+                <div class="auth-form-header">
+                    <h1>Crie sua conta</h1>
+                    <p>Preencha os dados abaixo para começar gratuitamente.</p>
+                </div>
+
+                <form id="formCadastro">
+                    <div class="auth-field">
+                        <div class="auth-field-label-row">
+                            <label for="nomeCadastro">Nome completo</label>
+                        </div>
+                        <div class="auth-input-wrap">
+                            <i data-lucide="user" class="auth-field-icon"></i>
+                            <input type="text" id="nomeCadastro" placeholder="Seu nome e sobrenome" required autocomplete="name">
+                        </div>
+                        <div id="erro-nomeCadastro" class="erro-campo"></div>
+                    </div>
+
+                    <div class="auth-field">
+                        <div class="auth-field-label-row">
+                            <label for="emailCadastro">E-mail</label>
+                        </div>
+                        <div class="auth-input-wrap">
+                            <i data-lucide="mail" class="auth-field-icon"></i>
+                            <input type="email" id="emailCadastro" placeholder="seu@email.com" required autocomplete="email">
+                        </div>
+                        <div id="erro-emailCadastro" class="erro-campo"></div>
+                    </div>
+
+                    <div class="auth-field">
+                        <div class="auth-field-label-row">
+                            <label for="senhaCadastro">Senha</label>
+                        </div>
+                        <div class="auth-input-wrap has-toggle">
+                            <i data-lucide="lock" class="auth-field-icon"></i>
+                            <input type="password" id="senhaCadastro" placeholder="Mín. 8 caracteres" required autocomplete="new-password">
+                            <button type="button" class="btn-ver-senha" onclick="togglePassword('senhaCadastro')" tabindex="-1" aria-label="Mostrar ou ocultar senha">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="erro-senhaCadastro" class="erro-campo"></div>
+                    </div>
+
+                    <div class="auth-field">
+                        <div class="auth-field-label-row">
+                            <label for="senhaConfirmar">Confirmar senha</label>
+                        </div>
+                        <div class="auth-input-wrap has-toggle">
+                            <i data-lucide="lock" class="auth-field-icon"></i>
+                            <input type="password" id="senhaConfirmar" placeholder="Repita a senha" required autocomplete="new-password">
+                            <button type="button" class="btn-ver-senha" onclick="togglePassword('senhaConfirmar')" tabindex="-1" aria-label="Mostrar ou ocultar senha">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="erro-senhaConfirmar" class="erro-campo"></div>
+                    </div>
+
+                    <div id="erro-formCadastro" class="erro-campo erro-formulario"></div>
+
+                    <button type="submit" class="auth-btn-primary">
+                        <span>Finalizar cadastro</span>
+                        <i data-lucide="arrow-right"></i>
+                    </button>
+                </form>
+
+                <div class="auth-switch-links">
+                    <p>Já tem uma conta? <a href="login">Faça login</a></p>
+                    <a href="index.html" class="auth-back-home">
+                        <i data-lucide="arrow-left"></i>
+                        <span>Voltar para a página inicial</span>
+                    </a>
+                </div>
+            </div>
+        </main>
     </div>
 
     <script type="module" src="js/auth.js"></script>
